@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Prode Mundial 2026</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Mundial 2026</p>
+        <h1>Prode de cruces</h1>
+      </div>
+      <nav class="tabs" aria-label="Secciones">
+        <button class="tab is-active" data-view="predictor">Pronosticar</button>
+        <button class="tab" data-view="live">Resultados en vivo</button>
+        <button class="tab" data-view="results">Resultados reales</button>
+        <button class="tab" data-view="validate">Validar PDF</button>
+      </nav>
+    </header>
+
+    <main>
+      <section class="summary-band">
+        <div>
+          <span>48 selecciones</span>
+          <strong>12 grupos</strong>
+        </div>
+        <div>
+          <span>Clasifican</span>
+          <strong>1ro, 2do y 8 mejores 3ros</strong>
+        </div>
+        <div>
+          <span>Final</span>
+          <strong>19 de julio de 2026</strong>
+        </div>
+        <div>
+          <span>Bonus</span>
+          <strong>+2 por resultado exacto</strong>
+        </div>
+      </section>
+
+      <section class="view is-visible" id="predictor">
+        <div class="lock-banner" id="lockBanner" hidden></div>
+        <div class="section-head">
+          <div>
+            <h2>Prediccion del jugador</h2>
+            <p>Ordena cada grupo, completa los cruces y genera el PDF del prode.</p>
+          </div>
+          <div class="actions">
+            <button class="secondary" id="autoFill">Autocompletar</button>
+            <button class="secondary" id="clearPredictions">Limpiar</button>
+          </div>
+        </div>
+
+        <form class="player-form" id="playerForm">
+          <label>
+            Jugador
+            <input id="playerName" name="playerName" autocomplete="name" placeholder="Nombre y apellido" required>
+          </label>
+          <label>
+            Email
+            <input id="playerEmail" name="playerEmail" type="email" autocomplete="email" placeholder="nombre@email.com" required>
+          </label>
+        </form>
+
+        <div class="groups-grid" id="groupsGrid"></div>
+
+        <div class="section-head compact">
+          <div>
+            <h2>Cruces eliminatorios</h2>
+            <p>Se arman con tu orden de grupos. Elegi ganador y marcador para sumar extra.</p>
+          </div>
+        </div>
+        <div class="bracket" id="bracket"></div>
+
+        <div class="submit-panel">
+          <div>
+            <h2>Guardar jugada</h2>
+            <p>El PDF incluye un codigo interno para poder validarlo despues desde esta misma web.</p>
+          </div>
+          <div class="actions">
+            <button id="downloadPdf">Descargar PDF</button>
+            <button class="secondary" id="sendEmail">Enviar por correo</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="live">
+        <div class="section-head">
+          <div>
+            <h2>Resultados en vivo</h2>
+            <p>Se actualiza desde el archivo de resultados diario del torneo.</p>
+          </div>
+          <div class="actions">
+            <button class="secondary" id="refreshLive">Actualizar</button>
+          </div>
+        </div>
+        <div class="live-status" id="liveStatus">Cargando resultados...</div>
+        <div class="live-grid" id="liveGrid"></div>
+      </section>
+
+      <section class="view" id="results">
+        <div class="section-head">
+          <div>
+            <h2>Resultados reales</h2>
+            <p>Cuando avance el Mundial, carga los clasificados y ganadores reales para puntuar los prodes.</p>
+          </div>
+          <div class="actions">
+            <button class="secondary" id="autoReal">Usar mismos pronosticos</button>
+            <button class="secondary" id="clearReal">Limpiar reales</button>
+          </div>
+        </div>
+        <div class="groups-grid" id="realGroupsGrid"></div>
+        <div class="section-head compact">
+          <div>
+            <h2>Llave real</h2>
+            <p>Completa ganadores y marcadores reales de cada ronda.</p>
+          </div>
+        </div>
+        <div class="bracket" id="realBracket"></div>
+      </section>
+
+      <section class="view" id="validate">
+        <div class="section-head">
+          <div>
+            <h2>Validar un PDF</h2>
+            <p>Subi el PDF generado por esta web y comparalo contra los resultados reales cargados.</p>
+          </div>
+        </div>
+        <div class="validator">
+          <label class="file-drop">
+            <input id="pdfInput" type="file" accept="application/pdf">
+            <span>Seleccionar PDF del jugador</span>
+          </label>
+          <div class="score-card" id="scoreCard">
+            <p class="empty">Todavia no se cargo ningun PDF.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <template id="groupTemplate">
+      <article class="group-card">
+        <div class="group-title"></div>
+        <div class="selectors"></div>
+      </article>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
