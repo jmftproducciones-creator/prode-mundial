@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Prode Mundial 2026</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Mundial 2026</p>
+        <h1>Prode de cruces</h1>
+      </div>
+      <nav class="tabs" aria-label="Secciones">
+        <button class="tab is-active" data-view="predictor">Pronosticar</button>
+        <button class="tab" data-view="leaderboard">Leaderboard</button>
+        <button class="tab" data-view="tournaments">Torneos</button>
+        <button class="tab" data-view="live">Resultados en vivo</button>
+      </nav>
+    </header>
+
+    <main>
+      <section class="summary-band">
+        <div>
+          <span>48 selecciones</span>
+          <strong>12 grupos</strong>
+        </div>
+        <div>
+          <span>Clasifican</span>
+          <strong>1ro, 2do y 8 mejores 3ros</strong>
+        </div>
+        <div>
+          <span>Final</span>
+          <strong>19 de julio de 2026</strong>
+        </div>
+        <div>
+          <span>Bonus</span>
+          <strong>+2 por resultado exacto</strong>
+        </div>
+      </section>
+
+      <section class="view is-visible" id="predictor">
+        <div class="lock-banner" id="lockBanner" hidden></div>
+        <div class="section-head">
+          <div>
+            <h2>Prediccion del jugador</h2>
+            <p>Ordena cada grupo, completa los cruces y guarda el prode en el torneo elegido.</p>
+          </div>
+          <div class="actions">
+            <button class="secondary" id="autoFill">Autocompletar</button>
+            <button class="secondary" id="clearPredictions">Limpiar</button>
+          </div>
+        </div>
+
+        <form class="player-form" id="playerForm">
+          <label>
+            Torneo
+            <select id="tournamentSelect" name="tournament"></select>
+          </label>
+          <label>
+            Jugador
+            <input id="playerName" name="playerName" autocomplete="name" placeholder="Nombre y apellido" required>
+          </label>
+          <label>
+            Email
+            <input id="playerEmail" name="playerEmail" type="email" autocomplete="email" placeholder="nombre@email.com" required>
+          </label>
+        </form>
+
+        <div class="groups-grid" id="groupsGrid"></div>
+
+        <div class="section-head compact">
+          <div>
+            <h2>Cruces eliminatorios</h2>
+            <p>Se arman con tu orden de grupos. Elegi ganador y marcador para sumar extra.</p>
+          </div>
+        </div>
+        <div class="bracket" id="bracket"></div>
+
+        <div class="submit-panel">
+          <div>
+            <h2>Guardar jugada</h2>
+            <p>El prode queda guardado en el leaderboard del torneo. El PDF es solo comprobante.</p>
+          </div>
+          <div class="actions">
+            <button id="savePrediction">Guardar prode</button>
+            <button class="secondary" id="downloadPdf">Guardar y descargar comprobante</button>
+            <button class="secondary" id="sendEmail">Guardar y enviar comprobante</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="leaderboard">
+        <div class="section-head">
+          <div>
+            <h2>Leaderboard</h2>
+            <p>Tabla de puntos del torneo seleccionado.</p>
+          </div>
+          <div class="actions">
+            <button class="secondary" id="refreshLeaderboard">Actualizar</button>
+          </div>
+        </div>
+        <div class="leaderboard-panel" id="leaderboardPanel"></div>
+        <div class="section-head compact">
+          <div>
+            <h2>Cargar resultados del torneo</h2>
+            <p>Solo se usa para recalcular el leaderboard del torneo seleccionado.</p>
+          </div>
+          <div class="actions">
+            <button class="secondary" id="autoReal">Usar mismos pronosticos</button>
+            <button id="saveRealResults">Guardar resultados</button>
+            <button class="secondary" id="clearReal">Limpiar reales</button>
+          </div>
+        </div>
+        <div class="groups-grid" id="realGroupsGrid"></div>
+        <div class="section-head compact">
+          <div>
+            <h2>Llave real</h2>
+            <p>Completa ganadores y marcadores reales de cada ronda.</p>
+          </div>
+        </div>
+        <div class="bracket" id="realBracket"></div>
+      </section>
+
+      <section class="view" id="tournaments">
+        <div class="section-head">
+          <div>
+            <h2>Torneos privados</h2>
+            <p>Crea un torneo para amigos sin afectar el ranking global.</p>
+          </div>
+        </div>
+        <form class="tournament-form" id="tournamentForm">
+          <label>
+            Nombre del torneo
+            <input id="tournamentName" placeholder="Ej: Prode con amigos">
+          </label>
+          <button>Crear torneo</button>
+        </form>
+        <div class="tournament-list" id="tournamentList"></div>
+      </section>
+
+      <section class="view" id="live">
+        <div class="section-head">
+          <div>
+            <h2>Resultados en vivo</h2>
+            <p>Se actualiza desde el archivo de resultados diario del torneo.</p>
+          </div>
+          <div class="actions">
+            <button class="secondary" id="refreshLive">Actualizar</button>
+          </div>
+        </div>
+        <div class="live-status" id="liveStatus">Cargando resultados...</div>
+        <div class="live-grid" id="liveGrid"></div>
+      </section>
+    </main>
+
+    <template id="groupTemplate">
+      <article class="group-card">
+        <div class="group-title"></div>
+        <div class="selectors"></div>
+      </article>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
