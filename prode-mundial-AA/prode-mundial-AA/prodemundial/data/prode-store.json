@@ -1,0 +1,755 @@
+{
+  "tournaments": [
+    {
+      "id": "global",
+      "name": "Global",
+      "code": "GLOBAL",
+      "isGlobal": true,
+      "createdAt": "2026-04-21T00:00:00.000Z",
+      "realResults": null,
+      "submissions": [
+        {
+          "id": "1776796961316-nicolasbricchifuentes14-gmail-com",
+          "createdAt": "2026-04-21T18:42:41.316Z",
+          "player": {
+            "name": "nicoalsbricchi",
+            "email": "nicolasbricchifuentes14@gmail.com"
+          },
+          "prediction": {
+            "groups": {
+              "A": [
+                "Corea del Sur",
+                "Mexico",
+                "Republica Checa",
+                "Sudafrica"
+              ],
+              "B": [
+                "Bosnia-Herzegovina",
+                "Canada",
+                "Qatar",
+                "Suiza"
+              ],
+              "C": [
+                "Brasil",
+                "Escocia",
+                "Haiti",
+                "Marruecos"
+              ],
+              "D": [
+                "Australia",
+                "Estados Unidos",
+                "Paraguay",
+                "Turquia"
+              ],
+              "E": [
+                "Alemania",
+                "Costa de Marfil",
+                "Curazao",
+                "Ecuador"
+              ],
+              "F": [
+                "Japon",
+                "Paises Bajos",
+                "Suecia",
+                "Tunez"
+              ],
+              "G": [
+                "Belgica",
+                "Egipto",
+                "Iran",
+                "Nueva Zelanda"
+              ],
+              "H": [
+                "Arabia Saudita",
+                "Cabo Verde",
+                "Espana",
+                "Uruguay"
+              ],
+              "I": [
+                "Francia",
+                "Irak",
+                "Noruega",
+                "Senegal"
+              ],
+              "J": [
+                "Argelia",
+                "Argentina",
+                "Austria",
+                "Jordania"
+              ],
+              "K": [
+                "Colombia",
+                "Portugal",
+                "RD Congo",
+                "Uzbekistan"
+              ],
+              "L": [
+                "Croacia",
+                "Ghana",
+                "Inglaterra",
+                "Panama"
+              ]
+            },
+            "groupMatches": {
+              "A-0-1": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Mexico",
+                "awayTeam": "Corea del Sur"
+              },
+              "A-2-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Sudafrica",
+                "awayTeam": "Republica Checa"
+              },
+              "A-0-2": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Mexico",
+                "awayTeam": "Sudafrica"
+              },
+              "A-1-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Corea del Sur",
+                "awayTeam": "Republica Checa"
+              },
+              "A-0-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Mexico",
+                "awayTeam": "Republica Checa"
+              },
+              "A-1-2": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Corea del Sur",
+                "awayTeam": "Sudafrica"
+              },
+              "B-0-1": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Canada",
+                "awayTeam": "Suiza"
+              },
+              "B-2-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Qatar",
+                "awayTeam": "Bosnia-Herzegovina"
+              },
+              "B-0-2": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Canada",
+                "awayTeam": "Qatar"
+              },
+              "B-1-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Suiza",
+                "awayTeam": "Bosnia-Herzegovina"
+              },
+              "B-0-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Canada",
+                "awayTeam": "Bosnia-Herzegovina"
+              },
+              "B-1-2": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Suiza",
+                "awayTeam": "Qatar"
+              },
+              "C-0-1": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Brasil",
+                "awayTeam": "Marruecos"
+              },
+              "C-2-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Escocia",
+                "awayTeam": "Haiti"
+              },
+              "C-0-2": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Brasil",
+                "awayTeam": "Escocia"
+              },
+              "C-1-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Marruecos",
+                "awayTeam": "Haiti"
+              },
+              "C-0-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Brasil",
+                "awayTeam": "Haiti"
+              },
+              "C-1-2": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Marruecos",
+                "awayTeam": "Escocia"
+              },
+              "D-0-1": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Estados Unidos",
+                "awayTeam": "Paraguay"
+              },
+              "D-2-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Australia",
+                "awayTeam": "Turquia"
+              },
+              "D-0-2": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Estados Unidos",
+                "awayTeam": "Australia"
+              },
+              "D-1-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Paraguay",
+                "awayTeam": "Turquia"
+              },
+              "D-0-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Estados Unidos",
+                "awayTeam": "Turquia"
+              },
+              "D-1-2": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Paraguay",
+                "awayTeam": "Australia"
+              },
+              "E-0-1": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Alemania",
+                "awayTeam": "Ecuador"
+              },
+              "E-2-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Costa de Marfil",
+                "awayTeam": "Curazao"
+              },
+              "E-0-2": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Alemania",
+                "awayTeam": "Costa de Marfil"
+              },
+              "E-1-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Ecuador",
+                "awayTeam": "Curazao"
+              },
+              "E-0-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Alemania",
+                "awayTeam": "Curazao"
+              },
+              "E-1-2": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Ecuador",
+                "awayTeam": "Costa de Marfil"
+              },
+              "F-0-1": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Paises Bajos",
+                "awayTeam": "Japon"
+              },
+              "F-2-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Tunez",
+                "awayTeam": "Suecia"
+              },
+              "F-0-2": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Paises Bajos",
+                "awayTeam": "Tunez"
+              },
+              "F-1-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Japon",
+                "awayTeam": "Suecia"
+              },
+              "F-0-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Paises Bajos",
+                "awayTeam": "Suecia"
+              },
+              "F-1-2": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Japon",
+                "awayTeam": "Tunez"
+              },
+              "G-0-1": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Belgica",
+                "awayTeam": "Iran"
+              },
+              "G-2-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Egipto",
+                "awayTeam": "Nueva Zelanda"
+              },
+              "G-0-2": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Belgica",
+                "awayTeam": "Egipto"
+              },
+              "G-1-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Iran",
+                "awayTeam": "Nueva Zelanda"
+              },
+              "G-0-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Belgica",
+                "awayTeam": "Nueva Zelanda"
+              },
+              "G-1-2": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Iran",
+                "awayTeam": "Egipto"
+              },
+              "H-0-1": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Espana",
+                "awayTeam": "Uruguay"
+              },
+              "H-2-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Arabia Saudita",
+                "awayTeam": "Cabo Verde"
+              },
+              "H-0-2": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Espana",
+                "awayTeam": "Arabia Saudita"
+              },
+              "H-1-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Uruguay",
+                "awayTeam": "Cabo Verde"
+              },
+              "H-0-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Espana",
+                "awayTeam": "Cabo Verde"
+              },
+              "H-1-2": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Uruguay",
+                "awayTeam": "Arabia Saudita"
+              },
+              "I-0-1": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Francia",
+                "awayTeam": "Senegal"
+              },
+              "I-2-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Noruega",
+                "awayTeam": "Irak"
+              },
+              "I-0-2": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Francia",
+                "awayTeam": "Noruega"
+              },
+              "I-1-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Senegal",
+                "awayTeam": "Irak"
+              },
+              "I-0-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Francia",
+                "awayTeam": "Irak"
+              },
+              "I-1-2": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Senegal",
+                "awayTeam": "Noruega"
+              },
+              "J-0-1": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Argentina",
+                "awayTeam": "Austria"
+              },
+              "J-2-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Argelia",
+                "awayTeam": "Jordania"
+              },
+              "J-0-2": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Argentina",
+                "awayTeam": "Argelia"
+              },
+              "J-1-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Austria",
+                "awayTeam": "Jordania"
+              },
+              "J-0-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Argentina",
+                "awayTeam": "Jordania"
+              },
+              "J-1-2": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Austria",
+                "awayTeam": "Argelia"
+              },
+              "K-0-1": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Portugal",
+                "awayTeam": "Colombia"
+              },
+              "K-2-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Uzbekistan",
+                "awayTeam": "RD Congo"
+              },
+              "K-0-2": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Portugal",
+                "awayTeam": "Uzbekistan"
+              },
+              "K-1-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Colombia",
+                "awayTeam": "RD Congo"
+              },
+              "K-0-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Portugal",
+                "awayTeam": "RD Congo"
+              },
+              "K-1-2": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Colombia",
+                "awayTeam": "Uzbekistan"
+              },
+              "L-0-1": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Inglaterra",
+                "awayTeam": "Croacia"
+              },
+              "L-2-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Panama",
+                "awayTeam": "Ghana"
+              },
+              "L-0-2": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Inglaterra",
+                "awayTeam": "Panama"
+              },
+              "L-1-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Croacia",
+                "awayTeam": "Ghana"
+              },
+              "L-0-3": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Inglaterra",
+                "awayTeam": "Ghana"
+              },
+              "L-1-2": {
+                "home": "",
+                "away": "",
+                "homeTeam": "Croacia",
+                "awayTeam": "Panama"
+              }
+            },
+            "thirdAssignments": {
+              "m74": "Republica Checa",
+              "m81": "Qatar",
+              "m82": "Curazao",
+              "m77": "Iran",
+              "m79": "Suecia",
+              "m85": "Haiti",
+              "m87": "Noruega",
+              "m80": "RD Congo"
+            },
+            "winners": {
+              "m73": "Mexico",
+              "m74": "Alemania",
+              "m75": "Japon",
+              "m76": "Brasil",
+              "m77": "Francia",
+              "m78": "Costa de Marfil",
+              "m79": "Corea del Sur",
+              "m80": "Croacia",
+              "m81": "Australia",
+              "m82": "Belgica",
+              "m83": "Portugal",
+              "m84": "Argentina",
+              "m85": "Bosnia-Herzegovina",
+              "m86": "Argelia",
+              "m87": "Colombia",
+              "m88": "Estados Unidos",
+              "m89": "Alemania",
+              "m90": "Brasil",
+              "m91": "Francia",
+              "m92": "Corea del Sur",
+              "m93": "Belgica",
+              "m94": "Argentina",
+              "m95": "Bosnia-Herzegovina",
+              "m96": "Colombia",
+              "m97": "Alemania",
+              "m98": "Francia",
+              "m99": "Argentina",
+              "m100": "Bosnia-Herzegovina",
+              "m101": "Alemania",
+              "m102": "Argentina",
+              "m104": "Argentina"
+            },
+            "scores": {
+              "m73": {
+                "left": "",
+                "right": ""
+              },
+              "m74": {
+                "left": "",
+                "right": ""
+              },
+              "m75": {
+                "left": "",
+                "right": ""
+              },
+              "m76": {
+                "left": "",
+                "right": ""
+              },
+              "m77": {
+                "left": "",
+                "right": ""
+              },
+              "m78": {
+                "left": "",
+                "right": ""
+              },
+              "m79": {
+                "left": "",
+                "right": ""
+              },
+              "m80": {
+                "left": "",
+                "right": ""
+              },
+              "m81": {
+                "left": "",
+                "right": ""
+              },
+              "m82": {
+                "left": "",
+                "right": ""
+              },
+              "m83": {
+                "left": "",
+                "right": ""
+              },
+              "m84": {
+                "left": "",
+                "right": ""
+              },
+              "m85": {
+                "left": "",
+                "right": ""
+              },
+              "m86": {
+                "left": "",
+                "right": ""
+              },
+              "m87": {
+                "left": "",
+                "right": ""
+              },
+              "m88": {
+                "left": "",
+                "right": ""
+              },
+              "m89": {
+                "left": "",
+                "right": ""
+              },
+              "m90": {
+                "left": "",
+                "right": ""
+              },
+              "m91": {
+                "left": "",
+                "right": ""
+              },
+              "m92": {
+                "left": "",
+                "right": ""
+              },
+              "m93": {
+                "left": "",
+                "right": ""
+              },
+              "m94": {
+                "left": "",
+                "right": ""
+              },
+              "m95": {
+                "left": "",
+                "right": ""
+              },
+              "m96": {
+                "left": "",
+                "right": ""
+              },
+              "m97": {
+                "left": "",
+                "right": ""
+              },
+              "m98": {
+                "left": "",
+                "right": ""
+              },
+              "m99": {
+                "left": "",
+                "right": ""
+              },
+              "m100": {
+                "left": "",
+                "right": ""
+              },
+              "m101": {
+                "left": "",
+                "right": ""
+              },
+              "m102": {
+                "left": "",
+                "right": ""
+              },
+              "m104": {
+                "left": "",
+                "right": ""
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "cascasc",
+      "name": "cascasc",
+      "code": "I721P3",
+      "isGlobal": false,
+      "createdAt": "2026-04-21T18:44:00.583Z",
+      "realResults": null,
+      "submissions": []
+    },
+    {
+      "id": "nicasaclaksclas",
+      "name": "nicasaclaksclas",
+      "code": "QFCMQ0",
+      "isGlobal": false,
+      "createdAt": "2026-04-21T18:49:39.677Z",
+      "realResults": null,
+      "submissions": []
+    },
+    {
+      "id": "caca",
+      "name": "caca",
+      "code": "WHGAE7",
+      "isGlobal": false,
+      "createdAt": "2026-04-21T18:55:06.952Z",
+      "realResults": null,
+      "submissions": []
+    },
+    {
+      "id": "caca-2",
+      "name": "caca",
+      "code": "OH6E15",
+      "isGlobal": false,
+      "createdAt": "2026-04-21T19:01:28.905Z",
+      "realResults": null,
+      "submissions": []
+    },
+    {
+      "id": "caca-3",
+      "name": "caca",
+      "code": "OH6EI5",
+      "isGlobal": false,
+      "createdAt": "2026-04-21T19:02:34.746Z",
+      "realResults": null,
+      "submissions": []
+    },
+    {
+      "id": "prueba-crear-buscar",
+      "name": "Prueba Crear Buscar",
+      "code": "TESTJOIN1",
+      "isGlobal": false,
+      "createdAt": "2026-04-21T19:03:15.586Z",
+      "realResults": null,
+      "submissions": []
+    }
+  ]
+}
