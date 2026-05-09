@@ -1,0 +1,22 @@
+{
+  "tournaments": [
+    {
+      "id": "global",
+      "name": "Global",
+      "code": "GLOBAL",
+      "isGlobal": true,
+      "createdAt": "2026-05-09T00:00:00.000Z",
+      "realResults": null,
+      "templateId": "worldcup-2026",
+      "mode": "groups-knockout",
+      "scoring": {
+        "groupPosition": 1,
+        "knockoutWinner": 3,
+        "exactScore": 2,
+        "champion": 10
+      },
+      "submissions": []
+    }
+  ],
+  "tenants": {}
+}
