@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Prode Mundial 2026</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <a class="brand-watermark" href="/" aria-label="NBF Soft">
+      <img src="/NBFSOFT.png" alt="NBF Soft">
+    </a>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow" id="brandEyebrow">Mundial 2026</p>
+        <h1 id="brandTitle">Prode de cruces</h1>
+        <p class="brand-description" id="brandDescription" hidden></p>
+      </div>
+      <nav class="tabs" aria-label="Secciones">
+        <button class="tab is-active" data-view="predictor">Pronosticar</button>
+        <button class="tab" data-view="tournaments">Torneos</button>
+        <button class="tab" data-view="admin" data-admin-tab data-admin-section="users" hidden>Usuarios</button>
+        <button class="tab" data-view="admin" data-admin-tab data-admin-section="results" hidden>Cargar resultados</button>
+        <button class="tab" data-view="live">Resultados en vivo</button>
+      </nav>
+    </header>
+
+    <main>
+      <section class="summary-band">
+        <div>
+          <img class="summary-image" src="/th.webp" alt="">
+          <span>48 selecciones</span>
+          <strong>12 grupos</strong>
+        </div>
+        <div>
+          <img class="summary-image" src="/OIP.webp" alt="">
+          <span>Clasifican</span>
+          <strong>1ro, 2do y 8 mejores 3ros</strong>
+        </div>
+        <div>
+          <img class="summary-image" src="/descargar.webp" alt="">
+          <span>Final</span>
+          <strong>19 de julio de 2026</strong>
+        </div>
+        <div>
+          <span>Bonus</span>
+          <strong>+2 por resultado exacto</strong>
+        </div>
+      </section>
+
+      <section class="view is-visible" id="predictor">
+        <div class="lock-banner" id="lockBanner" hidden></div>
+        <section class="company-login" id="companyLogin" hidden>
+          <div class="company-login-card">
+            <img class="login-brand-logo" src="/NBFSOFT.png" alt="NBF Soft">
+            <p class="login-kicker">Prode Mundial 2026</p>
+            <h2>Iniciar Sesion</h2>
+            <p>Ingresa con tu usuario de empresa para cargar y seguir tu prode.</p>
+            <form class="company-login-form" id="companyLoginForm">
+              <label>
+                Correo Electronico / DNI
+                <input id="loginEmail" autocomplete="username" placeholder="nombre@empresa.com o DNI" autofocus>
+              </label>
+              <label>
+                Contrasena
+                <input id="loginPassword" type="password" autocomplete="current-password" placeholder="********">
+              </label>
+              <button type="submit">Ingresar</button>
+              <button class="secondary login-create-toggle" type="button" id="openCreateUser">Crear usuario</button>
+            </form>
+            <datalist id="companyAreaOptions"></datalist>
+            <div class="form-status" id="companyLoginStatus" hidden></div>
+          </div>
+        </section>
+        <div class="modal-backdrop" id="createUserModal" hidden>
+          <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="createUserTitle">
+            <div class="section-head compact">
+              <div>
+                <h2 id="createUserTitle">Crear usuario</h2>
+                <p>Completa tus datos para ingresar al prode de la empresa.</p>
+              </div>
+              <button class="secondary icon-close" type="button" id="closeCreateUser">Cerrar</button>
+            </div>
+            <form class="company-login-form" id="createUserForm">
+              <label>
+                Mail / DNI
+                <input id="createUserEmail" autocomplete="username" placeholder="mail@empresa.com o DNI">
+              </label>
+              <label>
+                Contrasena
+                <input id="createUserPassword" type="password" autocomplete="new-password" placeholder="********">
+              </label>
+              <label>
+                Nombre
+                <input id="createUserName" autocomplete="name" placeholder="Nombre y apellido">
+              </label>
+              <label>
+                Area
+                <input id="createUserArea" list="companyAreaOptions" placeholder="Sistemas">
+              </label>
+              <button type="submit">Crear e ingresar</button>
+            </form>
+            <div class="form-status" id="createUserStatus" hidden></div>
+          </section>
+        </div>
+        <div class="company-session" id="companySession" hidden>
+          <span id="companySessionText"></span>
+          <button class="secondary" type="button" id="logoutCompanyUser">Cerrar sesion</button>
+        </div>
+        <div class="section-head">
+          <div>
+            <h2>Prediccion del jugador</h2>
+            <p>Ordena cada grupo, completa los cruces y guarda el prode en el torneo elegido.</p>
+          </div>
+          <div class="actions">
+            <button class="secondary" id="autoFill">Autocompletar</button>
+            <button class="secondary" id="clearPredictions">Limpiar</button>
+          </div>
+        </div>
+
+        <form class="player-form" id="playerForm">
+          <label data-session-field="tournament">
+            Torneo
+            <select id="tournamentSelect" name="tournament"></select>
+          </label>
+          <label data-session-field="player">
+            Jugador
+            <input id="playerName" name="playerName" autocomplete="name" placeholder="Nombre y apellido" required>
+          </label>
+          <label data-session-field="player">
+            Email
+            <input id="playerEmail" name="playerEmail" type="email" autocomplete="email" placeholder="nombre@email.com" required>
+          </label>
+          <label>
+            Modo
+            <select id="predictionMode" name="predictionMode">
+              <option value="date">Fecha por fecha</option>
+              <option value="full">Todo junto</option>
+            </select>
+          </label>
+          <label>
+            Fecha
+            <select id="predictionPhase" name="predictionPhase"></select>
+          </label>
+        </form>
+        <div class="phase-status" id="phaseStatus"></div>
+
+        <div class="groups-grid" id="groupsGrid" data-worldcup-editor></div>
+        <div class="matchday-grid" id="matchdayGrid" data-worldcup-editor hidden></div>
+        <div class="custom-sheet" id="customSheet" data-custom-editor hidden></div>
+
+        <div class="section-head compact" data-worldcup-editor data-worldcup-stage="thirds">
+          <div>
+            <h2>Cruces eliminatorios</h2>
+            <p>Antes de elegir ganadores, asigna manualmente los mejores terceros a cada cruce.</p>
+          </div>
+        </div>
+        <div class="thirds-panel" id="thirdsPanel" data-worldcup-editor></div>
+        <div class="bracket" id="bracket" data-worldcup-editor></div>
+
+        <div class="submit-panel">
+          <div>
+            <h2>Guardar jugada</h2>
+            <p>El prode queda guardado en el leaderboard del torneo y se vincula al email para continuar por fecha.</p>
+          </div>
+          <div class="actions">
+            <button id="savePrediction">Guardar prode</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="tournaments">
+        <div class="section-head">
+          <div>
+            <h2 id="tournamentsHeading">Torneos privados</h2>
+            <p id="tournamentsIntro">Crea torneos, entra a sus leaderboards y carga resultados sin mezclar rankings.</p>
+          </div>
+        </div>
+        <section class="company-areas" id="companyAreas" hidden>
+          <div class="section-head compact">
+            <div>
+              <h2>Minitorneos por area</h2>
+              <p>Crea areas como Sistemas o RRHH. Cada una usa las mismas predicciones del torneo de empresa.</p>
+            </div>
+          </div>
+          <form class="tournament-form" id="companyAreaForm">
+            <label>
+              Nueva area
+              <input id="companyAreaName" placeholder="Ej: Sistemas">
+            </label>
+            <button>Crear minitorneo</button>
+          </form>
+          <div class="form-status" id="companyAreaStatus" hidden></div>
+          <div class="tournament-list" id="companyAreaList"></div>
+        </section>
+        <form class="tournament-form tournament-admin-only" id="tournamentForm">
+          <label>
+            Nombre del torneo
+            <input id="tournamentName" placeholder="Ej: Prode con amigos">
+          </label>
+          <label>
+            Clave del torneo
+            <input id="tournamentCode" placeholder="Ej: AMIGOS2026">
+          </label>
+          <label>
+            Email del creador
+            <input id="creatorEmail" type="email" placeholder="creador@email.com">
+          </label>
+          <label>
+            Plantilla
+            <select id="templateSelect"></select>
+          </label>
+          <label class="custom-template-field" id="customTeamsField" hidden>
+            Equipos / jugadores custom
+            <textarea id="customTeams" rows="5" placeholder="Equipo 1&#10;Equipo 2&#10;Equipo 3&#10;Equipo 4"></textarea>
+          </label>
+          <label>
+            Modo
+            <select id="modeSelect">
+              <option value="groups-knockout">Grupos + eliminatorias</option>
+              <option value="league">Liga / tabla</option>
+              <option value="fixture">Fixture completo</option>
+              <option value="extras">Campeon / extras</option>
+            </select>
+          </label>
+          <label>
+            Pts posicion grupo
+            <input id="scoreGroup" type="number" min="0" value="1">
+          </label>
+          <label>
+            Pts ganador cruce
+            <input id="scoreWinner" type="number" min="0" value="3">
+          </label>
+          <label>
+            Pts resultado exacto
+            <input id="scoreExact" type="number" min="0" value="2">
+          </label>
+          <label>
+            Bonus campeon
+            <input id="scoreChampion" type="number" min="0" value="10">
+          </label>
+          <button>Crear torneo</button>
+        </form>
+        <div class="form-status tournament-admin-only">
+          Las plantillas de ligas/copas generan una planilla de partidos. La plantilla Custom sirve para torneos de f5, padel, amigos o cualquier lista propia.
+        </div>
+        <form class="tournament-form tournament-admin-only" id="joinTournamentForm">
+          <label>
+            Buscar por nombre
+            <input id="joinTournamentName" placeholder="Nombre exacto del torneo">
+          </label>
+          <label>
+            Clave del torneo
+            <input id="joinTournamentCode" placeholder="Misma clave creada">
+          </label>
+          <button class="secondary">Unirme</button>
+        </form>
+        <div class="form-status" id="tournamentStatus" hidden></div>
+        <div class="tournament-list" id="tournamentList"></div>
+        <div class="tournament-results" id="tournamentResults" hidden>
+          <div class="section-head compact">
+            <div>
+              <h2 id="selectedTournamentTitle">Leaderboard</h2>
+              <p>Podio, usuarios y puntos del torneo seleccionado.</p>
+            </div>
+            <div class="actions">
+              <button class="secondary" id="refreshLeaderboard">Actualizar</button>
+              <button class="secondary" id="toggleResultsAdmin">Admin</button>
+            </div>
+          </div>
+          <div class="leaderboard-panel" id="leaderboardPanel"></div>
+        </div>
+      </section>
+
+      <section class="view" id="admin">
+        <div class="section-head">
+          <div>
+            <h2>Panel admin</h2>
+            <p>Gestiona resultados reales y revisa usuarios registrados en la empresa.</p>
+          </div>
+        </div>
+        <form class="tournament-form" id="adminLoginForm">
+          <label>
+            Clave admin
+            <input id="adminKey" type="password" placeholder="Clave del administrador">
+          </label>
+          <button>Entrar</button>
+        </form>
+        <div class="form-status" id="adminStatus" hidden></div>
+        <div class="admin-dashboard" id="adminDashboard" hidden>
+          <section class="admin-panel" id="adminUsersPanel">
+            <div class="section-head compact">
+              <div>
+                <h2>Usuarios</h2>
+                <p>Usuarios registrados, area y estado de prediccion.</p>
+              </div>
+              <div class="actions">
+                <button class="secondary" id="refreshAdminUsers" type="button">Actualizar</button>
+              </div>
+            </div>
+            <div class="admin-users" id="adminUsers"></div>
+          </section>
+          <div class="results-admin" id="adminResultsPanel">
+            <div class="section-head compact">
+              <div>
+                <h2>Cargar resultados del torneo</h2>
+                <p>Solo se usa para recalcular este leaderboard.</p>
+              </div>
+              <div class="actions">
+                <button class="secondary" id="autoReal">Usar mismos pronosticos</button>
+                <button id="saveRealResults">Guardar resultados</button>
+                <button class="secondary" id="clearReal">Limpiar reales</button>
+              </div>
+            </div>
+            <div class="groups-grid" id="realGroupsGrid" data-worldcup-editor></div>
+            <div class="custom-sheet" id="realCustomSheet" data-custom-editor hidden></div>
+            <div class="thirds-panel" id="realThirdsPanel" data-worldcup-editor></div>
+            <div class="section-head compact" data-worldcup-editor>
+              <div>
+                <h2>Llave real</h2>
+                <p>Completa ganadores y marcadores reales de cada ronda.</p>
+              </div>
+            </div>
+            <div class="bracket" id="realBracket" data-worldcup-editor></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="live">
+        <div class="section-head">
+          <div>
+            <h2>Resultados en vivo</h2>
+            <p>Se actualiza desde el archivo de resultados diario del torneo.</p>
+          </div>
+          <div class="actions">
+            <button class="secondary" id="refreshLive">Actualizar</button>
+          </div>
+        </div>
+        <div class="live-status" id="liveStatus">Cargando resultados...</div>
+        <div class="live-grid" id="liveGrid"></div>
+      </section>
+    </main>
+
+    <template id="groupTemplate">
+      <article class="group-card">
+        <div class="group-title"></div>
+        <div class="selectors"></div>
+      </article>
+    </template>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
