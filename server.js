@@ -2770,7 +2770,7 @@ function handleAdminSummary(req, res) {
 function serveStatic(req, res) {
   const cleanUrl = decodeURIComponent(req.url.split("?")[0]);
   const isCompanyView = /^\/(?:prode\/)?empresa\/[^/.]+\/?$/.test(cleanUrl);
-  const isProdeView = cleanUrl === "/prode" || cleanUrl === "/prode/";
+  const isProdeView = cleanUrl === "/prode" || cleanUrl === "/prode/" || cleanUrl === "/prode/global" || cleanUrl === "/prode/global/";
   const staticMatch = cleanUrl.match(/^\/prode-static\/(.+)$/);
   const requested = req.url === "/" || isProdeView || cleanUrl.startsWith("/join/") || cleanUrl.startsWith("/continuar/") || isCompanyView
     ? "/index.html"
