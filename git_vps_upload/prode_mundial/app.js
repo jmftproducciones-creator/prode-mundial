@@ -18,6 +18,13 @@ const APP_CONFIG = {
   liveResultsUrl: "/api/live-results"
 };
 
+function apiUrl(url) {
+  if (!String(url || "").startsWith("/api/")) return url;
+  return window.location.pathname.startsWith("/prode/")
+    ? `/prode${url}`
+    : url;
+}
+
 const FLAG_CODES = {
   "Mexico": "mx",
   "Corea del Sur": "kr",
@@ -2172,7 +2179,7 @@ function buildPayload() {
 }
 
 async function apiJson(url, options = {}) {
-  const response = await fetch(url, {
+  const response = await fetch(apiUrl(url), {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -2836,7 +2843,7 @@ async function loadLiveResults() {
   const status = document.getElementById("liveStatus");
   status.textContent = "Actualizando resultados...";
   try {
-    const response = await fetch(`${APP_CONFIG.liveResultsUrl}?t=${Date.now()}`);
+    const response = await fetch(`${apiUrl(APP_CONFIG.liveResultsUrl)}?t=${Date.now()}`);
     if (!response.ok) throw new Error("No se pudo leer resultados");
     const data = await response.json();
     state.live = {
@@ -3543,7 +3550,7 @@ document.getElementById("sendEmail")?.addEventListener("click", async event => {
   const filename = getFileName(payload);
 
   blobToBase64(blob)
-    .then(pdfBase64 => fetch("/api/send-prode", {
+    .then(pdfBase64 => fetch(apiUrl("/api/send-prode"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ payload, pdfBase64, filename })
