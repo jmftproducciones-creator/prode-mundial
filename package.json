@@ -1,5 +1,5 @@
 {
-  "name": "prode-mundial-2026-global",
+  "name": "prode-mundial-2026",
   "version": "1.0.0",
   "private": true,
   "engines": {
@@ -7,5 +7,9 @@
   },
   "scripts": {
     "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "mysql2": "^3.22.3"
   }
 }

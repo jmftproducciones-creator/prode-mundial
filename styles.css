@@ -22,6 +22,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   position: relative;
   margin: 0;
@@ -57,6 +61,34 @@ body > * {
   z-index: 1;
 }
 
+body[data-auth-gate="global"] .topbar,
+body[data-auth-gate="global"] .summary-band,
+body[data-auth-gate="global"] .brand-watermark,
+body[data-auth-gate="global"] main > .view:not(#lobby),
+body[data-auth-gate="global"] #lobby > .section-head,
+body[data-auth-gate="global"] #globalTournamentLobby,
+body[data-auth-gate="global"] #globalSession {
+  display: none !important;
+}
+
+body[data-auth-gate="global"] #lobby {
+  display: block;
+}
+
+body[data-auth-gate="global"] #globalLogin {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 0;
+  background:
+    linear-gradient(135deg, rgba(255, 250, 241, 0.88), rgba(255, 255, 255, 0.92)),
+    url("/descargar.webp") center / cover;
+}
+
 .brand-watermark {
   position: fixed;
   right: 18px;
@@ -73,6 +105,15 @@ body > * {
 .brand-watermark:hover {
   opacity: 1;
   filter: none;
+}
+
+body[data-tenant] .brand-watermark {
+  right: 18px;
+  bottom: 104px;
+  z-index: 35;
+  width: clamp(72px, 7vw, 98px);
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .brand-watermark img {
@@ -258,6 +299,100 @@ main {
   display: block;
 }
 
+.home-matches-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 20px 0 16px;
+}
+
+.home-rules-list {
+  display: grid;
+  gap: 7px;
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.home-status-card {
+  min-height: 132px;
+}
+
+.home-empty {
+  align-self: center;
+  margin: 8px 0;
+  color: var(--ink);
+  font-weight: 750;
+  text-align: center;
+}
+
+.home-fixture-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  font-weight: 900;
+}
+
+.home-fixture-line b {
+  color: var(--ink);
+  text-align: center;
+}
+
+.home-fixture-line .team-badge:last-child {
+  justify-content: flex-end;
+}
+
+.home-rules-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 24px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 12px 28px rgba(33, 29, 22, 0.10);
+}
+
+.home-rules-panel h2,
+.home-rules-panel p {
+  margin: 0;
+}
+
+.home-rules-panel h2 {
+  font-size: 1.2rem;
+}
+
+.home-rules-panel p {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.home-rules-panel button {
+  min-width: 118px;
+}
+
+.match-schedule {
+  display: block;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.group-match .match-schedule {
+  grid-column: 1 / -1;
+}
+
 body[data-tenant] .tournament-admin-only,
 body[data-tenant] #tournamentList {
   display: none;
@@ -277,13 +412,21 @@ body[data-tenant] #tournamentList {
   font-weight: 850;
 }
 
-.section-head,
-.submit-panel {
+.section-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 16px;
   margin: 24px 0 16px;
+  position: sticky;
+  bottom: 12px;
+  z-index: 20;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(8px);
 }
 
 .section-head.compact {
@@ -355,6 +498,151 @@ body[data-tenant] #tournamentList {
   gap: 12px;
 }
 
+.company-login,
+.company-areas,
+.global-login {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  margin-bottom: 22px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 18px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.company-login {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  place-items: center;
+  min-height: 100vh;
+  background:
+    linear-gradient(135deg, rgba(50, 50, 50, 0.92), rgba(99, 16, 9, 0.92)),
+    url("/descargar.webp") center / cover;
+  border: 0;
+  padding: 24px;
+}
+
+.company-login-card {
+  width: min(100%, 420px);
+  border: 1px solid rgba(50, 50, 50, 0.10);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 18px 45px rgba(20, 15, 12, 0.28);
+  padding: 34px;
+  backdrop-filter: blur(10px);
+}
+
+.login-brand-logo {
+  display: block;
+  width: 148px;
+  max-width: 62%;
+  height: auto;
+  margin: 0 auto 18px;
+  border: 0;
+  border-radius: 0;
+  object-fit: contain;
+  background: transparent;
+}
+
+.company-login-card .login-kicker {
+  margin: 0 0 4px;
+  color: #631009;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.company-login-card h2 {
+  margin: 0 0 10px;
+  color: #2c3e50;
+  font-size: 1.65rem;
+  text-align: center;
+}
+
+.company-login-card p {
+  margin: 0 0 20px;
+  color: #6f6259;
+  text-align: center;
+  font-weight: 700;
+}
+
+.company-login-card label {
+  color: #5f625f;
+  font-weight: 800;
+}
+
+.company-login-card input {
+  min-height: 50px;
+  border-color: transparent;
+  background: #f7f3eb;
+  color: #323232;
+}
+
+.company-login-card input::placeholder {
+  color: color-mix(in srgb, var(--muted) 72%, white);
+}
+
+.company-login-card button:not(.secondary) {
+  width: 100%;
+  background: #631009;
+  color: #ffffff;
+  min-height: 48px;
+}
+
+.company-login-card .login-create-toggle {
+  width: 100%;
+  justify-content: center;
+  background: transparent;
+  border-color: rgba(99, 16, 9, 0.22);
+  color: #631009;
+}
+
+.company-login::before,
+.company-areas::before,
+.global-login::before {
+  background-image: var(--decor-web-1);
+  background-position: 76% center;
+  opacity: 0.08;
+}
+
+.company-login > *,
+.company-areas > *,
+.global-login > * {
+  position: relative;
+  z-index: 1;
+}
+
+.company-login-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  align-items: end;
+}
+
+.company-session {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, white);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 9%, white);
+  padding: 12px 14px;
+}
+
+.company-session span {
+  color: var(--muted);
+  font-weight: 800;
+}
+
 .tournament-form {
   display: grid;
   grid-template-columns: repeat(4, minmax(180px, 1fr));
@@ -414,12 +702,486 @@ body[data-tenant] #tournamentList {
   gap: 10px;
 }
 
+.button-link {
+  min-height: 44px;
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, white);
+  border-radius: 6px;
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-weight: 850;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.lobby-list {
+  margin-top: 18px;
+}
+
+.lobby-admin-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+.lobby-card.is-locked {
+  opacity: 0.86;
+}
+
 .tournament-results {
   margin-top: 28px;
 }
 
 .results-admin {
   margin-top: 18px;
+}
+
+.admin-dashboard,
+.admin-panel,
+.admin-users {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-subtabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 10px;
+}
+
+.admin-subtab {
+  min-height: 38px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, white);
+  background: color-mix(in srgb, var(--accent) 10%, white);
+  color: var(--accent);
+}
+
+.admin-subtab.is-active {
+  background: var(--accent);
+  color: white;
+}
+
+.admin-panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 14px;
+}
+
+.admin-user-row {
+  display: grid;
+  grid-template-columns: minmax(190px, 1.3fr) minmax(150px, 0.8fr) minmax(140px, 0.7fr) 86px 86px minmax(190px, 0.9fr);
+  align-items: end;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.74);
+  padding: 12px;
+}
+
+.admin-user-row span,
+.admin-user-row small {
+  min-width: 0;
+}
+
+.admin-user-row strong,
+.admin-user-row small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.admin-user-row small {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.admin-user-row b,
+.admin-user-row em {
+  font-style: normal;
+  font-weight: 900;
+}
+
+.inline-check {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  gap: 8px;
+}
+
+.inline-check input {
+  width: auto;
+  min-height: 0;
+}
+
+.admin-user-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-user-actions button {
+  flex: 1 1 0;
+  padding: 0 10px;
+}
+
+.home-games {
+  margin-top: 24px;
+}
+
+.game-center {
+  margin-top: 0;
+}
+
+.game-center-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.game-center-meta span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 82%, white);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 7px 10px;
+}
+
+.daily-games {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.game-card {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 16px;
+  overflow: hidden;
+}
+
+.game-card.is-completed > :not(.game-completed-panel) {
+  opacity: 0.28;
+  filter: saturate(0.8);
+  pointer-events: none;
+}
+
+.game-completed-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  padding: 22px;
+  text-align: center;
+  background:
+    linear-gradient(135deg, rgba(var(--tenant-tint-rgb), 0.16), rgba(255, 255, 255, 0.9)),
+    rgba(255, 255, 255, 0.82);
+  border: 2px solid color-mix(in srgb, var(--accent) 38%, white);
+}
+
+.game-completed-badge {
+  justify-self: center;
+  width: max-content;
+  border-radius: 999px;
+  background: #237a57;
+  color: white;
+  padding: 7px 12px;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.game-completed-panel strong {
+  color: var(--ink);
+  font-size: 1.35rem;
+}
+
+.game-completed-panel small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.game-card h3,
+.game-card p {
+  margin: 0;
+}
+
+.custom-match-card.is-locked {
+  background: color-mix(in srgb, var(--panel) 78%, #f1f1f1);
+}
+
+.custom-match-card.is-locked input,
+.custom-match-card.is-locked select {
+  opacity: 0.62;
+}
+
+.match-timing {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.game-shirt-frame {
+  display: grid;
+  place-items: center;
+  min-height: 150px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 9%, white);
+  overflow: hidden;
+}
+
+.game-shirt-placeholder {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4px;
+  width: 154px;
+  min-height: 124px;
+  border-radius: 6px 6px 14px 14px;
+  color: var(--shirt-secondary);
+  font-weight: 900;
+  background: var(--shirt-primary);
+  box-shadow: 0 14px 24px rgba(33, 29, 22, 0.18);
+}
+
+.game-shirt-placeholder.shirt-stripes {
+  background: repeating-linear-gradient(90deg, var(--shirt-primary) 0 24px, var(--shirt-secondary) 24px 48px);
+}
+
+.game-shirt-placeholder.shirt-center {
+  background: linear-gradient(90deg, var(--shirt-secondary) 0 28%, var(--shirt-primary) 28% 72%, var(--shirt-secondary) 72%);
+}
+
+.game-shirt-placeholder::before,
+.game-shirt-placeholder::after {
+  content: "";
+  position: absolute;
+  top: 18%;
+  width: 18%;
+  height: 42%;
+  border-radius: 8px;
+  background: var(--shirt-primary);
+}
+
+.game-shirt-placeholder::before {
+  left: 18%;
+  transform: rotate(18deg);
+}
+
+.game-shirt-placeholder::after {
+  right: 18%;
+  transform: rotate(-18deg);
+}
+
+.game-shirt-placeholder strong {
+  position: relative;
+  z-index: 1;
+  font-size: 58px;
+  line-height: 1;
+}
+
+.game-shirt-placeholder small {
+  position: relative;
+  z-index: 1;
+  max-width: 70%;
+  color: currentColor;
+  font-weight: 900;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.shirt-neck {
+  position: relative;
+  z-index: 1;
+  width: 56px;
+  height: 22px;
+  border-radius: 0 0 999px 999px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.camisetadle-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.camisetadle-form .letter-guess:first-child {
+  grid-column: 1 / -1;
+}
+
+.letter-guess {
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.letter-guess legend {
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.letter-grid,
+.wordle-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.letter-grid input {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: white;
+  color: var(--ink);
+  font-weight: 900;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.letter-gap {
+  width: 14px;
+  height: 34px;
+}
+
+.letter-grid input.hit {
+  background: #237a57;
+  border-color: #237a57;
+  color: white;
+}
+
+.letter-grid input.near {
+  background: #d7a934;
+  border-color: #d7a934;
+  color: #1d1d1d;
+}
+
+.letter-grid input.miss {
+  background: #e8e2d8;
+  color: var(--muted);
+}
+
+.game-guess-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.stadium-guess-form .letter-guess {
+  grid-column: 1 / -1;
+}
+
+.stadium-guess-form button {
+  justify-self: end;
+}
+
+.game-result {
+  min-height: 22px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.stadium-visual {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-items: end;
+  min-height: 118px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 9%, white);
+  overflow: hidden;
+}
+
+.stadium-visual span {
+  display: block;
+  height: 70%;
+  border: 2px solid color-mix(in srgb, var(--accent) 58%, white);
+  border-bottom: 0;
+  border-radius: 999px 999px 0 0;
+  background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--accent) 20%, white) 0 8px, rgba(255, 255, 255, 0.7) 8px 16px);
+  transform: translateY(22px);
+}
+
+.stadium-visual span:nth-child(2) {
+  height: 92%;
+  transform: translateY(8px);
+}
+
+.stadium-clues {
+  display: grid;
+  gap: 8px;
+}
+
+.stadium-clues p {
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, white);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 7%, white);
+  padding: 10px 12px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.admin-theme-form,
+.admin-games-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.admin-theme-form .wide,
+.admin-games-form .wide {
+  grid-column: span 4;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(50, 50, 50, 0.46);
+}
+
+.modal-panel {
+  width: min(100%, 520px);
+  max-height: min(760px, 92vh);
+  overflow: auto;
+  border: 1px solid #d8c8ad;
+  border-radius: 12px;
+  background: #fff8ec;
+  box-shadow: 0 24px 80px rgba(99, 16, 9, 0.24);
+  padding: 18px;
+}
+
+.icon-close {
+  align-self: start;
 }
 
 .tournament-card h3,
@@ -721,15 +1483,20 @@ textarea {
 .flag,
 .flag-placeholder {
   flex: 0 0 auto;
+  display: inline-block;
   width: 22px;
   height: 15px;
   border-radius: 2px;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.14);
   object-fit: cover;
+  overflow: hidden;
 }
 
 .flag-placeholder {
   background: #d9dedb;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
 .selectors {
@@ -746,6 +1513,39 @@ textarea {
   margin-top: 6px;
   border-top: 1px solid var(--line);
   padding-top: 12px;
+}
+
+.matchday-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(320px, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.matchday-card {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  min-height: 116px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(255, 250, 241, 0.86)),
+    var(--decor-local-1) center / cover;
+  box-shadow: 0 12px 28px rgba(33, 29, 22, 0.10);
+  padding: 16px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.matchday-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .group-matches-head {
@@ -775,11 +1575,25 @@ textarea {
   font-size: 0.76rem;
 }
 
+.matchday-card .group-match {
+  grid-template-columns: minmax(0, 1fr) 54px 14px 54px minmax(0, 1fr);
+  gap: 10px;
+  font-size: 0.88rem;
+  font-weight: 850;
+}
+
 .group-match input {
   min-height: 32px;
   padding: 0 6px;
   text-align: center;
   font-weight: 900;
+}
+
+.matchday-card .group-match input {
+  min-height: 42px;
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--line));
+  background: rgba(255, 255, 255, 0.94);
+  font-size: 1rem;
 }
 
 .group-match b {
@@ -882,9 +1696,9 @@ textarea {
 
 .bracket {
   display: grid;
-  grid-template-columns: repeat(4, minmax(220px, 1fr));
-  gap: 14px;
-  overflow-x: auto;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  overflow: visible;
   padding-bottom: 4px;
 }
 
@@ -933,11 +1747,15 @@ textarea {
 }
 
 .round {
-  min-width: 220px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+  min-width: 0;
 }
 
 .round h3 {
-  margin: 0 0 10px;
+  grid-column: 1 / -1;
+  margin: 0;
   font-size: 0.92rem;
   text-transform: uppercase;
   color: var(--blue);
@@ -947,7 +1765,7 @@ textarea {
   position: relative;
   display: grid;
   gap: 9px;
-  margin-bottom: 10px;
+  margin-bottom: 0;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.88);
@@ -1027,22 +1845,43 @@ textarea {
 }
 
 .submit-panel {
-  margin-top: 26px;
-  padding: 18px;
-  border: 1px solid var(--line);
+  position: sticky;
+  bottom: 12px;
+  z-index: 20;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin: 26px 0 16px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line));
   border-radius: 8px;
-  background: var(--ink);
-  box-shadow: var(--shadow);
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 16px 36px rgba(33, 29, 22, 0.16);
+  backdrop-filter: blur(8px);
 }
 
-.submit-panel h2,
-.submit-panel p {
-  color: white;
+.submit-panel h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1rem;
 }
 
 .submit-panel p {
-  margin-bottom: 0;
-  opacity: 0.78;
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
+.submit-panel .actions {
+  flex: 0 0 auto;
+}
+
+.submit-panel #savePrediction {
+  min-width: 190px;
+  min-height: 48px;
+  box-shadow: 0 10px 22px rgba(12, 112, 77, 0.20);
 }
 
 .validator {
@@ -1183,6 +2022,14 @@ textarea {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .daily-games {
+    grid-template-columns: 1fr;
+  }
+
+  .matchday-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .thirds-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1197,8 +2044,11 @@ textarea {
   }
 
   .summary-band,
+  .home-matches-grid,
+  .home-rules-panel,
   .player-form,
   .payment-gate,
+  .company-login-form,
   .tournament-form,
   .validator {
     grid-template-columns: 1fr;
@@ -1209,12 +2059,26 @@ textarea {
   }
 
   .live-grid,
+  .matchday-grid,
+  .game-guess-form,
+  .camisetadle-form,
   .live-score,
   .leaderboard-row,
+  .admin-user-row,
   .thirds-grid,
   .group-match,
   .standings-row {
     grid-template-columns: 1fr;
+  }
+
+  .admin-theme-form,
+  .admin-games-form {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-theme-form .wide,
+  .admin-games-form .wide {
+    grid-column: auto;
   }
 
   .groups-grid {
@@ -1223,5 +2087,19 @@ textarea {
 
   .actions button {
     flex: 1 1 150px;
+  }
+
+  .submit-panel {
+    bottom: 8px;
+    padding: 12px;
+  }
+
+  .submit-panel .actions,
+  .submit-panel #savePrediction {
+    width: 100%;
+  }
+
+  .submit-panel p {
+    display: none;
   }
 }
