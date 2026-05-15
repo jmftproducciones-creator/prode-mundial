@@ -9,9 +9,9 @@
   --gold: #d7a934;
   --blue: #1f5f8b;
   --tenant-tint-rgb: 13, 107, 87;
-  --decor-local-1: url("/th.webp");
-  --decor-local-2: url("/OIP.webp");
-  --decor-local-3: url("/descargar.webp");
+  --decor-local-1: url("/prode-static/th.webp");
+  --decor-local-2: url("/prode-static/OIP.webp");
+  --decor-local-3: url("/prode-static/descargar.webp");
   --decor-web-1: url("https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Lionel-Messi-Argentina-2022-FIFA-World-Cup.jpg/500px-Lionel-Messi-Argentina-2022-FIFA-World-Cup.jpg");
   --decor-web-2: url("https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Argentina_national_football_team_-_1_-_2022.jpg/640px-Argentina_national_football_team_-_1_-_2022.jpg");
   --decor-web-3: url("https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Argentina_national_football_team_-_2_-_2022.jpg/640px-Argentina_national_football_team_-_2_-_2022.jpg");
@@ -47,7 +47,7 @@ body::before {
   position: fixed;
   inset: 0;
   z-index: 0;
-  background-image: url("/descargar.webp");
+  background-image: url("/prode-static/descargar.webp");
   background-size: cover;
   background-position: center;
   opacity: 0.12;
@@ -86,7 +86,7 @@ body[data-auth-gate="global"] #globalLogin {
   border-radius: 0;
   background:
     linear-gradient(135deg, rgba(255, 250, 241, 0.88), rgba(255, 255, 255, 0.92)),
-    url("/descargar.webp") center / cover;
+    url("/prode-static/descargar.webp") center / cover;
 }
 
 .brand-watermark {
@@ -521,7 +521,7 @@ body[data-tenant] #tournamentList {
   min-height: 100vh;
   background:
     linear-gradient(135deg, rgba(50, 50, 50, 0.92), rgba(99, 16, 9, 0.92)),
-    url("/descargar.webp") center / cover;
+    url("/prode-static/descargar.webp") center / cover;
   border: 0;
   padding: 24px;
 }
