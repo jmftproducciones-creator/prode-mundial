@@ -327,7 +327,7 @@ function syncAdminNavigation() {
 
 function syncTenantNavigation() {
   const isTenantPage = Boolean(state.tenantId);
-  const showAccessLobby = isTenantPage && !state.tenantAccessGranted;
+  const showAccessLobby = false;
   const lobbyTab = document.querySelector('.tab[data-view="lobby"]');
   const tournamentsTab = document.querySelector('.tab[data-view="tournaments"]');
   const lobbyView = document.getElementById("lobby");
@@ -338,7 +338,7 @@ function syncTenantNavigation() {
   const globalLobby = document.getElementById("globalTournamentLobby");
   const createGlobalModal = document.getElementById("createGlobalUserModal");
   const unlockModal = document.getElementById("unlockTournamentModal");
-  document.body.dataset.authGate = !state.globalSession?.token ? "global" : "";
+  document.body.dataset.authGate = !isTenantPage && !state.globalSession?.token ? "global" : "";
   if (isTenantPage && state.tenantAccessGranted) {
     if (lobbyView) {
       lobbyView.hidden = true;
@@ -3573,7 +3573,7 @@ async function init() {
   renderAll();
   await refreshGlobalSession();
   await loadTenant();
-  if (state.tenantId && state.currentView === "lobby") openView("predictor");
+  if (state.tenantId && !state.tenantAccessGranted) openView("predictor");
   await loadTemplates();
   if (initialContinueToken()) {
     await loadContinuation();
