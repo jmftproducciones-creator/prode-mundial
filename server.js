@@ -4,7 +4,21 @@ const path = require("path");
 const tls = require("tls");
 const net = require("net");
 const crypto = require("crypto");
-
+const nodemailer = require('nodemailer');
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'ba.itsoft26@gmail.com',
+    pass: 'fhnipndmbbgksmld'
+  }
+});
+const verificationCodes = {};
+try {
+  require("dotenv").config();
+} catch {
+  // Optional in local runs; loadEnvFile below handles .env without a package.
+}
+const mysql = require("mysql2/promise");
 function loadEnvFile() {
   const envPath = path.join(__dirname, ".env");
   if (!fs.existsSync(envPath)) return;
@@ -27,9 +41,13 @@ const ROOT = __dirname;
 const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(ROOT, "data");
 const LIVE_RESULTS_FILE = process.env.LIVE_RESULTS_FILE ? path.resolve(process.env.LIVE_RESULTS_FILE) : path.join(DATA_DIR, "live-results.json");
 const STORE_FILE = process.env.STORE_FILE ? path.resolve(process.env.STORE_FILE) : path.join(DATA_DIR, "prode-store.json");
-const SQL_ENABLED = ["1", "true", "yes", "si", "on"].includes(String(process.env.SQL_ENABLED || process.env.USE_SQL || "").toLowerCase())
-  || Boolean(process.env.DATABASE_URL || process.env.DB_HOST || process.env.MYSQL_HOST);
-const SQL_TABLE_PREFIX = (process.env.SQL_TABLE_PREFIX || "").replace(/[^a-zA-Z0-9_]/g, "");
+const DB_CONFIG = {
+  host: process.env.DB_HOST || "localhost",
+  user: process.env.DB_USER || "root",
+  password: process.env.DB_PASSWORD ?? "root",
+  database: process.env.DB_NAME || "prode_mundial_2026",
+  port: Number(process.env.DB_PORT || 3306)
+};
 
 function envFlag(name, fallback = false) {
   const value = process.env[name];
@@ -106,23 +124,410 @@ const TENANTS = {
   }
 };
 
+const DEFAULT_DAILY_GAMES = {
+  enabled: true,
+  title: "Centro de minijuegos",
+  intro: "Desafios rapidos para sumar ritmo al prode diario.",
+  rewardName: "Fan Points",
+  points: {
+    camisetadle: 20,
+    desafio: 15
+  },
+  camisetas: [
+    { id: "messi-10-arg-2022", player: "Lionel Messi", number: "10", team: "Argentina", tournament: "Mundial 2022", hint: "Campeon en Qatar" },
+    { id: "mbappe-10-fra-2018", player: "Kylian Mbappe", number: "10", team: "Francia", tournament: "Mundial 2018", hint: "Campeon en Rusia" },
+    { id: "ronaldo-7-por-2006", player: "Cristiano Ronaldo", number: "7", team: "Portugal", tournament: "Mundial 2006", hint: "Debuto mundialista en Alemania" },
+    { id: "neymar-10-bra-2014", player: "Neymar", number: "10", team: "Brasil", tournament: "Mundial 2014", hint: "Local y figura de Brasil" },
+    { id: "iniesta-6-esp-2010", player: "Andres Iniesta", number: "6", team: "Espana", tournament: "Mundial 2010", hint: "Gol historico en la final" },
+    { id: "zidane-10-fra-1998", player: "Zinedine Zidane", number: "10", team: "Francia", tournament: "Mundial 1998", hint: "Dos goles en la final" },
+    { id: "ronaldo-9-bra-2002", player: "Ronaldo", number: "9", team: "Brasil", tournament: "Mundial 2002", hint: "Maximo goleador del campeon" },
+    { id: "klose-11-ger-2014", player: "Miroslav Klose", number: "11", team: "Alemania", tournament: "Mundial 2014", hint: "Record goleador mundialista" },
+    { id: "forlan-10-uru-2010", player: "Diego Forlan", number: "10", team: "Uruguay", tournament: "Mundial 2010", hint: "Balon de oro del torneo" },
+    { id: "modric-10-cro-2018", player: "Luka Modric", number: "10", team: "Croacia", tournament: "Mundial 2018", hint: "Condujo a su seleccion a la final" },
+    { id: "kane-9-eng-2018", player: "Harry Kane", number: "9", team: "Inglaterra", tournament: "Mundial 2018", hint: "Bota de oro en Rusia" },
+    { id: "suarez-9-uru-2014", player: "Luis Suarez", number: "9", team: "Uruguay", tournament: "Mundial 2014", hint: "Figura charrua en Brasil" },
+    { id: "robben-11-ned-2014", player: "Arjen Robben", number: "11", team: "Paises Bajos", tournament: "Mundial 2014", hint: "Velocidad por derecha" },
+    { id: "james-10-col-2014", player: "James Rodriguez", number: "10", team: "Colombia", tournament: "Mundial 2014", hint: "Golazo de volea ante Uruguay" },
+    { id: "maradona-10-arg-1986", player: "Diego Maradona", number: "10", team: "Argentina", tournament: "Mundial 1986", hint: "Mexico y una camiseta eterna" },
+    { id: "baggio-10-ita-1994", player: "Roberto Baggio", number: "10", team: "Italia", tournament: "Mundial 1994", hint: "Llevo a Italia a la final" },
+    { id: "pirlo-21-ita-2006", player: "Andrea Pirlo", number: "21", team: "Italia", tournament: "Mundial 2006", hint: "Cerebro del campeon" },
+    { id: "xavi-8-esp-2010", player: "Xavi", number: "8", team: "Espana", tournament: "Mundial 2010", hint: "Motor del tiki taka" },
+    { id: "ozil-8-ger-2010", player: "Mesut Ozil", number: "8", team: "Alemania", tournament: "Mundial 2010", hint: "Zurda fina alemana" },
+    { id: "hazard-10-bel-2018", player: "Eden Hazard", number: "10", team: "Belgica", tournament: "Mundial 2018", hint: "Capitan de la generacion dorada" }
+  ],
+  desafios: [
+    {
+      id: "azteca",
+      type: "estadio",
+      answer: "Estadio Azteca",
+      title: "Adivina el estadio",
+      subtitle: "Mundial 2026",
+      clues: ["Fue sede de dos finales mundialistas", "Esta en Ciudad de Mexico", "Tambien recibe partidos del Mundial 2026"]
+    },
+    {
+      id: "maradona",
+      type: "jugador",
+      answer: "Diego Maradona",
+      title: "Adivina el jugador",
+      subtitle: "Argentina",
+      clues: ["Uso la 10", "Fue campeon del mundo en 1986", "Su gol mas famoso fue en Mexico"]
+    },
+    {
+      id: "lusail",
+      type: "estadio",
+      answer: "Estadio Lusail",
+      title: "Adivina el estadio",
+      subtitle: "Qatar 2022",
+      clues: ["Recibio la final de 2022", "Argentina levanto alli la copa", "Esta en Lusail"]
+    },
+    {
+      id: "wembley",
+      type: "estadio",
+      answer: "Wembley",
+      title: "Adivina el estadio",
+      subtitle: "Inglaterra",
+      clues: ["Tiene un arco sobre su techo", "Fue sede de finales europeas", "Esta en Londres"]
+    },
+    {
+      id: "maracana",
+      type: "estadio",
+      answer: "Maracana",
+      title: "Adivina el estadio",
+      subtitle: "Brasil",
+      clues: ["Fue sede de finales mundialistas", "Esta en Rio de Janeiro", "Su nombre completo homenajea a Mario Filho"]
+    },
+    {
+      id: "bernabeu",
+      type: "estadio",
+      answer: "Santiago Bernabeu",
+      title: "Adivina el estadio",
+      subtitle: "Espana",
+      clues: ["Casa del Real Madrid", "Esta en Madrid", "Lleva el nombre de un historico presidente"]
+    },
+    {
+      id: "camp-nou",
+      type: "estadio",
+      answer: "Camp Nou",
+      title: "Adivina el estadio",
+      subtitle: "Espana",
+      clues: ["Casa del Barcelona", "Su nombre significa campo nuevo", "Esta en Catalunya"]
+    },
+    {
+      id: "bombonera",
+      type: "estadio",
+      answer: "La Bombonera",
+      title: "Adivina el estadio",
+      subtitle: "Argentina",
+      clues: ["Tiene tribunas muy empinadas", "Esta en La Boca", "Casa de Boca Juniors"]
+    },
+    {
+      id: "monumental",
+      type: "estadio",
+      answer: "Monumental",
+      title: "Adivina el estadio",
+      subtitle: "Argentina",
+      clues: ["Casa de River Plate", "Sede frecuente de la seleccion argentina", "Esta en Nunez"]
+    },
+    {
+      id: "san-siro",
+      type: "estadio",
+      answer: "San Siro",
+      title: "Adivina el estadio",
+      subtitle: "Italia",
+      clues: ["Lo comparten dos gigantes de Milan", "Tambien se llama Giuseppe Meazza", "Tiene torres exteriores muy reconocibles"]
+    },
+    {
+      id: "allianz-arena",
+      type: "estadio",
+      answer: "Allianz Arena",
+      title: "Adivina el estadio",
+      subtitle: "Alemania",
+      clues: ["Su fachada se ilumina", "Casa del Bayern Munich", "Esta en Munich"]
+    },
+    {
+      id: "old-trafford",
+      type: "estadio",
+      answer: "Old Trafford",
+      title: "Adivina el estadio",
+      subtitle: "Inglaterra",
+      clues: ["Conocido como el Teatro de los Suenos", "Casa del Manchester United", "Esta en Greater Manchester"]
+    },
+    {
+      id: "pele",
+      type: "jugador",
+      answer: "Pele",
+      title: "Adivina el jugador",
+      subtitle: "Brasil",
+      clues: ["Gano tres Mundiales", "Debuto mundialista con 17 anos", "Es una leyenda del Santos"]
+    },
+    {
+      id: "beckenbauer",
+      type: "jugador",
+      answer: "Franz Beckenbauer",
+      title: "Adivina el jugador",
+      subtitle: "Alemania",
+      clues: ["Fue campeon como jugador y entrenador", "Lo llamaban el Kaiser", "Defensor elegante"]
+    },
+    {
+      id: "cruyff",
+      type: "jugador",
+      answer: "Johan Cruyff",
+      title: "Adivina el jugador",
+      subtitle: "Paises Bajos",
+      clues: ["Simbolo de la Naranja Mecanica", "Uso la 14", "Influyo en Ajax y Barcelona"]
+    },
+    {
+      id: "zidane",
+      type: "jugador",
+      answer: "Zinedine Zidane",
+      title: "Adivina el jugador",
+      subtitle: "Francia",
+      clues: ["Campeon mundial en 1998", "Uso la 10", "Marco dos goles de cabeza en una final"]
+    },
+    {
+      id: "marta",
+      type: "jugadora",
+      answer: "Marta",
+      title: "Adivina la jugadora",
+      subtitle: "Brasil",
+      clues: ["Leyenda del futbol femenino", "Zurda brasileña", "Multiple ganadora del premio FIFA"]
+    },
+    {
+      id: "la-mano-de-dios",
+      type: "frase",
+      answer: "La mano de Dios",
+      title: "Adivina la frase",
+      subtitle: "Mundial 1986",
+      clues: ["Nacio en Mexico", "Esta ligada a Argentina-Inglaterra", "La dijo Diego Maradona"]
+    },
+    {
+      id: "tiki-taka",
+      type: "concepto",
+      answer: "Tiki taka",
+      title: "Adivina el concepto",
+      subtitle: "Espana",
+      clues: ["Asociado a posesion y pases cortos", "Marco una epoca en Barcelona y Espana", "Fue clave en 2010"]
+    }
+  ]
+};
+
 const MIME = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
+  ".json": "application/manifest+json; charset=utf-8",
   ".md": "text/markdown; charset=utf-8",
   ".png": "image/png",
   ".webp": "image/webp"
 };
+
+const LALIGA_2025_26_TEAMS = [
+  "Athletic Club",
+  "Atletico de Madrid",
+  "CA Osasuna",
+  "Celta",
+  "Deportivo Alaves",
+  "Elche CF",
+  "FC Barcelona",
+  "Getafe CF",
+  "Girona FC",
+  "Levante UD",
+  "Rayo Vallecano",
+  "RCD Espanyol de Barcelona",
+  "RCD Mallorca",
+  "Real Betis",
+  "Real Madrid",
+  "Real Oviedo",
+  "Real Sociedad",
+  "Sevilla FC",
+  "Valencia CF",
+  "Villarreal CF"
+];
+
+function minutesFromNow(minutes) {
+  return new Date(Date.now() + minutes * 60000).toISOString();
+}
+
+function fixture(id, home, away, startsAt, round = "Fecha") {
+  return { id, home, away, startsAt, round };
+}
+
+function laligaTimingLabFixtures() {
+  return [
+    fixture("c1", "Real Madrid", "FC Barcelona", minutesFromNow(180), "Lab - abierto"),
+    fixture("c2", "Atletico de Madrid", "Sevilla FC", minutesFromNow(45), "Lab - cerca del cierre"),
+    fixture("c3", "Real Betis", "Valencia CF", minutesFromNow(-120), "Lab - bloqueado"),
+    fixture("c4", "Villarreal CF", "Athletic Club", minutesFromNow(-300), "Lab - resultado reciente"),
+    fixture("c5", "Real Sociedad", "Celta", minutesFromNow(-1500), "Lab - puntuable"),
+    fixture("c6", "Girona FC", "RCD Mallorca", minutesFromNow(1440), "Lab - manana")
+  ];
+}
+
+const ARGENTINA_2026_ZONES = {
+  A: [
+    "Platense",
+    "Defensa y Justicia",
+    "Central Cordoba",
+    "Lanus",
+    "Deportivo Riestra",
+    "Talleres",
+    "Boca Juniors",
+    "Estudiantes",
+    "Instituto",
+    "Gimnasia Mendoza",
+    "San Lorenzo",
+    "Independiente",
+    "Newell's",
+    "Union",
+    "Velez"
+  ],
+  B: [
+    "Argentinos Juniors",
+    "Aldosivi",
+    "Atletico Tucuman",
+    "Banfield",
+    "Barracas Central",
+    "Belgrano",
+    "River Plate",
+    "Gimnasia La Plata",
+    "Estudiantes de Rio Cuarto",
+    "Independiente Rivadavia",
+    "Huracan",
+    "Racing",
+    "Rosario Central",
+    "Sarmiento",
+    "Tigre"
+  ]
+};
+
+const ARGENTINA_2026_INTERZONAL = [
+  ["Velez", "River Plate"],
+  ["Barracas Central", "Platense"],
+  ["Talleres", "Rosario Central"],
+  ["Sarmiento", "Estudiantes"],
+  ["Defensa y Justicia", "Belgrano"],
+  ["Argentinos Juniors", "Lanus"],
+  ["Boca Juniors", "Racing"],
+  ["Independiente Rivadavia", "Independiente"],
+  ["Union", "Aldosivi"],
+  ["Atletico Tucuman", "Instituto"],
+  ["San Lorenzo", "Estudiantes de Rio Cuarto"],
+  ["Gimnasia La Plata", "Gimnasia Mendoza"],
+  ["Central Cordoba", "Tigre"],
+  ["Huracan", "Deportivo Riestra"],
+  ["Newell's", "Banfield"]
+];
+
+const ARGENTINA_2026_CLASSICS = [
+  ["Boca Juniors", "River Plate"],
+  ["Independiente", "Racing"],
+  ["Huracan", "San Lorenzo"],
+  ["Newell's", "Rosario Central"],
+  ["Estudiantes", "Gimnasia La Plata"],
+  ["Gimnasia Mendoza", "Independiente Rivadavia"],
+  ["Banfield", "Lanus"],
+  ["Belgrano", "Talleres"],
+  ["Argentinos Juniors", "Platense"],
+  ["Tigre", "Velez"],
+  ["Estudiantes de Rio Cuarto", "Instituto"],
+  ["Atletico Tucuman", "Central Cordoba"],
+  ["Sarmiento", "Union"],
+  ["Barracas Central", "Deportivo Riestra"],
+  ["Aldosivi", "Defensa y Justicia"]
+];
+
+function zonalRoundRobinFixtures(zoneId, teams) {
+  const rotation = teams.length % 2 === 0 ? [...teams] : [...teams, ""];
+  const rounds = rotation.length - 1;
+  const half = rotation.length / 2;
+  const fixtures = [];
+  for (let round = 0; round < rounds; round += 1) {
+    for (let i = 0; i < half; i += 1) {
+      const home = rotation[i];
+      const away = rotation[rotation.length - 1 - i];
+      if (home && away) {
+        const swap = round % 2 === 1;
+        fixtures.push(fixture(
+          `arg-${zoneId.toLowerCase()}-${round + 1}-${i + 1}`,
+          swap ? away : home,
+          swap ? home : away,
+          "",
+          `Zona ${zoneId} - Fecha ${round + 1}`
+        ));
+      }
+    }
+    rotation.splice(1, 0, rotation.pop());
+  }
+  return fixtures;
+}
+
+function argentina2026Fixtures() {
+  const zonal = [
+    ...zonalRoundRobinFixtures("A", ARGENTINA_2026_ZONES.A),
+    ...zonalRoundRobinFixtures("B", ARGENTINA_2026_ZONES.B)
+  ];
+  const interzonal = ARGENTINA_2026_INTERZONAL.map(([home, away], index) => fixture(
+    `arg-interzonal-${index + 1}`,
+    home,
+    away,
+    "",
+    "Fecha Interzonal"
+  ));
+  const classics = ARGENTINA_2026_CLASSICS.map(([home, away], index) => fixture(
+    `arg-clasicos-${index + 1}`,
+    home,
+    away,
+    "",
+    "Fecha Clasicos"
+  ));
+  return [...zonal, ...classics, ...interzonal];
+}
 
 const TOURNAMENT_TEMPLATES = [
   { id: "worldcup-2026", name: "Mundial 2026", mode: "groups-knockout", teams: [] },
   { id: "champions", name: "Champions League", mode: "fixture", teams: ["Real Madrid", "Barcelona", "Manchester City", "Liverpool", "Bayern Munich", "PSG", "Inter", "Arsenal", "Atletico Madrid", "Borussia Dortmund", "Juventus", "Benfica", "Porto", "Napoli", "Bayer Leverkusen", "Chelsea"] },
   { id: "libertadores", name: "Copa Libertadores", mode: "groups-knockout", teams: ["River Plate", "Boca Juniors", "Flamengo", "Palmeiras", "Sao Paulo", "Fluminense", "Gremio", "Atletico Mineiro", "Nacional", "Penarol", "Colo-Colo", "Universidad de Chile", "Olimpia", "Cerro Porteno", "Liga de Quito", "Independiente del Valle"] },
   { id: "sudamericana", name: "Copa Sudamericana", mode: "groups-knockout", teams: ["Lanus", "Defensa y Justicia", "Racing", "Independiente", "Corinthians", "Cruzeiro", "Internacional", "Fortaleza", "Universidad Catolica", "Emelec", "Barcelona SC", "America de Cali", "Junior", "Sporting Cristal", "Bolivar", "The Strongest"] },
-  { id: "argentina", name: "Liga Argentina", mode: "league", teams: ["River Plate", "Boca Juniors", "Racing", "Independiente", "San Lorenzo", "Huracan", "Velez", "Estudiantes", "Gimnasia", "Lanus", "Banfield", "Rosario Central", "Newell's", "Talleres", "Belgrano", "Godoy Cruz"] },
+  {
+    id: "argentina",
+    name: "Liga Profesional Argentina 2026",
+    mode: "league",
+    teams: [...ARGENTINA_2026_ZONES.A, ...ARGENTINA_2026_ZONES.B],
+    fixtures: argentina2026Fixtures()
+  },
   { id: "premier", name: "Premier League", mode: "league", teams: ["Arsenal", "Aston Villa", "Chelsea", "Liverpool", "Manchester City", "Manchester United", "Newcastle", "Tottenham", "Everton", "West Ham", "Brighton", "Crystal Palace", "Fulham", "Brentford", "Wolves", "Nottingham Forest"] },
-  { id: "laliga", name: "LaLiga", mode: "league", teams: ["Real Madrid", "Barcelona", "Atletico Madrid", "Athletic Club", "Real Sociedad", "Villarreal", "Betis", "Sevilla", "Valencia", "Celta", "Osasuna", "Getafe", "Mallorca", "Girona", "Espanyol", "Rayo Vallecano"] },
+  {
+    id: "laliga-2025-26",
+    name: "LaLiga EA Sports 2025/26",
+    mode: "league",
+    teams: LALIGA_2025_26_TEAMS,
+    timing: {
+      predictionLockMinutesBefore: 60,
+      scoringDelayMinutesAfterResult: 120
+    },
+    fixtures: [
+      fixture("c1", "Real Sociedad", "Real Betis", "2026-05-16T16:00:00+02:00", "Fecha 37"),
+      fixture("c2", "FC Barcelona", "Villarreal CF", "2026-05-16T18:30:00+02:00", "Fecha 37"),
+      fixture("c3", "Valencia CF", "Athletic Club", "2026-05-16T21:00:00+02:00", "Fecha 37"),
+      fixture("c4", "Real Madrid", "RCD Mallorca", "2026-05-17T16:00:00+02:00", "Fecha 37"),
+      fixture("c5", "Atletico de Madrid", "Real Sociedad", "2026-05-24T18:30:00+02:00", "Fecha 38"),
+      fixture("c6", "Athletic Club", "FC Barcelona", "2026-05-24T18:30:00+02:00", "Fecha 38"),
+      fixture("c7", "Villarreal CF", "Sevilla FC", "2026-05-24T18:30:00+02:00", "Fecha 38"),
+      fixture("c8", "Real Betis", "Valencia CF", "2026-05-24T18:30:00+02:00", "Fecha 38")
+    ]
+  },
+  {
+    id: "laliga-timing-lab",
+    name: "LaLiga Timing Lab",
+    mode: "league",
+    teams: LALIGA_2025_26_TEAMS,
+    timing: {
+      predictionLockMinutesBefore: 60,
+      scoringDelayMinutesAfterResult: 180
+    },
+    fixtures: laligaTimingLabFixtures()
+  },
+  { id: "laliga", name: "LaLiga clasica", mode: "league", teams: LALIGA_2025_26_TEAMS },
   { id: "serie-a", name: "Serie A", mode: "league", teams: ["Inter", "Milan", "Juventus", "Napoli", "Roma", "Lazio", "Atalanta", "Fiorentina", "Bologna", "Torino", "Genoa", "Udinese", "Sassuolo", "Cagliari", "Parma", "Verona"] },
   { id: "bundesliga", name: "Bundesliga", mode: "league", teams: ["Bayern Munich", "Borussia Dortmund", "Bayer Leverkusen", "RB Leipzig", "Eintracht Frankfurt", "Stuttgart", "Wolfsburg", "Werder Bremen", "Freiburg", "Mainz", "Augsburg", "Hoffenheim", "Union Berlin", "Koln", "Hamburg", "Borussia Monchengladbach"] },
   { id: "ligue-1", name: "Ligue 1", mode: "league", teams: ["PSG", "Marseille", "Lyon", "Monaco", "Lille", "Lens", "Rennes", "Nice", "Strasbourg", "Nantes", "Toulouse", "Montpellier", "Brest", "Reims", "Auxerre", "Angers"] },
@@ -137,22 +542,22 @@ const DEFAULT_SCORING = {
 };
 
 const DEFAULT_PHASES = [
-  { id: "all", name: "Prode completo", type: "all", description: "Permite cargar grupos y todos los cruces." },
-  { id: "group1", name: "Fecha 1 - Grupos", type: "groups", groupMatchday: 1, description: "Carga solo los primeros enfrentamientos de cada grupo." },
-  { id: "group2", name: "Fecha 2 - Grupos", type: "groups", groupMatchday: 2, description: "Carga solo la segunda fecha de la fase de grupos." },
-  { id: "group3", name: "Fecha 3 - Grupos", type: "groups", groupMatchday: 3, description: "Carga solo la tercera fecha de la fase de grupos." },
-  { id: "r32", name: "16avos", type: "matches", matchIds: ["m73", "m74", "m75", "m76", "m77", "m78", "m79", "m80", "m81", "m82", "m83", "m84", "m85", "m86", "m87", "m88"], description: "Cruces de 16avos usando los clasificados reales si ya fueron cargados." },
-  { id: "r16", name: "8avos", type: "matches", matchIds: ["m89", "m90", "m91", "m92", "m93", "m94", "m95", "m96"], description: "Cruces de octavos." },
-  { id: "qf", name: "4tos", type: "matches", matchIds: ["m97", "m98", "m99", "m100"], description: "Cruces de cuartos." },
-  { id: "sf", name: "Semis", type: "matches", matchIds: ["m101", "m102"], description: "Semifinales." },
-  { id: "third", name: "3er puesto", type: "matches", matchIds: ["m103"], description: "Partido por el tercer puesto." },
-  { id: "final", name: "Final", type: "matches", matchIds: ["m104"], description: "Final y campeon." }
+  { id: "all", name: "Prode completo", type: "all" },
+  { id: "group1", name: "Fecha 1 - Grupos", type: "groups", groupMatchday: 1 },
+  { id: "group2", name: "Fecha 2 - Grupos", type: "groups", groupMatchday: 2 },
+  { id: "group3", name: "Fecha 3 - Grupos", type: "groups", groupMatchday: 3 },
+  { id: "r32", name: "16avos", type: "matches", matchIds: ["m73", "m74", "m75", "m76", "m77", "m78", "m79", "m80", "m81", "m82", "m83", "m84", "m85", "m86", "m87", "m88"] },
+  { id: "r16", name: "8avos", type: "matches", matchIds: ["m89", "m90", "m91", "m92", "m93", "m94", "m95", "m96"] },
+  { id: "qf", name: "4tos", type: "matches", matchIds: ["m97", "m98", "m99", "m100"] },
+  { id: "sf", name: "Semis", type: "matches", matchIds: ["m101", "m102"] },
+  { id: "third", name: "3er puesto", type: "matches", matchIds: ["m103"] },
+  { id: "final", name: "Final", type: "matches", matchIds: ["m104"] }
 ];
 
 const GROUP_MATCHDAY_FIXTURES = {
-  group1: [[0, 1], [2, 3]],
-  group2: [[0, 2], [1, 3]],
-  group3: [[0, 3], [1, 2]]
+  group1: ["A-0-2", "A-1-3", "B-0-3", "D-0-1", "B-2-1", "C-0-1", "C-3-2", "D-2-3", "E-0-3", "F-0-1", "E-2-1", "F-3-2", "H-0-3", "G-0-2", "H-2-1", "G-1-3", "I-0-1", "I-3-2", "J-0-2", "J-1-3", "K-0-3", "L-0-1", "L-2-3", "K-2-1"],
+  group2: ["A-3-2", "B-1-3", "B-0-2", "A-0-1", "D-0-2", "C-2-1", "C-0-3", "D-3-1", "F-0-3", "E-0-2", "E-1-3", "F-2-1", "H-0-2", "G-0-1", "H-1-3", "G-3-2", "J-0-1", "I-0-3", "I-2-1", "J-3-2", "K-0-2", "L-0-2", "L-3-1", "K-1-3"],
+  group3: ["B-1-0", "B-3-2", "C-2-0", "C-1-3", "A-3-0", "A-2-1", "E-3-2", "E-1-0", "F-1-3", "F-2-0", "D-3-0", "D-1-2", "I-2-0", "I-1-3", "H-3-2", "H-1-0", "G-2-1", "G-3-0", "L-3-0", "L-1-2", "K-1-0", "K-3-2", "J-2-1", "J-3-0"]
 };
 
 const WORLD_CUP_GROUP_KEYS = "ABCDEFGHIJKL".split("");
@@ -162,18 +567,27 @@ function groupMatchId(group, firstIndex, secondIndex) {
 }
 
 function groupMatchIdsForPhase(phaseId) {
-  const pairs = GROUP_MATCHDAY_FIXTURES[phaseId];
-  if (!pairs) return [];
-  return WORLD_CUP_GROUP_KEYS.flatMap(group => pairs.map(([firstIndex, secondIndex]) => groupMatchId(group, firstIndex, secondIndex)));
+  const list = GROUP_MATCHDAY_FIXTURES[phaseId];
+  return Array.isArray(list) ? list : [];
 }
 
 function send(res, status, body, type = "application/json; charset=utf-8") {
-  res.writeHead(status, { "Content-Type": type });
+  res.writeHead(status, {
+    "Content-Type": type,
+    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0"
+  });
   res.end(body);
 }
 
 function emptyStore() {
   return {
+    users: {},
+    globalSessions: {},
+    tournamentAccess: {},
+    globalGames: JSON.parse(JSON.stringify(DEFAULT_DAILY_GAMES)),
+    globalGamePlays: {},
     tournaments: [
       {
         id: "global",
@@ -194,11 +608,44 @@ function emptyStore() {
 
 function tenantFromValue(value) {
   const id = slug(value);
-  return TENANTS[id] || null;
+  if (TENANTS[id]) return TENANTS[id];
+  try {
+    if (!fs.existsSync(STORE_FILE)) return null;
+    const store = JSON.parse(fs.readFileSync(STORE_FILE, "utf8"));
+    const tenantData = store.tenants?.[id];
+    if (!tenantData || tenantData.dynamic !== true) return null;
+    registerDynamicTenant(id, tenantData);
+    return TENANTS[id] || null;
+  } catch {
+    return null;
+  }
 }
 
 function tenantTournamentId(tenantId) {
   return `empresa-${tenantId}`;
+}
+
+function tenantFromStoredData(id, tenantData = {}) {
+  return {
+    id,
+    name: tenantData.displayName || tenantData.name || id,
+    eyebrow: tenantData.eyebrow || "Prode corporativo",
+    title: tenantData.title || `Prode ${tenantData.displayName || tenantData.name || id}`,
+    description: tenantData.description || `Predicciones y ranking exclusivo para ${tenantData.displayName || tenantData.name || id}.`,
+    areas: Array.isArray(tenantData.areas) ? tenantData.areas : [],
+    theme: tenantData.baseTheme || tenantData.theme || {}
+  };
+}
+
+function registerDynamicTenant(id, tenantData = {}) {
+  if (!id || TENANTS[id]) return;
+  TENANTS[id] = tenantFromStoredData(id, tenantData);
+}
+
+function registerDynamicTenants(store) {
+  Object.entries(store.tenants || {}).forEach(([id, tenantData]) => {
+    if (tenantData?.dynamic === true) registerDynamicTenant(id, tenantData);
+  });
 }
 
 function paymentSettings(tournament) {
@@ -237,6 +684,9 @@ function paymentAllowsFirstSubmission(tournament, email) {
 
 function ensureTenantTournaments(store) {
   if (!store.tenants || typeof store.tenants !== "object") store.tenants = {};
+  const globalTournament = store.tournaments.find(t => t.id === "global");
+  const globalReal = globalTournament?.realResults || null;
+  const globalRealUpdatedAt = globalTournament?.realResultsUpdatedAt || null;
   Object.values(TENANTS).forEach(tenant => {
     const previous = store.tenants[tenant.id] && typeof store.tenants[tenant.id] === "object" ? store.tenants[tenant.id] : {};
     const existingAreas = Array.isArray(previous.areas) ? previous.areas : [];
@@ -247,7 +697,10 @@ function ensureTenantTournaments(store) {
       name: tenant.name,
       areas: [...new Set([...baseAreas, ...existingAreas].map(normalizeAreaName).filter(Boolean))],
       users: previous.users && typeof previous.users === "object" ? previous.users : {},
-      sessions: previous.sessions && typeof previous.sessions === "object" ? previous.sessions : {}
+      sessions: previous.sessions && typeof previous.sessions === "object" ? previous.sessions : {},
+      theme: previous.theme && typeof previous.theme === "object" ? previous.theme : {},
+      games: previous.games && typeof previous.games === "object" ? previous.games : {},
+      gamePlays: previous.gamePlays && typeof previous.gamePlays === "object" ? previous.gamePlays : {}
     };
     const existing = store.tournaments.find(tournament => tournament.id === tenantTournamentId(tenant.id));
     if (existing) {
@@ -261,6 +714,8 @@ function ensureTenantTournaments(store) {
       if (!Array.isArray(existing.submissions)) existing.submissions = [];
       if (tenant.payment && !existing.payment) existing.payment = tenant.payment;
       if (!existing.payments || typeof existing.payments !== "object") existing.payments = {};
+      existing.realResults = globalReal;
+      existing.realResultsUpdatedAt = globalRealUpdatedAt;
     } else {
       store.tournaments.push({
         id: tenantTournamentId(tenant.id),
@@ -269,7 +724,8 @@ function ensureTenantTournaments(store) {
         tenantId: tenant.id,
         isGlobal: false,
         createdAt: new Date().toISOString(),
-        realResults: null,
+        realResults: globalReal,
+        realResultsUpdatedAt: globalRealUpdatedAt,
         templateId: "worldcup-2026",
         mode: "groups-knockout",
         scoring: DEFAULT_SCORING,
@@ -284,165 +740,221 @@ function ensureTenantTournaments(store) {
 function tenantStore(store, tenantId) {
   if (!store.tenants || typeof store.tenants !== "object") store.tenants = {};
   if (!store.tenants[tenantId]) {
-    store.tenants[tenantId] = { id: tenantId, name: TENANTS[tenantId]?.name || tenantId, areas: [], users: {}, sessions: {} };
+    store.tenants[tenantId] = { id: tenantId, name: TENANTS[tenantId]?.name || tenantId, areas: [], users: {}, sessions: {}, theme: {}, games: {}, gamePlays: {} };
   }
   const tenantData = store.tenants[tenantId];
   if (!Array.isArray(tenantData.areas)) tenantData.areas = [];
   if (!tenantData.users || typeof tenantData.users !== "object") tenantData.users = {};
   if (!tenantData.sessions || typeof tenantData.sessions !== "object") tenantData.sessions = {};
+  if (!tenantData.theme || typeof tenantData.theme !== "object") tenantData.theme = {};
+  if (!tenantData.games || typeof tenantData.games !== "object") tenantData.games = {};
+  if (!tenantData.gamePlays || typeof tenantData.gamePlays !== "object") tenantData.gamePlays = {};
   return tenantData;
 }
+function toMysqlDate(value) {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 19).replace("T", " ");
+}
 
+async function getMysqlConnection() {
+  const dbName = String(DB_CONFIG.database || "").replace(/[^a-zA-Z0-9_]/g, "");
+  if (!dbName) throw new Error("DB_NAME is invalid");
+  const rootDb = await mysql.createConnection({
+    host: DB_CONFIG.host,
+    user: DB_CONFIG.user,
+    password: DB_CONFIG.password,
+    port: DB_CONFIG.port,
+    multipleStatements: false
+  });
+  await rootDb.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+  await rootDb.end();
+  const db = await mysql.createConnection({ ...DB_CONFIG, database: dbName });
+  await ensureMysqlSchema(db);
+  return db;
+}
+
+async function ensureMysqlSchema(db) {
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS tournaments (
+      id VARCHAR(120) PRIMARY KEY,
+      name VARCHAR(160) NOT NULL,
+      code VARCHAR(80),
+      is_global BOOLEAN NOT NULL DEFAULT FALSE,
+      creator_email VARCHAR(190),
+      creator_key VARCHAR(120),
+      template_id VARCHAR(80),
+      mode VARCHAR(80),
+      custom_template JSON,
+      scoring JSON,
+      real_results JSON,
+      real_results_updated_at DATETIME NULL,
+      created_at DATETIME NULL,
+      raw_json JSON,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+  `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS submissions (
+      id VARCHAR(160) PRIMARY KEY,
+      tournament_id VARCHAR(120) NOT NULL,
+      player JSON,
+      prediction JSON,
+      created_at DATETIME NULL,
+      raw_json JSON,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_submissions_tournament (tournament_id)
+    )
+  `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS users (
+      email VARCHAR(190) PRIMARY KEY,
+      name VARCHAR(160),
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      raw_json JSON,
+      created_at DATETIME NULL,
+      updated_at DATETIME NULL
+    )
+  `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS tournament_access (
+      user_email VARCHAR(190) NOT NULL,
+      tournament_id VARCHAR(120) NOT NULL,
+      granted_at DATETIME NULL,
+      granted_by_password BOOLEAN NOT NULL DEFAULT TRUE,
+      raw_json JSON,
+      PRIMARY KEY (user_email, tournament_id)
+    )
+  `);
+}
+
+async function syncStoreToMysql(store) {
+  const db = await getMysqlConnection();
+
+  try {
+    const tournaments = store.tournaments || [];
+
+    for (const t of tournaments) {
+      await db.execute(
+        `INSERT INTO tournaments
+        (id, name, code, is_global, creator_email, creator_key, template_id, mode,
+         custom_template, scoring, real_results, real_results_updated_at, created_at, raw_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS JSON), CAST(? AS JSON), CAST(? AS JSON), ?, ?, CAST(? AS JSON))
+         ON DUPLICATE KEY UPDATE
+         name=VALUES(name),
+         code=VALUES(code),
+         is_global=VALUES(is_global),
+         creator_email=VALUES(creator_email),
+         creator_key=VALUES(creator_key),
+         template_id=VALUES(template_id),
+         mode=VALUES(mode),
+         custom_template=VALUES(custom_template),
+         scoring=VALUES(scoring),
+         real_results=VALUES(real_results),
+         real_results_updated_at=VALUES(real_results_updated_at),
+         created_at=VALUES(created_at),
+         raw_json=VALUES(raw_json)`,
+        [
+          t.id,
+          t.name || "Sin nombre",
+          t.code || null,
+          Boolean(t.isGlobal),
+          t.creatorEmail || null,
+          t.creatorKey || null,
+          t.templateId || null,
+          t.mode || null,
+          JSON.stringify(t.customTemplate ?? null),
+          JSON.stringify(t.scoring ?? null),
+          JSON.stringify(t.realResults ?? null),
+          toMysqlDate(t.realResultsUpdatedAt),
+          toMysqlDate(t.createdAt),
+          JSON.stringify(t),
+        ]
+      );
+
+      for (const s of t.submissions || []) {
+        await db.execute(
+          `INSERT INTO submissions
+          (id, tournament_id, player, prediction, created_at, raw_json)
+          VALUES (?, ?, CAST(? AS JSON), CAST(? AS JSON), ?, CAST(? AS JSON))
+          ON DUPLICATE KEY UPDATE
+          player=VALUES(player),
+          prediction=VALUES(prediction),
+          created_at=VALUES(created_at),
+          raw_json=VALUES(raw_json)`,
+          [
+            s.id,
+            t.id,
+            JSON.stringify(s.player || {}),
+            JSON.stringify(s.prediction || {}),
+            toMysqlDate(s.createdAt),
+            JSON.stringify(s),
+          ]
+        );
+      }
+    }
+    for (const [email, user] of Object.entries(store.users || {})) {
+      await db.execute(
+        `INSERT INTO users
+        (email, name, active, raw_json, created_at, updated_at)
+        VALUES (?, ?, ?, CAST(? AS JSON), ?, ?)
+        ON DUPLICATE KEY UPDATE
+        name=VALUES(name),
+        active=VALUES(active),
+        raw_json=VALUES(raw_json),
+        created_at=VALUES(created_at),
+        updated_at=VALUES(updated_at)`,
+        [
+          normalizeEmail(user.email || email),
+          user.name || "",
+          user.active !== false,
+          JSON.stringify(user),
+          toMysqlDate(user.createdAt),
+          toMysqlDate(user.updatedAt)
+        ]
+      );
+    }
+    for (const [email, accessByTournament] of Object.entries(store.tournamentAccess || {})) {
+      for (const [tournamentId, access] of Object.entries(accessByTournament || {})) {
+        await db.execute(
+          `INSERT INTO tournament_access
+          (user_email, tournament_id, granted_at, granted_by_password, raw_json)
+          VALUES (?, ?, ?, ?, CAST(? AS JSON))
+          ON DUPLICATE KEY UPDATE
+          granted_at=VALUES(granted_at),
+          granted_by_password=VALUES(granted_by_password),
+          raw_json=VALUES(raw_json)`,
+          [
+            normalizeEmail(email),
+            tournamentId,
+            toMysqlDate(access.grantedAt),
+            access.grantedByPassword !== false,
+            JSON.stringify(access)
+          ]
+        );
+      }
+    }
+  } finally {
+    await db.end();
+  }
+}
 function ensureDataDir() {
   fs.mkdirSync(path.dirname(STORE_FILE), { recursive: true });
 }
 
-function sqlIdentifier(name) {
-  return `\`${String(name).replace(/`/g, "``")}\``;
-}
-
-function sqlTable(name) {
-  return sqlIdentifier(SQL_TABLE_PREFIX ? `${SQL_TABLE_PREFIX}_${name}` : name);
-}
-
-function mysqlConfig() {
-  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
-  return {
-    host: process.env.DB_HOST || process.env.MYSQL_HOST || "localhost",
-    port: Number(process.env.DB_PORT || process.env.MYSQL_PORT || 3306),
-    user: process.env.DB_USER || process.env.MYSQL_USER || "root",
-    password: process.env.DB_PASSWORD || process.env.MYSQL_PASSWORD || "",
-    database: process.env.DB_NAME || process.env.MYSQL_DATABASE || "prodemundial",
-    waitForConnections: true,
-    connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 10),
-    charset: "utf8mb4"
-  };
-}
-
-let sqlPool = null;
-let sqlSchemaReady = false;
-
-function getSqlPool() {
-  if (!SQL_ENABLED) return null;
-  if (!sqlPool) {
-    let mysql;
-    try {
-      mysql = require("mysql2/promise");
-    } catch (error) {
-      throw new Error("SQL is enabled but mysql2 is not installed. Run: npm install mysql2");
-    }
-    sqlPool = mysql.createPool(mysqlConfig());
-  }
-  return sqlPool;
-}
-
-async function ensureSqlSchema() {
-  if (!SQL_ENABLED || sqlSchemaReady) return;
-  const pool = getSqlPool();
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS ${sqlTable("tournaments")} (
-      id VARCHAR(120) NOT NULL PRIMARY KEY,
-      name VARCHAR(255) NOT NULL,
-      code VARCHAR(60) NULL UNIQUE,
-      is_global TINYINT(1) NULL DEFAULT 0,
-      creator_email VARCHAR(255) NULL,
-      creator_key VARCHAR(255) NULL,
-      template_id VARCHAR(120) NULL,
-      mode VARCHAR(80) NULL,
-      custom_template JSON NULL,
-      scoring JSON NULL,
-      real_results JSON NULL,
-      real_results_updated_at DATETIME NULL,
-      created_at DATETIME NULL,
-      raw_json JSON NULL,
-      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
-  `);
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS ${sqlTable("submissions")} (
-      id VARCHAR(160) NOT NULL PRIMARY KEY,
-      tournament_id VARCHAR(120) NOT NULL,
-      player JSON NOT NULL,
-      prediction JSON NOT NULL,
-      created_at DATETIME NULL,
-      raw_json JSON NULL,
-      INDEX (tournament_id)
-    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
-  `);
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS ${sqlTable("tenants")} (
-      id VARCHAR(120) NOT NULL PRIMARY KEY,
-      data JSON NOT NULL,
-      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
-  `);
-  sqlSchemaReady = true;
-}
-
-function parseSqlJson(value, fallback) {
-  if (value === null || value === undefined) return fallback;
-  if (typeof value === "object") return value;
-  try {
-    return JSON.parse(String(value));
-  } catch {
-    return fallback;
-  }
-}
-
-function sqlDate(value) {
-  if (!value) return null;
-  const date = value instanceof Date ? value : new Date(value);
-  if (!Number.isFinite(date.getTime())) return null;
-  return date.toISOString().slice(0, 19).replace("T", " ");
-}
-
-function isoDate(value) {
-  if (!value) return "";
-  const date = value instanceof Date ? value : new Date(value);
-  return Number.isFinite(date.getTime()) ? date.toISOString() : String(value);
-}
-
-function jsonForSql(value) {
-  return value === undefined ? null : JSON.stringify(value);
-}
-
-function tournamentFromSqlRow(row, submissions = []) {
-  const raw = parseSqlJson(row.raw_json, {});
-  return {
-    ...raw,
-    id: row.id,
-    name: row.name,
-    code: row.code || raw.code || "",
-    isGlobal: Boolean(row.is_global),
-    creatorEmail: row.creator_email || raw.creatorEmail || "",
-    creatorKey: row.creator_key || raw.creatorKey || "",
-    templateId: row.template_id || raw.templateId || "worldcup-2026",
-    mode: row.mode || raw.mode || "groups-knockout",
-    customTemplate: parseSqlJson(row.custom_template, raw.customTemplate || null),
-    scoring: parseSqlJson(row.scoring, raw.scoring || DEFAULT_SCORING),
-    realResults: parseSqlJson(row.real_results, raw.realResults || null),
-    realResultsUpdatedAt: isoDate(row.real_results_updated_at || raw.realResultsUpdatedAt),
-    createdAt: isoDate(row.created_at || raw.createdAt || new Date()),
-    submissions
-  };
-}
-
-function submissionFromSqlRow(row) {
-  const raw = parseSqlJson(row.raw_json, {});
-  return {
-    ...raw,
-    id: row.id,
-    createdAt: isoDate(row.created_at || raw.createdAt || new Date()),
-    player: parseSqlJson(row.player, raw.player || {}),
-    prediction: parseSqlJson(row.prediction, raw.prediction || {})
-  };
-}
-
-function readJsonStore() {
+function readStore() {
   ensureDataDir();
   try {
     const store = JSON.parse(fs.readFileSync(STORE_FILE, "utf8"));
     if (!Array.isArray(store.tournaments)) return emptyStore();
+    if (!store.users || typeof store.users !== "object") store.users = {};
+    if (!store.globalSessions || typeof store.globalSessions !== "object") store.globalSessions = {};
+    if (!store.passwordResets || typeof store.passwordResets !== "object") store.passwordResets = {};
+    if (!store.tournamentAccess || typeof store.tournamentAccess !== "object") store.tournamentAccess = {};
+    if (!store.globalGames || typeof store.globalGames !== "object") store.globalGames = JSON.parse(JSON.stringify(DEFAULT_DAILY_GAMES));
+    if (!store.globalGamePlays || typeof store.globalGamePlays !== "object") store.globalGamePlays = {};
+    registerDynamicTenants(store);
     if (!store.tournaments.some(tournament => tournament.id === "global")) {
       store.tournaments.unshift(emptyStore().tournaments[0]);
     }
@@ -450,144 +962,26 @@ function readJsonStore() {
     return store;
   } catch {
     const store = emptyStore();
+    registerDynamicTenants(store);
     ensureTenantTournaments(store);
-    writeJsonStore(store);
+    writeStore(store);
     return store;
   }
 }
 
-function writeJsonStore(store) {
+function writeStore(store) {
   ensureDataDir();
   fs.writeFileSync(STORE_FILE, JSON.stringify(store, null, 2));
-}
-
-async function readSqlStore() {
-  await ensureSqlSchema();
-  const pool = getSqlPool();
-  const [tournamentRows] = await pool.query(`SELECT * FROM ${sqlTable("tournaments")} ORDER BY id`);
-  const [submissionRows] = await pool.query(`SELECT * FROM ${sqlTable("submissions")} ORDER BY created_at, id`);
-  const [tenantRows] = await pool.query(`SELECT id, data FROM ${sqlTable("tenants")} ORDER BY id`);
-  const submissionsByTournament = new Map();
-  submissionRows.forEach(row => {
-    const submission = submissionFromSqlRow(row);
-    const list = submissionsByTournament.get(row.tournament_id) || [];
-    list.push(submission);
-    submissionsByTournament.set(row.tournament_id, list);
+  syncStoreToMysql(store).catch((err) => {
+    console.error("Error sincronizando store a MySQL:", err);
   });
-  const store = {
-    tournaments: tournamentRows.map(row => tournamentFromSqlRow(row, submissionsByTournament.get(row.id) || [])),
-    tenants: {}
-  };
-  tenantRows.forEach(row => {
-    const tenant = parseSqlJson(row.data, null);
-    if (tenant) store.tenants[row.id] = tenant;
-  });
-  if (!store.tournaments.length) {
-    const jsonStore = readJsonStore();
-    await writeSqlStore(jsonStore);
-    return jsonStore;
-  }
-  if (!store.tournaments.some(tournament => tournament.id === "global")) {
-    store.tournaments.unshift(emptyStore().tournaments[0]);
-  }
-  ensureTenantTournaments(store);
-  return store;
-}
-
-async function writeSqlStore(store) {
-  await ensureSqlSchema();
-  const pool = getSqlPool();
-  const connection = await pool.getConnection();
-  try {
-    await connection.beginTransaction();
-    await connection.query(`DELETE FROM ${sqlTable("tenants")}`);
-    await connection.query(`DELETE FROM ${sqlTable("submissions")}`);
-    for (const tournament of store.tournaments || []) {
-      const tournamentRaw = { ...tournament };
-      delete tournamentRaw.submissions;
-      await connection.query(
-        `
-          INSERT INTO ${sqlTable("tournaments")} (
-            id, name, code, is_global, creator_email, creator_key, template_id, mode,
-            custom_template, scoring, real_results, real_results_updated_at, created_at, raw_json
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          ON DUPLICATE KEY UPDATE
-            name = VALUES(name),
-            code = VALUES(code),
-            is_global = VALUES(is_global),
-            creator_email = VALUES(creator_email),
-            creator_key = VALUES(creator_key),
-            template_id = VALUES(template_id),
-            mode = VALUES(mode),
-            custom_template = VALUES(custom_template),
-            scoring = VALUES(scoring),
-            real_results = VALUES(real_results),
-            real_results_updated_at = VALUES(real_results_updated_at),
-            created_at = VALUES(created_at),
-            raw_json = VALUES(raw_json)
-        `,
-        [
-          tournament.id,
-          tournament.name || tournament.id,
-          tournament.code || null,
-          tournament.isGlobal ? 1 : 0,
-          tournament.creatorEmail || null,
-          tournament.creatorKey || null,
-          tournament.templateId || null,
-          tournament.mode || null,
-          jsonForSql(tournament.customTemplate || null),
-          jsonForSql(tournament.scoring || DEFAULT_SCORING),
-          jsonForSql(tournament.realResults || null),
-          sqlDate(tournament.realResultsUpdatedAt || tournament.real_results_updated_at),
-          sqlDate(tournament.createdAt || new Date()),
-          jsonForSql(tournamentRaw)
-        ]
-      );
-      for (const submission of tournament.submissions || []) {
-        await connection.query(
-          `
-            INSERT INTO ${sqlTable("submissions")} (
-              id, tournament_id, player, prediction, created_at, raw_json
-            ) VALUES (?, ?, ?, ?, ?, ?)
-          `,
-          [
-            submission.id,
-            tournament.id,
-            jsonForSql(submission.player || {}),
-            jsonForSql(submission.prediction || {}),
-            sqlDate(submission.createdAt || new Date()),
-            jsonForSql(submission)
-          ]
-        );
-      }
-    }
-    for (const [id, tenant] of Object.entries(store.tenants || {})) {
-      await connection.query(
-        `INSERT INTO ${sqlTable("tenants")} (id, data) VALUES (?, ?)`,
-        [id, JSON.stringify(tenant)]
-      );
-    }
-    await connection.commit();
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
-}
-
-async function readStore() {
-  return SQL_ENABLED ? readSqlStore() : readJsonStore();
-}
-
-async function writeStore(store) {
-  if (SQL_ENABLED) await writeSqlStore(store);
-  else writeJsonStore(store);
 }
 
 function publicTournament(tournament, options = {}) {
   const template = TOURNAMENT_TEMPLATES.find(item => item.id === tournament.templateId) || TOURNAMENT_TEMPLATES[0];
   const payment = paymentSettings(tournament);
+  const compact = Boolean(options.compact);
+  const fixtures = compact ? [] : tournamentFixtures(tournament);
   const data = {
     id: tournament.id,
     name: tournament.name,
@@ -596,11 +990,13 @@ function publicTournament(tournament, options = {}) {
     templateId: tournament.templateId || template.id,
     templateName: template.name,
     mode: tournament.mode || template.mode,
-    teams: tournament.customTemplate?.teams || template.teams || [],
-    customTemplate: tournament.customTemplate || null,
+    teams: compact ? [] : (tournament.customTemplate?.teams || template.teams || []),
+    fixtures,
+    timing: compact ? null : (tournament.customTemplate?.timing || template.timing || { predictionLockMinutesBefore: 0, scoringDelayMinutesAfterResult: 0 }),
+    customTemplate: compact ? null : (tournament.customTemplate || null),
     scoring: tournament.scoring || DEFAULT_SCORING,
     createdAt: tournament.createdAt,
-    realResults: tournament.realResults || null,
+    realResults: compact ? null : (tournament.realResults || null),
     payment: payment.required ? payment : { required: false },
     players: Array.isArray(tournament.submissions) ? tournament.submissions.length : 0
   };
@@ -648,11 +1044,137 @@ function areaId(value) {
   return slug(normalizeAreaName(value));
 }
 
+function safeText(value, max = 100) {
+  return String(value || "").trim().replace(/\s+/g, " ").slice(0, max);
+}
+
+function safeDate(value) {
+  const date = String(value || "").trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : "";
+}
+
+function safeColor(value) {
+  const color = String(value || "").trim();
+  return /^#[0-9a-fA-F]{6}$/.test(color) ? color : "";
+}
+
+function safeImage(value) {
+  const image = String(value || "").trim();
+  if (!image) return "";
+  if (image.startsWith("/") && !image.includes("..")) return image.slice(0, 5000000);
+  if (/^https?:\/\//i.test(image)) return image.slice(0, 5000000);
+  if (/^data:image\/(png|jpe?g|webp|gif);base64,/i.test(image) && image.length < 5000000) return image;
+  return "";
+}
+
+function normalizeTheme(value = {}) {
+  const theme = {};
+  ["bg", "ink", "muted", "line", "panel", "accent", "accent2", "gold", "blue"].forEach(key => {
+    const color = safeColor(value[key]);
+    if (color) theme[key] = color;
+  });
+  const image = safeImage(value.image);
+  if (image) theme.image = image;
+  if (value.image === "") theme.image = "";
+  return theme;
+}
+
+function mergeGameList(customItems, defaultItems) {
+  const merged = [];
+  const seen = new Set();
+  [...(Array.isArray(customItems) ? customItems : []), ...(Array.isArray(defaultItems) ? defaultItems : [])].forEach(item => {
+    const key = `${normalizeEmail(item?.player || item?.answer || item?.id || "")}:${safeText(item?.number || "", 8)}`;
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    merged.push(item);
+  });
+  return merged;
+}
+
+async function handleRequestVerification(req, res) {
+  try {
+    // En el servidor nativo, leemos el body con tu propia función readBody
+    const body = JSON.parse(await readBody(req));
+    const email = body.email;
+    // Genera un número aleatorio de 6 dígitos
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    verificationCodes[email] = code;
+    // Enviamos el correo
+    await transporter.sendMail({
+      from: '"Prode Bait" <ba.itsoft26@gmail.com>',
+      to: email,
+      subject: 'Tu código de verificación - Prode Bait',
+      text: `¡Hola!\n\nTu código de acceso de 6 dígitos para registrarte en el Prode es: ${code}\n\nSi no solicitaste esto, ignora este correo.`
+    });
+    send(res, 200, JSON.stringify({ ok: true }));
+  } catch (err) {
+    console.error("Error enviando email:", err);
+    send(res, 500, JSON.stringify({ error: "Error al enviar el email" }));
+  }
+}
+
+async function handleVerifyCode(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const { email, code } = body;
+    
+    if (verificationCodes[email] && verificationCodes[email] === code) {
+      delete verificationCodes[email]; // Lo borramos para que no se use 2 veces
+      send(res, 200, JSON.stringify({ ok: true }));
+    } else {
+      send(res, 400, JSON.stringify({ error: "Código incorrecto" }));
+    }
+  } catch (err) {
+    send(res, 500, JSON.stringify({ error: "Error al verificar código" }));
+  }
+}
+
+function publicGames(tenantData = {}) {
+  const custom = tenantData.games && typeof tenantData.games === "object" ? tenantData.games : {};
+  return {
+    ...DEFAULT_DAILY_GAMES,
+    ...custom,
+    points: {
+      ...DEFAULT_DAILY_GAMES.points,
+      ...(custom.points && typeof custom.points === "object" ? custom.points : {})
+    },
+    camisetas: mergeGameList(custom.camisetas, DEFAULT_DAILY_GAMES.camisetas),
+    desafios: mergeGameList(custom.desafios, DEFAULT_DAILY_GAMES.desafios)
+  };
+}
+
+function globalGames(store = {}) {
+  return publicGames({ games: store.globalGames || {} });
+}
+
 function publicTenant(tenant, tenantData = {}) {
+  const theme = {
+    ...(tenant.theme || {}),
+    ...(tenantData.theme || {})
+  };
   return {
     ...tenant,
+    name: tenantData.displayName || tenant.name,
+    eyebrow: tenantData.eyebrow || tenant.eyebrow,
+    title: tenantData.title || tenant.title,
+    description: tenantData.description || tenant.description,
+    theme,
+    games: publicGames(tenantData),
     areas: Array.isArray(tenantData.areas) ? tenantData.areas : [],
     userEmails: Object.keys(tenantData.users || {})
+  };
+}
+
+function currentDailyGamePlays(tenantData = {}, email = "", games = publicGames(tenantData)) {
+  const normalized = normalizeEmail(email);
+  const plays = tenantData.gamePlays?.[normalized]?.[todayKey()] || {};
+  const camisetadle = todayGameItem(games, "camisetadle");
+  const desafio = todayGameItem(games, "desafio");
+  const camisaPlay = plays.camisetadle?.challengeId === camisetadle?.id ? plays.camisetadle : null;
+  const desafioPlay = plays.desafio?.challengeId === desafio?.id ? plays.desafio : null;
+  return {
+    camisetadle: camisaPlay,
+    desafio: desafioPlay
   };
 }
 
@@ -664,11 +1186,86 @@ function sessionUser(store, tenant, token) {
   const user = email ? tenantData.users[email] : null;
   if (!user) return null;
   if (user.active === false) return null;
+  const role = userRole(tenant.id, { ...user, email: user.email || email });
   return {
     name: user.name || "",
     email: user.email || email,
     area: user.area || "",
-    isAdmin: Boolean(user.isAdmin || isAdminEmail(tenant.id, user.email || email))
+    role,
+    isAdmin: role === "admin" || role === "superadmin",
+    isSuperAdmin: role === "superadmin"
+  };
+}
+
+function globalSessionUser(store, token) {
+  const rawToken = String(token || "").trim();
+  if (!rawToken) return null;
+  const email = store.globalSessions?.[rawToken];
+  const user = email ? store.users?.[email] : null;
+  if (!user || user.active === false) return null;
+  const role = userRole(null, { ...user, email: user.email || email });
+  return {
+    name: user.name || "",
+    email: user.email || email,
+    role,
+    isAdmin: role === "admin" || role === "superadmin",
+    isSuperAdmin: role === "superadmin",
+    createdAt: user.createdAt || ""
+  };
+}
+
+function requireGlobalAdmin(req, res, store, token) {
+  const user = globalSessionUser(store, token);
+  if (user?.isAdmin || user?.isSuperAdmin) return user;
+  send(res, 403, JSON.stringify({ error: "Global admin required" }));
+  return null;
+}
+
+function accessMapFor(store, email) {
+  const normalized = normalizeEmail(email);
+  if (!store.tournamentAccess || typeof store.tournamentAccess !== "object") store.tournamentAccess = {};
+  if (!store.tournamentAccess[normalized] || typeof store.tournamentAccess[normalized] !== "object") {
+    store.tournamentAccess[normalized] = {};
+  }
+  return store.tournamentAccess[normalized];
+}
+
+function hasTournamentAccess(store, user, tournament) {
+  if (!tournament || tournament.isGlobal) return true;
+  if (!user?.email) return false;
+  const access = store.tournamentAccess?.[normalizeEmail(user.email)]?.[tournament.id];
+  return Boolean(access?.grantedAt);
+}
+
+function publicLobbyTournament(store, tournament, user = null) {
+  const tenant = tournament.tenantId ? tenantFromValue(tournament.tenantId) : null;
+  const access = hasTournamentAccess(store, user, tournament);
+  return {
+    ...publicTournament(tournament, { includePrivateCode: tournament.isGlobal || access, compact: true }),
+    isPrivate: !tournament.isGlobal,
+    hasAccess: access,
+    tenantPath: tenant ? `/prode/empresa/${encodeURIComponent(tenant.id)}` : "/prode",
+    tenantName: tenant?.name || "",
+    lockedLabel: tournament.isGlobal ? "Publico" : access ? "Acceso habilitado" : "Privado"
+  };
+}
+
+function publicTenantTemplate(id) {
+  const tenant = tenantFromValue(id);
+  if (!tenant) return null;
+  return {
+    id: tenant.id,
+    name: tenant.name,
+    title: tenant.title,
+    description: tenant.description
+  };
+}
+
+function publicCompetitionTemplate(template) {
+  return {
+    id: template.id,
+    name: template.name,
+    mode: template.mode
   };
 }
 
@@ -688,14 +1285,34 @@ function isAdminEmail(tenantId, email) {
   return admins.includes(normalizeEmail(email));
 }
 
+function isSuperAdminEmail(tenantId, email) {
+  const normalized = normalizeEmail(email);
+  const configured = envTenantList(tenantId, "SUPERADMIN_EMAILS");
+  return configured.includes(normalized) || (tenantId === "acme" && ["admin@acme", "admin@acme.com"].includes(normalized));
+}
+
+function userRole(tenantId, user = {}) {
+  if (isSuperAdminEmail(tenantId, user.email)) return "superadmin";
+  if (user.role === "superadmin" || user.isSuperAdmin) return "superadmin";
+  if (user.role === "admin" || user.isAdmin || isAdminEmail(tenantId, user.email)) return "admin";
+  return "player";
+}
+
 function adminSessionUser(store, tenant, token) {
   const user = sessionUser(store, tenant, token);
   return user?.isAdmin ? user : null;
 }
 
-async function requireAdmin(req, res, tenant, key, sessionToken = "") {
-  const store = await readStore();
+function superAdminSessionUser(store, tenant, token) {
+  const user = sessionUser(store, tenant, token);
+  return user?.isSuperAdmin ? user : null;
+}
+
+function requireAdmin(req, res, tenant, key, sessionToken = "", globalSessionToken = "") {
+  const store = readStore();
   if (adminSessionUser(store, tenant, sessionToken)) return true;
+  const globalUser = globalSessionUser(store, globalSessionToken);
+  if (globalUser?.isAdmin || globalUser?.isSuperAdmin) return true;
   const expected = adminKeyFor(tenant?.id || "");
   if (!expected) {
     send(res, 403, JSON.stringify({ error: "ADMIN_KEY is not configured" }));
@@ -706,6 +1323,15 @@ async function requireAdmin(req, res, tenant, key, sessionToken = "") {
     return false;
   }
   return true;
+}
+
+function requireSuperAdmin(req, res, tenant, sessionToken = "", globalSessionToken = "") {
+  const store = readStore();
+  if (superAdminSessionUser(store, tenant, sessionToken)) return true;
+  const globalUser = globalSessionUser(store, globalSessionToken);
+  if (globalUser?.isSuperAdmin) return true;
+  send(res, 403, JSON.stringify({ error: "Superadmin required" }));
+  return false;
 }
 
 function scoringNumber(value, fallback) {
@@ -730,14 +1356,385 @@ function normalizeTeams(value) {
     .slice(0, 64);
 }
 
+function normalizeTiming(value = {}) {
+  return {
+    predictionLockMinutesBefore: Math.max(0, Math.min(10080, Number(value.predictionLockMinutesBefore ?? 0) || 0)),
+    scoringDelayMinutesAfterResult: Math.max(0, Math.min(10080, Number(value.scoringDelayMinutesAfterResult ?? 0) || 0))
+  };
+}
+
+function normalizeFixtures(value) {
+  const fixtures = Array.isArray(value) ? value : [];
+  return fixtures
+    .map((match, index) => ({
+      id: safeText(match?.id, 30) || `c${index + 1}`,
+      home: safeText(match?.home, 80),
+      away: safeText(match?.away, 80),
+      homeCrest: safeText(match?.homeCrest || match?.homeLogo || match?.homeBadge, 240),
+      awayCrest: safeText(match?.awayCrest || match?.awayLogo || match?.awayBadge, 240),
+      startsAt: safeText(match?.startsAt, 40),
+      round: safeText(match?.round, 60)
+    }))
+    .filter(match => match.home && match.away)
+    .slice(0, 520);
+}
+
 function normalizeCustomTemplate(value, fallbackTemplate) {
   const teams = normalizeTeams(value?.teams);
   if (!teams.length) return null;
   return {
     name: String(value?.name || fallbackTemplate?.name || "Custom").trim().slice(0, 80),
     mode: value?.mode || fallbackTemplate?.mode || "fixture",
-    teams
+    teams,
+    fixtures: normalizeFixtures(value?.fixtures || fallbackTemplate?.fixtures),
+    timing: normalizeTiming(value?.timing || fallbackTemplate?.timing)
   };
+}
+
+function generatedFixturesForTemplate(template = {}) {
+  const teams = normalizeTeams(template.teams || []);
+  if (!teams.length || template.mode === "groups-knockout") return [];
+  const schedule = [];
+  const maxMatches = template.mode === "league" ? 24 : 16;
+  const rotation = teams.length % 2 === 0 ? [...teams] : [...teams, ""];
+  const rounds = rotation.length - 1;
+  const half = rotation.length / 2;
+  for (let round = 0; round < rounds; round += 1) {
+    for (let i = 0; i < half; i += 1) {
+      const home = rotation[i];
+      const away = rotation[rotation.length - 1 - i];
+      if (home && away) {
+        const swap = round % 2 === 1;
+        schedule.push({
+          id: `c${schedule.length + 1}`,
+          home: swap ? away : home,
+          away: swap ? home : away,
+          round: `Fecha ${round + 1}`
+        });
+        if (schedule.length >= maxMatches) return schedule;
+      }
+    }
+    rotation.splice(1, 0, rotation.pop());
+  }
+  return schedule;
+}
+
+function tournamentTemplate(tournament = {}) {
+  return TOURNAMENT_TEMPLATES.find(item => item.id === tournament.templateId) || TOURNAMENT_TEMPLATES[0];
+}
+
+function tournamentTiming(tournament = {}) {
+  const template = tournamentTemplate(tournament);
+  return normalizeTiming(tournament.customTemplate?.timing || template.timing || {});
+}
+
+function tournamentFixtures(tournament = {}) {
+  const template = tournamentTemplate(tournament);
+  const explicit = normalizeFixtures(tournament.customTemplate?.fixtures || template.fixtures || []);
+  return explicit.length ? explicit : generatedFixturesForTemplate(tournament.customTemplate || template);
+}
+
+function footballDataCompetitionCode(templateId) {
+  return {
+    champions: "CL",
+    premier: "PL",
+    "laliga-2025-26": "PD",
+    laliga: "PD",
+    "laliga-timing-lab": "PD",
+    "serie-a": "SA",
+    bundesliga: "BL1",
+    "ligue-1": "FL1",
+    worldcup: "WC",
+    "worldcup-2026": "WC"
+  }[templateId] || "";
+}
+
+function espnArgentinaRound(event, regularIndex = 0) {
+  const slug = String(event?.season?.slug || "");
+  if (slug.includes("round-of-16")) return "Apertura - Octavos";
+  if (slug.includes("quarterfinal")) return "Apertura - Cuartos";
+  if (slug.includes("semifinal")) return "Apertura - Semifinales";
+  if (slug.includes("final")) return "Apertura - Final";
+  if (slug === "torneo-clausura") return `Clausura - Fecha ${Math.floor(regularIndex / 15) + 1}`;
+  return `Apertura - Fecha ${Math.floor(regularIndex / 15) + 1}`;
+}
+
+function espnTeam(competition, homeAway) {
+  return competition?.competitors?.find(item => item.homeAway === homeAway) || null;
+}
+
+function espnTeamName(competitor) {
+  return competitor?.team?.displayName || competitor?.team?.shortDisplayName || competitor?.team?.name || "";
+}
+
+function espnTeamLogo(competitor) {
+  return competitor?.team?.logo || competitor?.team?.logos?.[0]?.href || "";
+}
+
+function espnArgentinaFixtures(events = []) {
+  const sorted = [...events].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const regularIndexes = { "torneo-apertura": 0, "torneo-clausura": 0 };
+  return sorted
+    .map(event => {
+      const competition = event.competitions?.[0] || {};
+      const home = espnTeam(competition, "home");
+      const away = espnTeam(competition, "away");
+      const slug = String(event?.season?.slug || "");
+      const round = espnArgentinaRound(event, regularIndexes[slug] || 0);
+      if (Object.prototype.hasOwnProperty.call(regularIndexes, slug)) regularIndexes[slug] += 1;
+      return {
+        id: `espn-${event.id}`,
+        home: espnTeamName(home),
+        away: espnTeamName(away),
+        homeCrest: espnTeamLogo(home),
+        awayCrest: espnTeamLogo(away),
+        startsAt: event.date || "",
+        round
+      };
+    })
+    .filter(match => match.home && match.away);
+}
+
+function espnArgentinaTeamsFromFixtures(fixtures = []) {
+  return [...new Set(fixtures.flatMap(match => [match.home, match.away]).filter(Boolean))].slice(0, 64);
+}
+
+async function fetchEspnArgentinaEvents() {
+  const url = "https://site.api.espn.com/apis/site/v2/sports/soccer/arg.1/scoreboard?dates=20260101-20261231&limit=500";
+  const response = await fetch(url);
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`ESPN Argentina ${response.status}: ${text.slice(0, 180)}`);
+  }
+  const data = await response.json();
+  return Array.isArray(data.events) ? data.events : [];
+}
+
+async function syncArgentinaApiResults(store, tournament) {
+  const events = await fetchEspnArgentinaEvents();
+  const apiFixtures = espnArgentinaFixtures(events);
+  if (apiFixtures.length) {
+    const template = tournamentTemplate(tournament);
+    tournament.customTemplate = {
+      ...(tournament.customTemplate || {}),
+      name: template.name,
+      mode: "fixture",
+      teams: espnArgentinaTeamsFromFixtures(apiFixtures),
+      fixtures: apiFixtures,
+      timing: tournamentTiming(tournament)
+    };
+    tournament.mode = "fixture";
+  }
+  const updatedAt = new Date().toISOString();
+  const now = Date.now();
+  const previous = tournament.realResults?.custom?.matches || {};
+  const matches = withoutFutureApiResults(previous, apiFixtures, now);
+  let imported = 0;
+  events.forEach(event => {
+    const status = event.status?.type || {};
+    if (!status.completed || !dateIsNotInFuture(event.date, now)) return;
+    const competition = event.competitions?.[0] || {};
+    const home = espnTeam(competition, "home");
+    const away = espnTeam(competition, "away");
+    const homeScore = Number(home?.score);
+    const awayScore = Number(away?.score);
+    if (!Number.isFinite(homeScore) || !Number.isFinite(awayScore)) return;
+    const homeName = espnTeamName(home);
+    const awayName = espnTeamName(away);
+    const winner = home?.winner ? homeName : away?.winner ? awayName : homeScore === awayScore ? "draw" : homeScore > awayScore ? homeName : awayName;
+    imported += 1;
+    const matchId = `espn-${event.id}`;
+    const nextMatch = {
+      homeScore,
+      awayScore,
+      winner,
+      source: "ESPN",
+      apiMatchId: event.id,
+      status: status.description || status.name || "",
+      updatedAt,
+      finishedAt: ""
+    };
+    nextMatch.finishedAt = status.completed ? apiResultFinishedAt(previous[matchId], nextMatch, estimatedFinishedAt(event.date, updatedAt)) : "";
+    matches[matchId] = nextMatch;
+  });
+  tournament.realResults = {
+    ...(tournament.realResults || {}),
+    custom: {
+      ...(tournament.realResults?.custom || {}),
+      matches,
+      champion: tournament.realResults?.custom?.champion || ""
+    },
+    apiSource: {
+      provider: "ESPN",
+      competitionCode: "arg.1",
+      season: "2026",
+      syncedAt: updatedAt,
+      fixtures: apiFixtures.length,
+      matched: imported,
+      imported
+    },
+    updatedAt
+  };
+  tournament.realResultsUpdatedAt = updatedAt;
+  return { provider: "ESPN", competitionCode: "arg.1", season: "2026", fixtures: apiFixtures.length, matched: imported, imported };
+}
+
+function normalizeTeamKey(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\b(fc|cf|afc|sc|club|de|the)\b/g, "")
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function teamLooksLike(source, target) {
+  const left = normalizeTeamKey(source);
+  const right = normalizeTeamKey(target);
+  return Boolean(left && right && (left === right || left.includes(right) || right.includes(left)));
+}
+
+function footballDataMatchTeams(match) {
+  return {
+    home: match?.homeTeam?.name || match?.homeTeam?.shortName || match?.homeTeam?.tla || "",
+    away: match?.awayTeam?.name || match?.awayTeam?.shortName || match?.awayTeam?.tla || ""
+  };
+}
+
+function footballDataMatchRound(match) {
+  const stage = safeText(match?.stage, 40);
+  const knockoutStageNames = {
+    PLAYOFFS: "Playoff knockout",
+    PLAY_OFFS: "Playoff knockout",
+    KNOCKOUT_ROUND_PLAY_OFFS: "Playoff knockout",
+    LAST_16: "Octavos de final",
+    QUARTER_FINALS: "Cuartos de final",
+    SEMI_FINALS: "Semifinales",
+    THIRD_PLACE: "Tercer puesto",
+    FINAL: "Final"
+  };
+  if (knockoutStageNames[stage]) {
+    if (stage === "FINAL" || stage === "THIRD_PLACE") return knockoutStageNames[stage];
+    if (Number(match?.matchday) === 1) return `${knockoutStageNames[stage]} - Ida`;
+    if (Number(match?.matchday) === 2) return `${knockoutStageNames[stage]} - Vuelta`;
+    return knockoutStageNames[stage];
+  }
+  if (match?.matchday) return `Fecha ${match.matchday}`;
+  return stage || safeText(match?.group, 40) || "Partidos";
+}
+
+function footballDataFixtures(apiMatches = []) {
+  return apiMatches
+    .map(match => {
+      const teams = footballDataMatchTeams(match);
+      return {
+        id: `fd-${match.id}`,
+        home: teams.home,
+        away: teams.away,
+        homeCrest: match?.homeTeam?.crest || "",
+        awayCrest: match?.awayTeam?.crest || "",
+        startsAt: match.utcDate || "",
+        round: footballDataMatchRound(match)
+      };
+    })
+    .filter(match => match.home && match.away)
+    .slice(0, 380);
+}
+
+function footballDataTeamsFromFixtures(fixtures = []) {
+  return [...new Set(fixtures.flatMap(match => [match.home, match.away]).filter(Boolean))].slice(0, 64);
+}
+
+function matchFixtureToApiResult(fixtureItem, apiMatches) {
+  const directId = String(fixtureItem.id || "").replace(/^fd-/, "");
+  return (apiMatches || []).find(match => String(match.id) === directId) || (apiMatches || []).find(match => {
+    const teams = footballDataMatchTeams(match);
+    return teamLooksLike(teams.home, fixtureItem.home) && teamLooksLike(teams.away, fixtureItem.away);
+  }) || null;
+}
+
+function dateIsNotInFuture(value, now = Date.now()) {
+  if (!value) return false;
+  const timestamp = new Date(value).getTime();
+  return Number.isFinite(timestamp) && timestamp <= now;
+}
+
+function withoutFutureApiResults(previousMatches = {}, fixtures = [], now = Date.now()) {
+  const matches = { ...(previousMatches || {}) };
+  fixtures.forEach(fixture => {
+    if (dateIsNotInFuture(fixture.startsAt, now)) return;
+    const match = matches[fixture.id];
+    if (match?.source === "football-data.org" || match?.source === "ESPN") delete matches[fixture.id];
+  });
+  return matches;
+}
+
+function apiResultFinishedAt(previousMatch, nextMatch, fallback) {
+  const previousFinishedAt = previousMatch?.finishedAt || "";
+  const sameScore = previousMatch &&
+    Number(previousMatch.homeScore) === Number(nextMatch.homeScore) &&
+    Number(previousMatch.awayScore) === Number(nextMatch.awayScore) &&
+    String(previousMatch.winner || "") === String(nextMatch.winner || "");
+  const previousIsSyncTime = previousFinishedAt && previousMatch?.updatedAt && previousFinishedAt === previousMatch.updatedAt;
+  return sameScore && previousFinishedAt && !previousIsSyncTime ? previousFinishedAt : fallback;
+}
+
+function estimatedFinishedAt(startsAt, fallback, matchMinutes = 120) {
+  const start = new Date(startsAt || "").getTime();
+  const fallbackTime = new Date(fallback || "").getTime();
+  if (!Number.isFinite(start)) return fallback;
+  const estimated = new Date(start + Number(matchMinutes || 120) * 60000).toISOString();
+  if (Number.isFinite(fallbackTime) && new Date(estimated).getTime() > fallbackTime) return fallback;
+  return estimated;
+}
+
+async function fetchFootballDataMatches({ code, season }) {
+  const token = process.env.FOOTBALL_DATA_TOKEN || process.env.FOOTBALLDATA_TOKEN || "";
+  if (!token) throw new Error("FOOTBALL_DATA_TOKEN is not configured");
+  const url = new URL(`https://api.football-data.org/v4/competitions/${encodeURIComponent(code)}/matches`);
+  if (season) url.searchParams.set("season", season);
+  const response = await fetch(url, { headers: { "X-Auth-Token": token } });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Football-Data ${response.status}: ${text.slice(0, 180)}`);
+  }
+  const data = await response.json();
+  return Array.isArray(data.matches) ? data.matches : [];
+}
+
+function customMatchLocked(match, timing = tournamentTiming()) {
+  if (!match?.startsAt) return false;
+  const startsAt = new Date(match.startsAt);
+  if (Number.isNaN(startsAt.getTime())) return false;
+  return Date.now() >= startsAt.getTime() - Number(timing.predictionLockMinutesBefore || 0) * 60000;
+}
+
+function mergeLockedCustomMatches(previousPrediction, incomingPrediction, tournament) {
+  if (!incomingPrediction?.custom?.matches) return incomingPrediction;
+  const fixtures = tournamentFixtures(tournament);
+  if (!fixtures.length) return incomingPrediction;
+  const timing = tournamentTiming(tournament);
+  const previousMatches = previousPrediction?.custom?.matches || {};
+  const incomingMatches = incomingPrediction.custom.matches;
+  // Collect official results already loaded for this tournament (from the global store)
+  const officialMatches = tournament?.realResults?.custom?.matches || {};
+  // DEBUG
+  console.log("[DEBUG lock] officialMatches keys:", Object.keys(officialMatches));
+  console.log("[DEBUG lock] incomingMatches keys:", Object.keys(incomingMatches));
+  fixtures.forEach(match => {
+    const official = officialMatches[match.id];
+    const hasOfficialResult =
+      official &&
+      official.homeScore !== undefined && official.homeScore !== "" &&
+      official.awayScore !== undefined && official.awayScore !== "";
+    const timeLocked = customMatchLocked(match, timing);
+    console.log(`[DEBUG lock] match=${match.id} hasOfficialResult=${hasOfficialResult} timeLocked=${timeLocked} official=`, official);
+    if (hasOfficialResult || timeLocked) {
+      if (previousMatches[match.id]) incomingMatches[match.id] = previousMatches[match.id];
+      else delete incomingMatches[match.id];
+    }
+  });
+  return incomingPrediction;
 }
 
 function randomSecret() {
@@ -751,6 +1748,14 @@ function passwordHash(password, salt) {
 function createPasswordRecord(password) {
   const salt = crypto.randomBytes(16).toString("hex");
   return { salt, hash: passwordHash(password, salt) };
+}
+
+function passwordResetToken() {
+  return crypto.randomBytes(32).toString("base64url");
+}
+
+function resetExpiryDate() {
+  return new Date(Date.now() + 60 * 60 * 1000).toISOString();
 }
 
 function verifyPassword(password, user) {
@@ -817,27 +1822,96 @@ function copyMatchFields(target, source, matchIds) {
   });
 }
 
-function mergePredictionByPhase(previousPrediction, incomingPrediction, phaseId) {
+const WORLD_CUP_MONTH_MAP = { "Jun": "06", "Jul": "07" };
+function isWorldCupMatchTimeLocked(id) {
+  const KNOCKOUT_SCHEDULE = {
+    m73: { date: "28 de Jun", time: "16:00" }, m74: { date: "29 de Jun", time: "16:00" }, m75: { date: "29 de Jun", time: "16:00" }, m76: { date: "29 de Jun", time: "16:00" },
+    m77: { date: "30 de Jun", time: "13:00" }, m78: { date: "30 de Jun", time: "16:00" }, m79: { date: "30 de Jun", time: "19:00" }, m80: { date: "1 de Jul", time: "14:00" },
+    m81: { date: "1 de Jul", time: "17:00" }, m82: { date: "1 de Jul", time: "20:00" }, m83: { date: "2 de Jul", time: "14:00" }, m84: { date: "2 de Jul", time: "17:00" },
+    m85: { date: "2 de Jul", time: "20:00" }, m86: { date: "3 de Jul", time: "16:00" }, m87: { date: "3 de Jul", time: "19:00" }, m88: { date: "3 de Jul", time: "22:00" },
+    m89: { date: "4 de Jul", time: "16:00" }, m90: { date: "4 de Jul", time: "16:00" }, m91: { date: "5 de Jul", time: "16:00" }, m92: { date: "5 de Jul", time: "16:00" },
+    m93: { date: "6 de Jul", time: "14:00" }, m94: { date: "6 de Jul", time: "17:00" }, m95: { date: "7 de Jul", time: "14:00" }, m96: { date: "7 de Jul", time: "17:00" },
+    m97: { date: "9 de Jul", time: "16:00" }, m98: { date: "10 de Jul", time: "16:00" }, m99: { date: "11 de Jul", time: "14:00" }, m100: { date: "11 de Jul", time: "17:00" },
+    m101: { date: "14 de Jul", time: "15:00" }, m102: { date: "15 de Jul", time: "15:00" }, m103: { date: "18 de Jul", time: "15:00" }, m104: { date: "19 de Jul", time: "15:00" }
+  };
+  const GROUP_SCHEDULE = {
+    "A-0-2": { date: "11 de Jun", time: "16:00" }, "A-1-3": { date: "11 de Jun", time: "23:00" }, "B-0-3": { date: "12 de Jun", time: "16:00" }, "D-0-1": { date: "12 de Jun", time: "22:00" },
+    "B-2-1": { date: "13 de Jun", time: "16:00" }, "C-0-1": { date: "13 de Jun", time: "19:00" }, "C-3-2": { date: "13 de Jun", time: "22:00" }, "D-2-3": { date: "14 de Jun", time: "01:00" },
+    "E-0-3": { date: "14 de Jun", time: "14:00" }, "F-0-1": { date: "14 de Jun", time: "17:00" }, "E-2-1": { date: "14 de Jun", time: "20:00" }, "F-3-2": { date: "14 de Jun", time: "23:00" },
+    "H-0-3": { date: "15 de Jun", time: "13:00" }, "G-0-2": { date: "15 de Jun", time: "16:00" }, "H-2-1": { date: "15 de Jun", time: "19:00" }, "G-1-3": { date: "15 de Jun", time: "22:00" },
+    "I-0-1": { date: "16 de Jun", time: "16:00" }, "I-3-2": { date: "16 de Jun", time: "19:00" }, "J-0-2": { date: "16 de Jun", time: "22:00" }, "J-1-3": { date: "17 de Jun", time: "01:00" },
+    "K-0-3": { date: "17 de Jun", time: "14:00" }, "L-0-1": { date: "17 de Jun", time: "17:00" }, "L-2-3": { date: "17 de Jun", time: "20:00" }, "K-2-1": { date: "17 de Jun", time: "23:00" },
+    "A-3-2": { date: "18 de Jun", time: "13:00" }, "B-1-3": { date: "18 de Jun", time: "16:00" }, "B-0-2": { date: "18 de Jun", time: "19:00" }, "A-0-1": { date: "18 de Jun", time: "22:00" },
+    "D-0-2": { date: "19 de Jun", time: "16:00" }, "C-2-1": { date: "19 de Jun", time: "19:00" }, "C-0-3": { date: "19 de Jun", time: "22:00" }, "D-3-1": { date: "20 de Jun", time: "01:00" },
+    "F-0-3": { date: "20 de Jun", time: "14:00" }, "E-0-2": { date: "20 de Jun", time: "17:00" }, "E-1-3": { date: "20 de Jun", time: "23:00" }, "F-2-1": { date: "21 de Jun", time: "01:00" },
+    "H-0-2": { date: "21 de Jun", time: "13:00" }, "G-0-1": { date: "21 de Jun", time: "16:00" }, "H-1-3": { date: "21 de Jun", time: "19:00" }, "G-3-2": { date: "21 de Jun", time: "22:00" },
+    "J-0-1": { date: "22 de Jun", time: "14:00" }, "I-0-3": { date: "22 de Jun", time: "18:00" }, "I-2-1": { date: "22 de Jun", time: "21:00" }, "J-3-2": { date: "23 de Jun", time: "00:00" },
+    "K-0-2": { date: "23 de Jun", time: "14:00" }, "L-0-2": { date: "23 de Jun", time: "17:00" }, "L-3-1": { date: "23 de Jun", time: "20:00" }, "K-1-3": { date: "23 de Jun", time: "23:00" },
+    "B-1-0": { date: "24 de Jun", time: "16:00" }, "B-3-2": { date: "24 de Jun", time: "16:00" }, "C-2-0": { date: "24 de Jun", time: "19:00" }, "C-1-3": { date: "24 de Jun", time: "19:00" },
+    "A-3-0": { date: "24 de Jun", time: "22:00" }, "A-2-1": { date: "24 de Jun", time: "22:00" }, "E-3-2": { date: "25 de Jun", time: "17:00" }, "E-1-0": { date: "25 de Jun", time: "17:00" },
+    "F-1-3": { date: "25 de Jun", time: "20:00" }, "F-2-0": { date: "25 de Jun", time: "20:00" }, "D-1-2": { date: "25 de Jun", time: "23:00" }, "D-3-0": { date: "25 de Jun", time: "23:00" },
+    "I-2-0": { date: "26 de Jun", time: "16:00" }, "I-1-3": { date: "26 de Jun", time: "16:00" }, "H-3-2": { date: "26 de Jun", time: "21:00" }, "H-1-0": { date: "26 de Jun", time: "21:00" },
+    "G-2-1": { date: "27 de Jun", time: "00:00" }, "G-3-0": { date: "27 de Jun", time: "00:00" }, "L-3-0": { date: "27 de Jun", time: "18:00" }, "L-1-2": { date: "27 de Jun", time: "18:00" },
+    "K-1-0": { date: "27 de Jun", time: "20:30" }, "K-3-2": { date: "27 de Jun", time: "20:30" }, "J-2-1": { date: "27 de Jun", time: "23:00" }, "J-3-0": { date: "27 de Jun", time: "23:00" }
+  };
+  const match = KNOCKOUT_SCHEDULE[id] || GROUP_SCHEDULE[id];
+  if (!match || !match.date || !match.time) return false;
+  const parts = match.date.split(" de ");
+  const day = parts[0].padStart(2, "0");
+  const month = WORLD_CUP_MONTH_MAP[parts[1]];
+  if (!month) return false;
+  const startsAt = new Date(`2026-${month}-${day}T${match.time}:00-03:00`);
+  if (Number.isNaN(startsAt.getTime())) return false;
+  return Date.now() >= startsAt.getTime() - 30 * 60000;
+}
+
+function mergePredictionByPhase(previousPrediction, incomingPrediction, phaseId, tournament = null) {
   const phase = phaseById(phaseId);
-  if (!previousPrediction || phase.id === "all" || incomingPrediction?.custom) return incomingPrediction;
-  const merged = JSON.parse(JSON.stringify(previousPrediction));
+  // CORRECCIÓN: Validar que realmente sea una plantilla personalizada con partidos configurados
+  if (!previousPrediction || phase.id === "all" || (incomingPrediction?.custom && Object.keys(incomingPrediction.custom.matches || {}).length > 0)) return incomingPrediction;
+
+  const merged = previousPrediction ? JSON.parse(JSON.stringify(previousPrediction)) : {
+    groups: {}, groupMatches: {}, thirdAssignments: {}, winners: {}, scores: {}, custom: {}
+  };
+  const realResults = tournament?.realResults || {};
+
   if (phase.type === "groups") {
     if (!merged.groupMatches) merged.groupMatches = {};
     const groupMatchIds = groupMatchIdsForPhase(phase.id);
     if (groupMatchIds.length) {
       groupMatchIds.forEach(id => {
-        if (incomingPrediction.groupMatches?.[id]) merged.groupMatches[id] = incomingPrediction.groupMatches[id];
+        const isPlayed = realResults.groupMatches?.[id]?.home !== "" && realResults.groupMatches?.[id]?.home !== undefined &&
+          realResults.groupMatches?.[id]?.away !== "" && realResults.groupMatches?.[id]?.away !== undefined;
+        const timeLocked = isWorldCupMatchTimeLocked(id);
+        if (!isPlayed && !timeLocked && incomingPrediction.groupMatches?.[id]) {
+          merged.groupMatches[id] = incomingPrediction.groupMatches[id];
+        }
       });
-    } else {
-      merged.groups = incomingPrediction.groups || merged.groups || {};
-      merged.groupMatches = incomingPrediction.groupMatches || merged.groupMatches || {};
-      merged.thirdAssignments = incomingPrediction.thirdAssignments || merged.thirdAssignments || {};
     }
     return merged;
   }
   if (phase.type === "matches") {
     if (phase.id === "r32") merged.thirdAssignments = incomingPrediction.thirdAssignments || merged.thirdAssignments || {};
+
     copyMatchFields(merged, incomingPrediction, phase.matchIds);
+
+    (phase.matchIds || []).forEach(id => {
+      const isPlayed = (realResults.scores?.[id]?.left !== "" && realResults.scores?.[id]?.left !== undefined &&
+        realResults.scores?.[id]?.right !== "" && realResults.scores?.[id]?.right !== undefined) ||
+        (realResults.winners?.[id] && realResults.winners?.[id] !== "");
+      const timeLocked = isWorldCupMatchTimeLocked(id);
+      if (isPlayed || timeLocked) {
+        if (previousPrediction.scores?.[id]) {
+          if (!merged.scores) merged.scores = {};
+          merged.scores[id] = previousPrediction.scores[id];
+        }
+        if (previousPrediction.winners?.[id]) {
+          if (!merged.winners) merged.winners = {};
+          merged.winners[id] = previousPrediction.winners[id];
+        }
+      }
+    });
+
     return merged;
   }
   return incomingPrediction;
@@ -863,17 +1937,24 @@ function scorePair(value, homeKey = "home", awayKey = "away") {
   return { home, away };
 }
 
-function scoreSubmission(prediction, real, scoring = DEFAULT_SCORING) {
+function scoreSubmission(prediction, real, scoring = DEFAULT_SCORING, tournament = null) {
   if (!prediction || !real) {
     return { points: 0, groupHits: 0, winnerHits: 0, exactScoreHits: 0, championHit: false };
   }
   const rules = normalizeScoring(scoring);
-  if (real.custom) {
+  // CORRECCIÓN: Verificar que tenga partidos personalizados cargados
+  if (real.custom && Object.keys(real.custom.matches || {}).length > 0) {
     const realMatches = real.custom.matches || {};
     const predictedMatches = prediction.custom?.matches || {};
+    const timing = tournament ? tournamentTiming(tournament) : { scoringDelayMinutesAfterResult: 0 };
     let winnerHits = 0;
     let exactScoreHits = 0;
     Object.keys(realMatches).forEach(id => {
+      const finishedAt = realMatches[id]?.finishedAt || realMatches[id]?.updatedAt || real.updatedAt || "";
+      if (finishedAt) {
+        const availableAt = new Date(new Date(finishedAt).getTime() + Number(timing.scoringDelayMinutesAfterResult || 0) * 60000);
+        if (!Number.isNaN(availableAt.getTime()) && Date.now() < availableAt.getTime()) return;
+      }
       if (realMatches[id]?.winner && predictedMatches[id]?.winner === realMatches[id].winner) winnerHits += 1;
       const realScore = `${realMatches[id]?.homeScore ?? ""}-${realMatches[id]?.awayScore ?? ""}`;
       const predictedScore = `${predictedMatches[id]?.homeScore ?? ""}-${predictedMatches[id]?.awayScore ?? ""}`;
@@ -1205,10 +2286,11 @@ async function handleSaveLiveResults(req, res) {
   }
 }
 
-async function handleTournaments(req, res) {
-  const store = await readStore();
+function handleTournaments(req, res) {
+  const store = readStore();
   const url = new URL(req.url, "http://localhost");
   const tenant = tenantFromValue(url.searchParams.get("tenant"));
+  const globalUser = globalSessionUser(store, url.searchParams.get("globalSessionToken"));
   const joinedCodes = String(url.searchParams.get("joined") || "")
     .split(",")
     .map(normalizeCode)
@@ -1218,8 +2300,290 @@ async function handleTournaments(req, res) {
       if (tenant) return tournament.tenantId === tenant.id;
       return tournament.isGlobal || (!tournament.tenantId && joinedCodes.includes(tournament.code));
     })
-    .map(tournament => publicTournament(tournament, { includePrivateCode: tenant || joinedCodes.includes(tournament.code) }));
+    .map(tournament => publicTournament(tournament, { includePrivateCode: tenant || joinedCodes.includes(tournament.code) || hasTournamentAccess(store, globalUser, tournament) }));
   send(res, 200, JSON.stringify({ tournaments }));
+}
+
+function handleTournamentLobby(req, res) {
+  const store = readStore();
+  const url = new URL(req.url, "http://localhost");
+  const user = globalSessionUser(store, url.searchParams.get("sessionToken"));
+  const lobbyIds = ["global", ...Object.keys(TENANTS).map(tenantTournamentId)];
+  const tournaments = lobbyIds
+    .map(id => store.tournaments.find(tournament => tournament.id === id))
+    .filter(Boolean)
+    .map(tournament => publicLobbyTournament(store, tournament, user));
+  send(res, 200, JSON.stringify({
+    user,
+    isAdmin: Boolean(user?.isAdmin || user?.isSuperAdmin),
+    templates: TOURNAMENT_TEMPLATES.map(publicCompetitionTemplate),
+    tournaments
+  }));
+}
+
+async function handleGlobalLogin(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const name = safeText(body.name, 100);
+    const email = normalizeEmail(body.email);
+    const password = String(body.password || "");
+    if (!email || !password) {
+      send(res, 400, JSON.stringify({ error: "Email/DNI and password are required" }));
+      return;
+    }
+    const store = readStore();
+    const previousUser = store.users[email];
+    if (previousUser) {
+      if (previousUser.active === false) {
+        send(res, 403, JSON.stringify({ error: "User is disabled" }));
+        return;
+      }
+      if (!verifyPassword(password, previousUser)) {
+        send(res, 401, JSON.stringify({ error: "Invalid email or password" }));
+        return;
+      }
+    } else if (!name) {
+      send(res, 400, JSON.stringify({ error: "Name is required for first login" }));
+      return;
+    }
+    const finalName = previousUser?.name || name;
+    const token = randomSecret();
+    const role = userRole(null, { ...(previousUser || {}), email });
+    const isAdmin = role === "admin" || role === "superadmin";
+    store.users[email] = {
+      ...(previousUser || {}),
+      name: finalName,
+      email,
+      active: previousUser?.active !== false,
+      role,
+      isAdmin,
+      password: previousUser?.password || createPasswordRecord(password),
+      updatedAt: new Date().toISOString(),
+      createdAt: previousUser?.createdAt || new Date().toISOString()
+    };
+    store.globalSessions[token] = email;
+    writeStore(store);
+    send(res, 200, JSON.stringify({
+      ok: true,
+      token,
+      user: { name: finalName, email, role, isAdmin, isSuperAdmin: role === "superadmin" },
+      templates: TOURNAMENT_TEMPLATES.map(publicCompetitionTemplate),
+      tournaments: ["global", ...Object.keys(TENANTS).map(tenantTournamentId)]
+        .map(id => store.tournaments.find(tournament => tournament.id === id))
+        .filter(Boolean)
+        .map(tournament => publicLobbyTournament(store, tournament, { email }))
+    }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleRegistrarGlobal(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const name = safeText(body.name, 100);
+    const email = normalizeEmail(body.email);
+    const password = String(body.password || "");
+    if (!email || !password || !name) {
+      send(res, 400, JSON.stringify({ error: "Nombre, email/DNI y contraseña son obligatorios." }));
+      return;
+    }
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      send(res, 400, JSON.stringify({ error: "La contraseña no cumple con los requisitos de seguridad." }));
+      return;
+    }
+    const store = readStore();
+    if (store.users[email]) {
+      send(res, 409, JSON.stringify({ error: "El usuario ya existe. Intenta iniciar sesión." }));
+      return;
+    }
+    const token = randomSecret();
+    const role = userRole(null, { email });
+    const isAdmin = role === "admin" || role === "superadmin";
+    store.users[email] = {
+      name,
+      email,
+      active: true,
+      role,
+      isAdmin,
+      password: createPasswordRecord(password),
+      updatedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString()
+    };
+    store.globalSessions[token] = email;
+    writeStore(store);
+    send(res, 200, JSON.stringify({
+      ok: true,
+      token,
+      user: { name, email, role, isAdmin, isSuperAdmin: role === "superadmin" },
+      templates: TOURNAMENT_TEMPLATES.map(publicCompetitionTemplate),
+      tournaments: ["global", ...Object.keys(TENANTS).map(tenantTournamentId)]
+        .map(id => store.tournaments.find(tournament => tournament.id === id))
+        .filter(Boolean)
+        .map(tournament => publicLobbyTournament(store, tournament, { email }))
+    }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+function handleGlobalSession(req, res) {
+  const store = readStore();
+  const url = new URL(req.url, "http://localhost");
+  const user = globalSessionUser(store, url.searchParams.get("sessionToken"));
+  if (!user) {
+    send(res, 401, JSON.stringify({ error: "Login is required" }));
+    return;
+  }
+  send(res, 200, JSON.stringify({ ok: true, user }));
+}
+
+async function handleCreateLobbyTenant(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const store = readStore();
+    const admin = requireGlobalAdmin(req, res, store, body.sessionToken);
+    if (!admin) return;
+    const name = safeText(body.name, 80);
+    const templateId = slug(body.templateId || "worldcup-2026");
+    const competitionTemplate = TOURNAMENT_TEMPLATES.find(item => item.id === templateId) || TOURNAMENT_TEMPLATES[0];
+    const baseTenant = TENANTS.acme;
+    let id = slug(body.id || name);
+    if (!name) {
+      send(res, 400, JSON.stringify({ error: "Company name is required" }));
+      return;
+    }
+    if (!id) id = `empresa-${Date.now()}`;
+    if (TENANTS[id] || store.tenants?.[id] || store.tournaments.some(tournament => tournament.id === tenantTournamentId(id))) {
+      send(res, 409, JSON.stringify({ error: "Company id already exists" }));
+      return;
+    }
+    const code = normalizeCode(body.code || `EMPRESA-${id.toUpperCase()}`);
+    if (!code) {
+      send(res, 400, JSON.stringify({ error: "Tournament password is required" }));
+      return;
+    }
+    if (store.tournaments.some(tournament => normalizeCode(tournament.code) === code)) {
+      send(res, 409, JSON.stringify({ error: "Tournament password already exists" }));
+      return;
+    }
+    if (!store.tenants || typeof store.tenants !== "object") store.tenants = {};
+    const now = new Date().toISOString();
+    store.tenants[id] = {
+      id,
+      dynamic: true,
+      templateId: "acme-private-shell",
+      competitionTemplateId: competitionTemplate.id,
+      name,
+      displayName: name,
+      eyebrow: baseTenant.eyebrow,
+      title: `Prode ${name}`,
+      description: `Predicciones y ranking exclusivo para ${name}.`,
+      areas: [...(baseTenant.areas || [])],
+      users: {},
+      sessions: {},
+      theme: { ...(baseTenant.theme || {}) },
+      baseTheme: { ...(baseTenant.theme || {}) },
+      games: JSON.parse(JSON.stringify(DEFAULT_DAILY_GAMES)),
+      gamePlays: {},
+      createdAt: now,
+      createdBy: admin.email
+    };
+    registerDynamicTenant(id, store.tenants[id]);
+    store.tournaments.push({
+      id: tenantTournamentId(id),
+      name,
+      code,
+      tenantId: id,
+      isGlobal: false,
+      createdAt: now,
+      realResults: null,
+      templateId: competitionTemplate.id,
+      mode: competitionTemplate.mode,
+      scoring: DEFAULT_SCORING,
+      payment: null,
+      payments: {},
+      submissions: []
+    });
+    accessMapFor(store, admin.email)[tenantTournamentId(id)] = {
+      tournamentId: tenantTournamentId(id),
+      grantedAt: now,
+      grantedByPassword: false,
+      grantedByAdmin: true
+    };
+    writeStore(store);
+    const tournament = store.tournaments.find(item => item.id === tenantTournamentId(id));
+    send(res, 201, JSON.stringify({
+      ok: true,
+      tenant: publicTenant(TENANTS[id], tenantStore(store, id)),
+      tournament: publicLobbyTournament(store, tournament, admin)
+    }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleGrantTournamentAccess(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const store = readStore();
+    const user = globalSessionUser(store, body.sessionToken);
+    if (!user) {
+      send(res, 401, JSON.stringify({ error: "Login is required" }));
+      return;
+    }
+    const tournament = findTournament(store, body.tournamentId);
+    if (!tournament) {
+      send(res, 404, JSON.stringify({ error: "Tournament not found" }));
+      return;
+    }
+    if (tournament.isGlobal) {
+      send(res, 200, JSON.stringify({ ok: true, tournament: publicLobbyTournament(store, tournament, user) }));
+      return;
+    }
+    const code = normalizeCode(body.password || body.code);
+    if (!code || code !== normalizeCode(tournament.code)) {
+      send(res, 401, JSON.stringify({ error: "Invalid tournament password" }));
+      return;
+    }
+    accessMapFor(store, user.email)[tournament.id] = {
+      tournamentId: tournament.id,
+      grantedAt: new Date().toISOString(),
+      grantedByPassword: true
+    };
+    // Si el torneo pertenece a una empresa, creamos una sesión de empresa
+    // para que el usuario global pueda operar directamente desde la página de la empresa.
+    let tenantSession = null;
+    if (tournament.tenantId) {
+      const tenant = tenantFromValue(tournament.tenantId);
+      const tenantData = tenantStore(store, tenant.id);
+      const token = randomSecret();
+      // Aseguramos que exista el usuario en el tenant (registro ligero sin contraseña)
+      const email = normalizeEmail(user.email);
+      const globalUserRecord = store.users?.[email] || null;
+      if (!tenantData.users[email]) {
+        tenantData.users[email] = {
+          name: user.name || "",
+          email,
+          area: "",
+          active: true,
+          role: userRole(tenant.id, { email }),
+          isAdmin: false,
+          password: globalUserRecord?.password || createPasswordRecord(""),
+          updatedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString()
+        };
+      }
+      tenantData.sessions[token] = email;
+      tenantSession = { token, user: { name: tenantData.users[email].name || user.name || "", email, area: tenantData.users[email].area || "" } };
+    }
+    syncGlobalSubmissionToTournament(store, user.email, tournament);
+    writeStore(store);
+    send(res, 200, JSON.stringify({ ok: true, tournament: publicLobbyTournament(store, tournament, user), tenantSession }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
 }
 
 function handleTemplates(req, res) {
@@ -1236,9 +2600,8 @@ async function handleCompanyLogin(req, res) {
     const tenant = tenantFromValue(body.tenantId);
     const name = String(body.name || "").trim().slice(0, 100);
     const email = normalizeEmail(body.email);
-    const area = normalizeAreaName(body.area);
+    const area = normalizeAreaName(body.area) || "General";
     const password = String(body.password || "");
-    const mode = body.mode === "create" ? "create" : "login";
     if (!tenant) {
       send(res, 404, JSON.stringify({ error: "Company not found" }));
       return;
@@ -1247,14 +2610,12 @@ async function handleCompanyLogin(req, res) {
       send(res, 400, JSON.stringify({ error: "Email and password are required" }));
       return;
     }
-    const store = await readStore();
+    const store = readStore();
     const tenantData = tenantStore(store, tenant.id);
     const previousUser = tenantData.users[email];
+    const globalUser = store.users?.[email] || null;
+    const loginFromGlobal = !previousUser && globalUser && verifyPassword(password, globalUser);
     if (previousUser) {
-      if (mode === "create") {
-        send(res, 409, JSON.stringify({ error: "User already exists" }));
-        return;
-      }
       if (previousUser.active === false) {
         send(res, 403, JSON.stringify({ error: "User is disabled" }));
         return;
@@ -1263,14 +2624,15 @@ async function handleCompanyLogin(req, res) {
         send(res, 401, JSON.stringify({ error: "Invalid email or password" }));
         return;
       }
-    } else if (!name || !area) {
-      send(res, 400, JSON.stringify({ error: "Name and area are required for first login" }));
+    } else if (!loginFromGlobal && (!name)) {
+      send(res, 400, JSON.stringify({ error: "Se requiere el nombre para el primer login" }));
       return;
     }
-    const finalName = previousUser?.name || name;
-    const finalArea = previousUser?.area || area;
-    const isAdmin = Boolean(previousUser?.isAdmin || isAdminEmail(tenant.id, email));
-    if (!tenantData.areas.some(item => areaId(item) === areaId(finalArea))) tenantData.areas.push(finalArea);
+    const finalName = previousUser?.name || (loginFromGlobal ? globalUser.name : name);
+    const finalArea = previousUser?.area || area || "";
+    const role = userRole(tenant.id, { ...(previousUser || {}), email });
+    const isAdmin = role === "admin" || role === "superadmin";
+    if (finalArea && !tenantData.areas.some(item => areaId(item) === areaId(finalArea))) tenantData.areas.push(finalArea);
     const token = randomSecret();
     tenantData.users[email] = {
       ...(previousUser || {}),
@@ -1278,17 +2640,34 @@ async function handleCompanyLogin(req, res) {
       email,
       area: finalArea,
       active: previousUser?.active !== false,
+      role,
       isAdmin,
-      password: previousUser?.password || createPasswordRecord(password),
+      password: previousUser?.password || (loginFromGlobal ? globalUser.password : createPasswordRecord(password)),
       updatedAt: new Date().toISOString(),
       createdAt: previousUser?.createdAt || new Date().toISOString()
     };
     tenantData.sessions[token] = email;
-    await writeStore(store);
+    const globalToken = randomSecret();
+    if (!store.users[email]) {
+      const globalRole = userRole(null, { email });
+      store.users[email] = {
+        name: finalName,
+        email,
+        active: true,
+        role: globalRole,
+        isAdmin: globalRole === "admin" || globalRole === "superadmin",
+        password: tenantData.users[email].password,
+        updatedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      };
+    }
+    store.globalSessions[globalToken] = email;
+    writeStore(store);
     send(res, 200, JSON.stringify({
       ok: true,
       token,
-      user: { name: finalName, email, area: finalArea, isAdmin },
+      user: { name: finalName, email, area: finalArea, role, isAdmin, isSuperAdmin: role === "superadmin" },
+      dailyGamePlays: currentDailyGamePlays(tenantData, email),
       tenant: publicTenant(tenant, tenantData)
     }));
   } catch (error) {
@@ -1296,7 +2675,209 @@ async function handleCompanyLogin(req, res) {
   }
 }
 
-async function handleCompanySession(req, res) {
+async function handleRegistrarCompany(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const tenant = tenantFromValue(body.tenantId);
+    const name = String(body.name || "").trim().slice(0, 100);
+    const email = normalizeEmail(body.email);
+    const area = normalizeAreaName(body.area) || "General";
+    const password = String(body.password || "");
+    if (!tenant) {
+      send(res, 404, JSON.stringify({ error: "Empresa no encontrada." }));
+      return;
+    }
+    if (!email || !password || !name) {
+      send(res, 400, JSON.stringify({ error: "Todos los campos son obligatorios para registrarse." }));
+      return;
+    }
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      send(res, 400, JSON.stringify({ error: "La contraseña no cumple con los requisitos de seguridad." }));
+      return;
+    }
+    const store = readStore();
+    const tenantData = tenantStore(store, tenant.id);
+    if (tenantData.users[email]) {
+      send(res, 409, JSON.stringify({ error: "El usuario ya existe en esta empresa." }));
+      return;
+    }
+    const role = userRole(tenant.id, { email });
+    const isAdmin = role === "admin" || role === "superadmin";
+    if (!tenantData.areas.some(item => areaId(item) === areaId(area))) tenantData.areas.push(area);
+    const token = randomSecret();
+    tenantData.users[email] = {
+      name,
+      email,
+      area,
+      active: true,
+      role,
+      isAdmin,
+      password: createPasswordRecord(password),
+      updatedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString()
+    };
+    tenantData.sessions[token] = email;
+    const globalToken = randomSecret();
+    if (!store.users[email]) {
+      const globalRole = userRole(null, { email });
+      store.users[email] = {
+        name,
+        email,
+        active: true,
+        role: globalRole,
+        isAdmin: globalRole === "admin" || globalRole === "superadmin",
+        password: createPasswordRecord(password), // Usa la misma clave
+        updatedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      };
+    }
+    store.globalSessions[globalToken] = email;
+    writeStore(store);
+    send(res, 200, JSON.stringify({
+      ok: true,
+      token,
+      globalToken, // <--- AGREGAR ESTA LÍNEA
+      user: { name, email, area, role, isAdmin, isSuperAdmin: role === "superadmin" },
+      dailyGamePlays: currentDailyGamePlays(tenantData, email),
+      tenant: publicTenant(tenant, tenantData)
+    }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleChangePassword(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const { scope, sessionToken, currentPassword, newPassword } = body;
+    const store = readStore();
+
+    let email = null;
+    let user = null;
+
+    if (scope === "company") {
+      for (const tId of Object.keys(store.tenants || {})) {
+        if (store.tenants[tId].sessions && store.tenants[tId].sessions[sessionToken]) {
+          email = store.tenants[tId].sessions[sessionToken];
+          user = store.tenants[tId].users[email];
+          break;
+        }
+      }
+    } else {
+      email = store.globalSessions?.[sessionToken];
+      user = store.users?.[email];
+    }
+
+    if (!user) {
+      send(res, 401, JSON.stringify({ error: "Sesión inválida o expirada." }));
+      return;
+    }
+
+    if (!verifyPassword(currentPassword, user)) {
+      send(res, 401, JSON.stringify({ error: "La contraseña actual es incorrecta." }));
+      return;
+    }
+
+    user.password = createPasswordRecord(newPassword);
+    user.updatedAt = new Date().toISOString();
+
+    writeStore(store);
+    send(res, 200, JSON.stringify({ success: true }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function sendPasswordResetMail({ to, resetUrl }) {
+  await transporter.sendMail({
+    from: '"Prode Bait" <ba.itsoft26@gmail.com>',
+    to,
+    subject: "Recuperar contrasena - Prode Bait",
+    text: [
+      "Recibimos un pedido para cambiar la contrasena de tu usuario.",
+      "",
+      "Abri este link para crear una contrasena nueva:",
+      resetUrl,
+      "",
+      "El link vence en 1 hora. Si no pediste este cambio, podes ignorar este correo."
+    ].join("\n")
+  });
+  return { sent: true };
+}
+
+async function handleRequestPasswordReset(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const email = normalizeEmail(body.email);
+    if (!email || !email.includes("@")) {
+      send(res, 400, JSON.stringify({ error: "A valid email is required" }));
+      return;
+    }
+    const store = readStore();
+    const user = store.users[email];
+    let mail = null;
+    if (user && user.active !== false) {
+      const token = passwordResetToken();
+      store.passwordResets[token] = {
+        email,
+        expiresAt: resetExpiryDate(),
+        createdAt: new Date().toISOString()
+      };
+      Object.entries(store.passwordResets).forEach(([resetToken, reset]) => {
+        if (!reset?.expiresAt || new Date(reset.expiresAt).getTime() < Date.now()) delete store.passwordResets[resetToken];
+      });
+      writeStore(store);
+      const resetUrl = `${siteBaseUrl(req)}/reset-password/${encodeURIComponent(token)}`;
+      mail = await sendPasswordResetMail({ to: email, resetUrl });
+    }
+    send(res, 200, JSON.stringify({ ok: true, mail }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleResetPassword(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const token = String(body.token || "").trim();
+    const password = String(body.password || "");
+    if (!token || password.length < 8 || !/[a-z]/.test(password) || !/[A-Z]/.test(password)) {
+      send(res, 400, JSON.stringify({ error: "Token and a valid password are required" }));
+      return;
+    }
+    const store = readStore();
+    const reset = store.passwordResets?.[token];
+    if (!reset || new Date(reset.expiresAt).getTime() < Date.now()) {
+      if (reset) {
+        delete store.passwordResets[token];
+        writeStore(store);
+      }
+      send(res, 410, JSON.stringify({ error: "Password reset link expired" }));
+      return;
+    }
+    const email = normalizeEmail(reset.email);
+    const user = store.users[email];
+    if (!user || user.active === false) {
+      delete store.passwordResets[token];
+      writeStore(store);
+      send(res, 404, JSON.stringify({ error: "User not found" }));
+      return;
+    }
+    user.password = createPasswordRecord(password);
+    user.updatedAt = new Date().toISOString();
+    delete store.passwordResets[token];
+    Object.entries(store.globalSessions || {}).forEach(([sessionToken, sessionEmail]) => {
+      if (normalizeEmail(sessionEmail) === email) delete store.globalSessions[sessionToken];
+    });
+    writeStore(store);
+    send(res, 200, JSON.stringify({ ok: true }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+function handleCompanySession(req, res) {
   const url = new URL(req.url, "http://localhost");
   const tenant = tenantFromValue(url.searchParams.get("tenant"));
   const token = url.searchParams.get("sessionToken");
@@ -1304,16 +2885,18 @@ async function handleCompanySession(req, res) {
     send(res, 404, JSON.stringify({ error: "Company not found" }));
     return;
   }
-  const store = await readStore();
+  const store = readStore();
   const user = sessionUser(store, tenant, token);
   if (!user) {
     send(res, 401, JSON.stringify({ error: "Login is required" }));
     return;
   }
+  const tenantData = tenantStore(store, tenant.id);
   send(res, 200, JSON.stringify({
     ok: true,
     user,
-    tenant: publicTenant(tenant, tenantStore(store, tenant.id))
+    dailyGamePlays: currentDailyGamePlays(tenantData, user.email),
+    tenant: publicTenant(tenant, tenantData)
   }));
 }
 
@@ -1323,15 +2906,54 @@ async function handleAdminUpdateUser(req, res) {
     const tenant = tenantFromValue(body.tenantId);
     const email = normalizeEmail(body.email);
     if (!tenant) {
-      send(res, 404, JSON.stringify({ error: "Company not found" }));
+      const store = readStore();
+      const admin = requireGlobalAdmin(req, res, store, body.globalSessionToken);
+      if (!admin) return;
+      if (!admin.isSuperAdmin && admin.role !== "superadmin") {
+        send(res, 403, JSON.stringify({ error: "Superadmin required" }));
+        return;
+      }
+      if (!email) {
+        send(res, 400, JSON.stringify({ error: "User email is required" }));
+        return;
+      }
+      const user = store.users[email];
+      if (!user) {
+        send(res, 404, JSON.stringify({ error: "User not found" }));
+        return;
+      }
+      const name = String(body.name || "").trim().slice(0, 100);
+      if (!name) {
+        send(res, 400, JSON.stringify({ error: "Name is required" }));
+        return;
+      }
+      user.name = name;
+      user.active = body.active !== false;
+      user.role = body.isAdmin ? "admin" : "player";
+      if (email === normalizeEmail(admin.email)) {
+        user.role = "superadmin";
+        user.active = true;
+      }
+      user.isAdmin = user.role === "admin" || user.role === "superadmin";
+      user.updatedAt = new Date().toISOString();
+      if (!user.active) {
+        Object.entries(store.globalSessions || {}).forEach(([token, sessionEmail]) => {
+          if (normalizeEmail(sessionEmail) === email) delete store.globalSessions[token];
+        });
+      }
+      writeStore(store);
+      send(res, 200, JSON.stringify({
+        ok: true,
+        user: { name: user.name, email: user.email || email, active: user.active !== false, role: user.role, isAdmin: user.isAdmin, isSuperAdmin: user.role === "superadmin" }
+      }));
       return;
     }
-    if (!await requireAdmin(req, res, tenant, body.adminKey, body.sessionToken)) return;
+    if (!requireAdmin(req, res, tenant, body.adminKey, body.sessionToken, body.globalSessionToken)) return;
     if (!email) {
       send(res, 400, JSON.stringify({ error: "User email is required" }));
       return;
     }
-    const store = await readStore();
+    const store = readStore();
     const tenantData = tenantStore(store, tenant.id);
     const user = tenantData.users[email];
     if (!user) {
@@ -1339,16 +2961,21 @@ async function handleAdminUpdateUser(req, res) {
       return;
     }
     const name = String(body.name || "").trim().slice(0, 100);
-    const area = normalizeAreaName(body.area);
-    if (!name || !area) {
-      send(res, 400, JSON.stringify({ error: "Name and area are required" }));
+    const area = normalizeAreaName(body.area) || "General";
+    if (!name) {
+      send(res, 400, JSON.stringify({ error: "Name required" }));
       return;
     }
     const active = body.active !== false;
+    const nextIsAdmin = Boolean(body.isAdmin || isAdminEmail(tenant.id, email));
+    const currentRole = userRole(tenant.id, { ...user, email });
+    const currentIsAdmin = currentRole === "admin" || currentRole === "superadmin";
+    if (nextIsAdmin !== currentIsAdmin && !requireSuperAdmin(req, res, tenant, body.sessionToken, body.globalSessionToken)) return;
     user.name = name;
     user.area = area;
     user.active = active;
-    user.isAdmin = Boolean(body.isAdmin || isAdminEmail(tenant.id, email));
+    user.role = isSuperAdminEmail(tenant.id, email) ? "superadmin" : nextIsAdmin ? "admin" : "player";
+    user.isAdmin = user.role === "admin" || user.role === "superadmin";
     user.updatedAt = new Date().toISOString();
     if (!tenantData.areas.some(item => areaId(item) === areaId(area))) tenantData.areas.push(area);
     if (!active) {
@@ -1356,11 +2983,87 @@ async function handleAdminUpdateUser(req, res) {
         if (normalizeEmail(sessionEmail) === email) delete tenantData.sessions[token];
       });
     }
-    await writeStore(store);
+    writeStore(store);
     send(res, 200, JSON.stringify({
       ok: true,
-      user: { name: user.name, email: user.email || email, area: user.area, active: user.active !== false, isAdmin: user.isAdmin }
+      user: { name: user.name, email: user.email || email, area: user.area, active: user.active !== false, role: user.role, isAdmin: user.isAdmin, isSuperAdmin: user.role === "superadmin" }
     }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleAdminDeleteUser(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const tenant = tenantFromValue(body.tenantId);
+    const email = normalizeEmail(body.email);
+    if (!email) {
+      send(res, 400, JSON.stringify({ error: "User email is required" }));
+      return;
+    }
+    const store = readStore();
+
+    if (!tenant) {
+      const admin = requireGlobalAdmin(req, res, store, body.globalSessionToken);
+      if (!admin) return;
+      if (!admin.isSuperAdmin && admin.role !== "superadmin") {
+        send(res, 403, JSON.stringify({ error: "Superadmin required" }));
+        return;
+      }
+      const user = store.users[email];
+      if (!user) {
+        send(res, 404, JSON.stringify({ error: "User not found" }));
+        return;
+      }
+      if (email === normalizeEmail(admin.email)) {
+        send(res, 403, JSON.stringify({ error: "Cannot delete yourself" }));
+        return;
+      }
+
+      delete store.users[email];
+      Object.entries(store.globalSessions || {}).forEach(([token, sessionEmail]) => {
+        if (normalizeEmail(sessionEmail) === email) delete store.globalSessions[token];
+      });
+      delete store.tournamentAccess?.[email];
+      delete store.globalGamePlays?.[email];
+
+      store.tournaments.forEach(tournament => {
+        if (tournament.submissions) {
+          tournament.submissions = tournament.submissions.filter(s => normalizeEmail(s.player?.email) !== email);
+        }
+      });
+
+      writeStore(store);
+      send(res, 200, JSON.stringify({ ok: true, deleted: email }));
+      return;
+    }
+
+    if (!requireAdmin(req, res, tenant, body.adminKey, body.sessionToken, body.globalSessionToken)) return;
+    const tenantData = tenantStore(store, tenant.id);
+    const user = tenantData.users[email];
+
+    const adminUser = sessionUser(store, tenant, body.sessionToken) || globalSessionUser(store, body.globalSessionToken);
+    if (adminUser && normalizeEmail(adminUser.email) === email) {
+      send(res, 403, JSON.stringify({ error: "Cannot delete yourself" }));
+      return;
+    }
+
+    if (user) {
+      delete tenantData.users[email];
+      Object.entries(tenantData.sessions).forEach(([token, sessionEmail]) => {
+        if (normalizeEmail(sessionEmail) === email) delete tenantData.sessions[token];
+      });
+      delete tenantData.gamePlays?.[email];
+    }
+
+    const tournament = store.tournaments.find(item => item.id === tenantTournamentId(tenant.id));
+    if (tournament && tournament.submissions) {
+      tournament.submissions = tournament.submissions.filter(s => normalizeEmail(s.player?.email) !== email);
+    }
+
+    writeStore(store);
+    send(res, 200, JSON.stringify({ ok: true, deleted: email }));
   } catch (error) {
     send(res, 500, JSON.stringify({ error: error.message }));
   }
@@ -1375,8 +3078,15 @@ async function handleCreateCompanyArea(req, res) {
       send(res, 404, JSON.stringify({ error: "Company not found" }));
       return;
     }
-    const store = await readStore();
-    const user = sessionUser(store, tenant, body.sessionToken);
+    const store = readStore();
+    let user = sessionUser(store, tenant, body.sessionToken);
+    if (!user) {
+      const globalUser = globalSessionUser(store, body.globalSessionToken);
+      const tournament = store.tournaments.find(item => item.id === tenantTournamentId(tenant.id));
+      if (hasTournamentAccess(store, globalUser, tournament)) {
+        user = { name: globalUser.name, email: globalUser.email, area: "" };
+      }
+    }
     if (!user) {
       send(res, 401, JSON.stringify({ error: "Login is required" }));
       return;
@@ -1387,8 +3097,241 @@ async function handleCreateCompanyArea(req, res) {
     }
     const tenantData = tenantStore(store, tenant.id);
     if (!tenantData.areas.some(item => areaId(item) === areaId(name))) tenantData.areas.push(name);
-    await writeStore(store);
+    writeStore(store);
     send(res, 201, JSON.stringify({ ok: true, tenant: publicTenant(tenant, tenantData) }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleUpdateCompanyArea(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const tenant = tenantFromValue(body.tenantId);
+    const oldName = normalizeAreaName(body.oldName);
+    const newName = normalizeAreaName(body.newName);
+    if (!tenant) {
+      send(res, 404, JSON.stringify({ error: "Company not found" }));
+      return;
+    }
+    const store = readStore();
+    let user = sessionUser(store, tenant, body.sessionToken);
+    if (!user) {
+      const globalUser = globalSessionUser(store, body.globalSessionToken);
+      const tournament = store.tournaments.find(item => item.id === tenantTournamentId(tenant.id));
+      if (hasTournamentAccess(store, globalUser, tournament)) {
+        user = { name: globalUser.name, email: globalUser.email, area: "" };
+      }
+    }
+    if (!user) {
+      send(res, 401, JSON.stringify({ error: "Login is required" }));
+      return;
+    }
+    if (!oldName || !newName) {
+      send(res, 400, JSON.stringify({ error: "Area names are required" }));
+      return;
+    }
+    const tenantData = tenantStore(store, tenant.id);
+    const oldId = areaId(oldName);
+    if (!tenantData.areas.some(item => areaId(item) === oldId)) {
+      send(res, 404, JSON.stringify({ error: "Area not found" }));
+      return;
+    }
+    if (tenantData.areas.some(item => areaId(item) === areaId(newName) && areaId(item) !== oldId)) {
+      send(res, 409, JSON.stringify({ error: "Area already exists" }));
+      return;
+    }
+    tenantData.areas = tenantData.areas.map(area => areaId(area) === oldId ? newName : area);
+    Object.values(tenantData.users || {}).forEach(item => {
+      if (areaId(item.area) === oldId) {
+        item.area = newName;
+        item.updatedAt = new Date().toISOString();
+      }
+    });
+    const tournament = store.tournaments.find(item => item.id === tenantTournamentId(tenant.id));
+    (tournament?.submissions || []).forEach(submission => {
+      if (areaId(submission.player?.area) === oldId) submission.player.area = newName;
+    });
+    writeStore(store);
+    send(res, 200, JSON.stringify({ ok: true, tenant: publicTenant(tenant, tenantData) }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+function normalizeCamisetas(value) {
+  const items = Array.isArray(value) ? value : [];
+  return items
+    .map((item, index) => ({
+      id: safeText(item.id, 80) || `camiseta-${index + 1}`,
+      player: safeText(item.player, 80),
+      number: safeText(item.number, 4),
+      team: safeText(item.team, 80),
+      tournament: safeText(item.tournament, 80),
+      hint: safeText(item.hint, 120),
+      date: safeDate(item.date)
+    }))
+    .filter(item => item.player && item.number)
+    .slice(0, 90);
+}
+
+function normalizeDesafios(value) {
+  const items = Array.isArray(value) ? value : [];
+  return items
+    .map((item, index) => {
+      const clues = Array.isArray(item.clues) ? item.clues : String(item.clues || "").split(";");
+      const type = slug(item.type || "otro") || "otro";
+      return {
+        id: safeText(item.id, 80) || `desafio-${index + 1}`,
+        type,
+        answer: safeText(item.answer, 90),
+        title: safeText(item.title, 90) || `Adivina ${type}`,
+        subtitle: safeText(item.subtitle, 90),
+        clues: clues.map(clue => safeText(clue, 120)).filter(Boolean).slice(0, 6),
+        date: safeDate(item.date)
+      };
+    })
+    .filter(item => item.answer)
+    .slice(0, 90);
+}
+
+function normalizeDailyGames(value = {}) {
+  const camisetas = normalizeCamisetas(value.camisetas);
+  const desafios = normalizeDesafios(value.desafios);
+  return {
+    enabled: value.enabled !== false,
+    title: safeText(value.title, 70) || DEFAULT_DAILY_GAMES.title,
+    intro: safeText(value.intro, 160) || DEFAULT_DAILY_GAMES.intro,
+    rewardName: safeText(value.rewardName, 40) || DEFAULT_DAILY_GAMES.rewardName,
+    points: {
+      camisetadle: Math.max(0, Math.min(999, Number(value.points?.camisetadle ?? DEFAULT_DAILY_GAMES.points.camisetadle) || 0)),
+      desafio: Math.max(0, Math.min(999, Number(value.points?.desafio ?? DEFAULT_DAILY_GAMES.points.desafio) || 0))
+    },
+    camisetas: camisetas.length ? camisetas : DEFAULT_DAILY_GAMES.camisetas,
+    desafios: desafios.length ? desafios : DEFAULT_DAILY_GAMES.desafios
+  };
+}
+
+async function handleAdminTheme(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const tenant = tenantFromValue(body.tenantId);
+    if (!tenant) {
+      send(res, 404, JSON.stringify({ error: "Company not found" }));
+      return;
+    }
+    if (!requireAdmin(req, res, tenant, body.adminKey, body.sessionToken, body.globalSessionToken)) return;
+    const store = readStore();
+    const tenantData = tenantStore(store, tenant.id);
+    tenantData.displayName = safeText(body.displayName, 80) || tenant.name;
+    tenantData.eyebrow = safeText(body.eyebrow, 80) || tenant.eyebrow;
+    tenantData.title = safeText(body.title, 90) || tenant.title;
+    tenantData.description = safeText(body.description, 180) || tenant.description;
+    tenantData.theme = normalizeTheme(body.theme || {});
+    tenantData.updatedAt = new Date().toISOString();
+    writeStore(store);
+    send(res, 200, JSON.stringify({ ok: true, tenant: publicTenant(tenant, tenantData) }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleAdminGames(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const tenant = tenantFromValue(body.tenantId);
+    if (!tenant) {
+      send(res, 404, JSON.stringify({ error: "Company not found" }));
+      return;
+    }
+    if (!requireAdmin(req, res, tenant, body.adminKey, body.sessionToken, body.globalSessionToken)) return;
+    const store = readStore();
+    const tenantData = tenantStore(store, tenant.id);
+    tenantData.games = normalizeDailyGames(body.games || {});
+    tenantData.updatedAt = new Date().toISOString();
+    writeStore(store);
+    send(res, 200, JSON.stringify({ ok: true, games: publicGames(tenantData), tenant: publicTenant(tenant, tenantData) }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+function handleGlobalGames(req, res) {
+  const url = new URL(req.url, "http://localhost");
+  const store = readStore();
+  const user = globalSessionUser(store, url.searchParams.get("sessionToken"));
+  const games = globalGames(store);
+  send(res, 200, JSON.stringify({
+    games,
+    dailyGamePlays: user ? currentDailyGamePlays({ gamePlays: store.globalGamePlays }, user.email, games) : {}
+  }));
+}
+
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function answerMatches(expected, guess) {
+  const clean = value => String(value || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return clean(expected) === clean(guess);
+}
+
+function todayGameItem(games, gameType) {
+  const list = gameType === "camisetadle" ? games.camisetas : games.desafios;
+  if (!Array.isArray(list) || !list.length) return null;
+  const dated = list.find(item => item.date === todayKey());
+  if (dated) return dated;
+  const seed = Math.floor(Date.now() / 86400000);
+  return list[seed % list.length];
+}
+
+async function handleDailyGamePlay(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const tenant = tenantFromValue(body.tenantId);
+    const store = readStore();
+    const user = tenant
+      ? sessionUser(store, tenant, body.sessionToken)
+      : globalSessionUser(store, body.globalSessionToken);
+    if (!user) {
+      send(res, 401, JSON.stringify({ error: "Login is required" }));
+      return;
+    }
+    const tenantData = tenant ? tenantStore(store, tenant.id) : null;
+    const games = tenantData ? publicGames(tenantData) : globalGames(store);
+    const gameType = body.gameType === "camisetadle" ? "camisetadle" : "desafio";
+    const item = todayGameItem(games, gameType);
+    if (!item) {
+      send(res, 404, JSON.stringify({ error: "Daily game not found" }));
+      return;
+    }
+    const email = normalizeEmail(user.email);
+    const date = todayKey();
+    const gamePlays = tenantData ? tenantData.gamePlays : store.globalGamePlays;
+    if (!gamePlays[email]) gamePlays[email] = {};
+    if (!gamePlays[email][date]) gamePlays[email][date] = {};
+    const previous = gamePlays[email][date][gameType];
+    if (previous?.completed) {
+      send(res, 409, JSON.stringify({ error: "Ya completaste este juego diario.", play: previous }));
+      return;
+    }
+    const correct = gameType === "camisetadle"
+      ? answerMatches(item.player, body.guess?.player) && answerMatches(item.number, body.guess?.number)
+      : answerMatches(item.answer, body.guess?.answer);
+    const play = {
+      gameType,
+      challengeId: item.id,
+      date,
+      attempts: Number(previous?.attempts || 0) + 1,
+      completed: correct,
+      completedAt: correct ? new Date().toISOString() : "",
+      points: correct ? Number(games.points?.[gameType] || 0) : 0,
+      rewardName: games.rewardName || DEFAULT_DAILY_GAMES.rewardName,
+      updatedAt: new Date().toISOString()
+    };
+    gamePlays[email][date][gameType] = play;
+    writeStore(store);
+    send(res, 200, JSON.stringify({ ok: true, correct, play, dailyGamePlays: currentDailyGamePlays({ gamePlays }, email, games) }));
   } catch (error) {
     send(res, 500, JSON.stringify({ error: error.message }));
   }
@@ -1426,7 +3369,7 @@ async function handleCreateTournament(req, res) {
       return;
     }
 
-    const store = await readStore();
+    const store = readStore();
     if (store.tournaments.some(tournament => tournament.code === requestedCode)) {
       send(res, 409, JSON.stringify({ error: "Tournament key already exists" }));
       return;
@@ -1459,7 +3402,7 @@ async function handleCreateTournament(req, res) {
       submissions: []
     };
     store.tournaments.push(tournament);
-    await writeStore(store);
+    writeStore(store);
     send(res, 201, JSON.stringify({
       tournament: publicTournament(tournament, { includePrivateCode: true }),
       creatorKey: tournament.creatorKey
@@ -1475,7 +3418,7 @@ async function handleJoinTournament(req, res) {
     const name = String(body.name || "").trim();
     const code = normalizeCode(body.code);
     const tenant = tenantFromValue(body.tenantId);
-    const store = await readStore();
+    const store = readStore();
     const tournament = store.tournaments.find(item =>
       !item.isGlobal &&
       (!tenant || item.tenantId === tenant.id) &&
@@ -1494,6 +3437,46 @@ async function handleJoinTournament(req, res) {
   }
 }
 
+function syncSubmissionAcrossTournaments(store, sourceTournamentId, player, incomingPrediction, phaseId) {
+  const userEmail = normalizeEmail(player.email);
+  if (!userEmail) return;
+
+  const userForAccessCheck = { email: userEmail, ...(store.users[userEmail] || {}) };
+
+  for (const otherTournament of store.tournaments) {
+    if (otherTournament.id === sourceTournamentId) continue;
+    if (otherTournament.templateId !== "worldcup-2026") continue;
+
+    if (hasTournamentAccess(store, userForAccessCheck, otherTournament)) {
+      if (!otherTournament.submissions) {
+        otherTournament.submissions = [];
+      }
+      const otherExistingIndex = otherTournament.submissions.findIndex(s => normalizeEmail(s.player?.email) === userEmail);
+      const otherPrevious = otherExistingIndex >= 0 ? otherTournament.submissions[otherExistingIndex] : null;
+
+      const predictionForOther = mergePredictionByPhase(otherPrevious?.prediction, incomingPrediction, phaseId, otherTournament);
+      const completedPhases = [...new Set([...(otherPrevious?.completedPhases || []), phaseId])];
+
+      const newOtherSubmission = {
+        id: otherPrevious?.id || `${Date.now()}-${slug(userEmail)}`,
+        createdAt: otherPrevious?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        phaseId,
+        completedPhases,
+        continuationToken: otherPrevious?.continuationToken || randomSecret(),
+        player: player,
+        prediction: predictionForOther
+      };
+
+      if (otherExistingIndex >= 0) {
+        otherTournament.submissions[otherExistingIndex] = newOtherSubmission;
+      } else {
+        otherTournament.submissions.push(newOtherSubmission);
+      }
+    }
+  }
+}
+
 async function handleSubmitProde(req, res) {
   try {
     const body = JSON.parse(await readBody(req));
@@ -1506,7 +3489,7 @@ async function handleSubmitProde(req, res) {
       return;
     }
 
-    const store = await readStore();
+    const store = readStore();
     const tournament = findTournament(store, tournamentId);
     if (!tournament) {
       send(res, 404, JSON.stringify({ error: "Tournament not found" }));
@@ -1519,6 +3502,16 @@ async function handleSubmitProde(req, res) {
     let loggedUser = null;
     if (tenant) {
       loggedUser = sessionUser(store, tenant, body.sessionToken);
+      if (!loggedUser) {
+        const globalUser = globalSessionUser(store, body.globalSessionToken);
+        if (hasTournamentAccess(store, globalUser, tournament)) {
+          loggedUser = {
+            name: globalUser.name,
+            email: globalUser.email,
+            area: ""
+          };
+        }
+      }
       if (!loggedUser) {
         send(res, 401, JSON.stringify({ error: "Login is required before saving predictions" }));
         return;
@@ -1539,7 +3532,8 @@ async function handleSubmitProde(req, res) {
       return;
     }
     const continuationToken = previous?.continuationToken || randomSecret();
-    const prediction = mergePredictionByPhase(previous?.prediction, payload.tournament, phaseId);
+    const filteredPayload = mergeLockedCustomMatches(previous?.prediction, payload.tournament, tournament);
+    const prediction = mergePredictionByPhase(previous?.prediction, filteredPayload, phaseId, tournament);
     const submission = {
       id: `${Date.now()}-${slug(payload.player.email)}`,
       createdAt: previous?.createdAt || new Date().toISOString(),
@@ -1553,7 +3547,11 @@ async function handleSubmitProde(req, res) {
     if (existingIndex >= 0) tournament.submissions[existingIndex] = submission;
     else tournament.submissions.push(submission);
 
-    await writeStore(store);
+    if (tournament.templateId === "worldcup-2026") {
+      syncSubmissionAcrossTournaments(store, tournament.id, payload.player, payload.tournament, phaseId);
+    }
+
+    writeStore(store);
     const continuationUrl = `${siteBaseUrl(req)}/continuar/${encodeURIComponent(continuationToken)}`;
     const nextPhase = nextPhaseId(phaseId);
     const nextPhaseUrl = nextPhase ? `${continuationUrl}?fase=${encodeURIComponent(nextPhase)}` : continuationUrl;
@@ -1595,7 +3593,8 @@ function materializeApprovedPaymentDraft(req, tournament, payment) {
   const existingIndex = tournament.submissions.findIndex(item => normalizeEmail(item.player?.email) === email);
   const previous = existingIndex >= 0 ? tournament.submissions[existingIndex] : null;
   const continuationToken = previous?.continuationToken || randomSecret();
-  const prediction = mergePredictionByPhase(previous?.prediction, payload.tournament, phaseId);
+  const filteredPayload = mergeLockedCustomMatches(previous?.prediction, payload.tournament, tournament);
+  const prediction = mergePredictionByPhase(previous?.prediction, filteredPayload, phaseId, tournament);
   const submission = {
     id: `${Date.now()}-${slug(payload.player.email)}`,
     createdAt: previous?.createdAt || new Date().toISOString(),
@@ -1615,14 +3614,14 @@ function materializeApprovedPaymentDraft(req, tournament, payment) {
   return submission;
 }
 
-async function handleContinueProde(req, res) {
+function handleContinueProde(req, res) {
   const url = new URL(req.url, "http://localhost");
   const token = String(url.searchParams.get("token") || "").trim();
   if (!token) {
     send(res, 400, JSON.stringify({ error: "Continuation token is required" }));
     return;
   }
-  const store = await readStore();
+  const store = readStore();
   for (const tournament of store.tournaments) {
     const submission = (tournament.submissions || []).find(item => item.continuationToken === token);
     if (submission) {
@@ -1639,12 +3638,12 @@ async function handleContinueProde(req, res) {
   send(res, 404, JSON.stringify({ error: "Continuation link not found" }));
 }
 
-async function handlePaymentStatus(req, res) {
+function handlePaymentStatus(req, res) {
   const url = new URL(req.url, "http://localhost");
   const tournamentId = url.searchParams.get("tournamentId") || "global";
   const tenant = tenantFromValue(url.searchParams.get("tenant"));
   const email = normalizeEmail(url.searchParams.get("email"));
-  const store = await readStore();
+  const store = readStore();
   const tournament = findTournament(store, tournamentId);
   if (!tournament || (tenant && tournament.tenantId !== tenant.id) || (!tenant && tournament.tenantId)) {
     send(res, 404, JSON.stringify({ error: "Tournament not found" }));
@@ -1653,7 +3652,7 @@ async function handlePaymentStatus(req, res) {
   const payment = paymentFor(tournament, email);
   if (payment?.status === "approved" && payment.pendingSubmission) {
     const submission = materializeApprovedPaymentDraft(req, tournament, payment);
-    if (submission) await writeStore(store);
+    if (submission) writeStore(store);
   }
   const existingSubmission = (tournament.submissions || []).some(item => normalizeEmail(item.player?.email) === email);
   send(res, 200, JSON.stringify({
@@ -1682,7 +3681,7 @@ async function handlePhaseReminders(req, res) {
       send(res, 200, JSON.stringify({ ok: true, sent: 0, phases: [] }));
       return;
     }
-    const store = await readStore();
+    const store = readStore();
     let sent = 0;
     for (const tournament of store.tournaments) {
       for (const submission of tournament.submissions || []) {
@@ -1709,7 +3708,7 @@ async function handlePhaseReminders(req, res) {
         }
       }
     }
-    await writeStore(store);
+    writeStore(store);
     send(res, 200, JSON.stringify({ ok: true, sent, phases: phases.map(item => item.id) }));
   } catch (error) {
     send(res, 500, JSON.stringify({ error: error.message }));
@@ -1718,44 +3717,429 @@ async function handlePhaseReminders(req, res) {
 
 async function handleSaveRealResults(req, res) {
   try {
-    const body = JSON.parse(await readBody(req));
-    const tournamentId = body.tournamentId || "global";
-    const tenant = tenantFromValue(body.tenantId);
+    const bodyText = await readBody(req);
+    console.log("[DEBUG save-results] Incoming body length:", bodyText.length);
+    const body = JSON.parse(bodyText);
     const realResults = body.realResults;
+    console.log("[DEBUG save-results] Incoming realResults.groupMatches:", JSON.stringify(realResults?.groupMatches || {}).substring(0, 500));
     if ((!realResults?.groups || !realResults?.winners) && !realResults?.custom) {
       send(res, 400, JSON.stringify({ error: "Invalid real results" }));
       return;
     }
-    const store = await readStore();
-    const tournament = store.tournaments.find(item => item.id === tournamentId);
+    const store = readStore();
+    const globalUser = globalSessionUser(store, body.globalSessionToken);
+    if (!globalUser?.isSuperAdmin && !globalUser?.isAdmin) {
+      send(res, 403, JSON.stringify({ error: "Se requieren privilegios de administrador global para guardar resultados oficiales." }));
+      return;
+    }
+    const tournament = store.tournaments.find(item => item.id === "global");
     if (!tournament) {
-      send(res, 404, JSON.stringify({ error: "Tournament not found" }));
+      send(res, 404, JSON.stringify({ error: "Global tournament not found" }));
       return;
     }
-    if ((tenant && tournament.tenantId !== tenant.id) || (!tenant && tournament.tenantId)) {
-      send(res, 404, JSON.stringify({ error: "Tournament not found" }));
-      return;
+    const updatedAt = new Date().toISOString();
+    if (realResults.custom?.matches) {
+      const timing = tournamentTiming(tournament);
+      const delayMs = Number(timing.scoringDelayMinutesAfterResult || 0) * 60000;
+      const manualFinishedAt = new Date(Date.now() - delayMs - 60000).toISOString();
+      Object.values(realResults.custom.matches).forEach(match => {
+        if (!match || typeof match !== "object") return;
+        const homeScore = match.homeScore;
+        const awayScore = match.awayScore;
+        const hasScore =
+          homeScore !== "" && homeScore !== undefined &&
+          awayScore !== "" && awayScore !== undefined;
+        if (hasScore) {
+          match.finishedAt = manualFinishedAt;
+          // Derive and store the winner so scoreSubmission can count winnerHits correctly
+          const h = Number(homeScore);
+          const a = Number(awayScore);
+          if (Number.isFinite(h) && Number.isFinite(a)) {
+            match.winner = h === a ? "draw" : h > a ? (match.home || "home") : (match.away || "away");
+          }
+        }
+      });
+      realResults.updatedAt = updatedAt;
     }
-    if (tenant && !await requireAdmin(req, res, tenant, body.adminKey, body.sessionToken)) return;
-    if (!tournament.isGlobal && tournament.creatorKey && body.creatorKey !== tournament.creatorKey) {
-      send(res, 403, JSON.stringify({ error: "Creator key is required to edit results" }));
-      return;
-    }
-    tournament.realResults = realResults;
-    tournament.realResultsUpdatedAt = new Date().toISOString();
-    await writeStore(store);
+    store.tournaments.forEach(t => {
+      t.realResults = realResults;
+      t.realResultsUpdatedAt = updatedAt;
+    });
+    writeStore(store);
+    // DEBUG: log what was saved
+    const savedMatches = Object.entries(realResults.custom?.matches || {});
+    console.log("[DEBUG save-results] Partidos con resultado guardado:",
+      savedMatches.filter(([, m]) => m.homeScore !== "" && m.homeScore !== undefined).map(([id, m]) => `${id}: ${m.homeScore}-${m.awayScore} winner=${m.winner}`)
+    );
     send(res, 200, JSON.stringify({ ok: true }));
   } catch (error) {
     send(res, 500, JSON.stringify({ error: error.message }));
   }
 }
 
-async function handleLeaderboard(req, res) {
+async function syncTournamentApiResults(store, tournament, options = {}) {
+  const code = safeText(options.competitionCode, 12) || footballDataCompetitionCode(tournament.templateId);
+  if (!code) {
+    throw new Error("No API competition code is configured for this template");
+  }
+  const season = safeText(options.season, 8) || process.env.FOOTBALL_DATA_SEASON || "";
+  const allApiMatches = await fetchFootballDataMatches({ code, season });
+  const apiFixtures = footballDataFixtures(allApiMatches);
+  if (apiFixtures.length && options.rebuildFixtures !== false) {
+    const template = tournamentTemplate(tournament);
+    tournament.customTemplate = {
+      ...(tournament.customTemplate || {}),
+      name: template.name,
+      mode: tournament.mode || template.mode,
+      teams: footballDataTeamsFromFixtures(apiFixtures),
+      fixtures: apiFixtures,
+      timing: tournamentTiming(tournament)
+    };
+  }
+  const fixtures = tournamentFixtures(tournament);
+  if (!fixtures.length) {
+    throw new Error("This tournament template has no fixture list to sync");
+  }
+  const now = Date.now();
+  const apiMatches = allApiMatches
+    .filter(match => match.status === "FINISHED" && dateIsNotInFuture(match.utcDate, now));
+  const updatedAt = new Date().toISOString();
+  const previous = tournament.realResults?.custom?.matches || {};
+  const matches = withoutFutureApiResults(previous, fixtures, now);
+  let imported = 0;
+  let matched = 0;
+  fixtures.forEach(fixtureItem => {
+    if (!dateIsNotInFuture(fixtureItem.startsAt, now)) return;
+    const apiMatch = matchFixtureToApiResult(fixtureItem, apiMatches);
+    if (!apiMatch) return;
+    matched += 1;
+    const fullTime = apiMatch.score?.fullTime || {};
+    const homeScore = Number(fullTime.home);
+    const awayScore = Number(fullTime.away);
+    if (!Number.isFinite(homeScore) || !Number.isFinite(awayScore)) return;
+    imported += 1;
+    const nextMatch = {
+      homeScore,
+      awayScore,
+      winner: homeScore === awayScore ? "draw" : homeScore > awayScore ? fixtureItem.home : fixtureItem.away,
+      source: "football-data.org",
+      apiMatchId: apiMatch.id,
+      status: apiMatch.status,
+      updatedAt,
+      finishedAt: ""
+    };
+    nextMatch.finishedAt = apiMatch.status === "FINISHED" ? apiResultFinishedAt(previous[fixtureItem.id], nextMatch, estimatedFinishedAt(apiMatch.utcDate || fixtureItem.startsAt, updatedAt)) : "";
+    matches[fixtureItem.id] = nextMatch;
+  });
+  tournament.realResults = {
+    ...(tournament.realResults || {}),
+    custom: {
+      ...(tournament.realResults?.custom || {}),
+      matches,
+      champion: tournament.realResults?.custom?.champion || ""
+    },
+    apiSource: {
+      provider: "football-data.org",
+      competitionCode: code,
+      season,
+      syncedAt: updatedAt,
+      fixtures: apiFixtures.length,
+      matched,
+      imported
+    },
+    updatedAt
+  };
+  tournament.realResultsUpdatedAt = updatedAt;
+  return { provider: "football-data.org", competitionCode: code, season, fixtures: apiFixtures.length, matched, imported };
+}
+
+async function handleImportApiResults(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const tournamentId = body.tournamentId || "global";
+    const tenant = tenantFromValue(body.tenantId);
+    const store = readStore();
+    if (tournamentId !== "global" || tenant) {
+      send(res, 403, JSON.stringify({ error: "Solo se pueden importar resultados en el torneo global." }));
+      return;
+    }
+    const tournament = store.tournaments.find(item => item.id === "global");
+    if (!tournament) {
+      send(res, 404, JSON.stringify({ error: "Global tournament not found" }));
+      return;
+    }
+    const globalUser = globalSessionUser(store, body.globalSessionToken);
+    if (!globalUser?.isAdmin && !globalUser?.isSuperAdmin) {
+      send(res, 403, JSON.stringify({ error: "Global admin required" }));
+      return;
+    }
+    const result = tournament.templateId === "argentina"
+      ? await syncArgentinaApiResults(store, tournament)
+      : await syncTournamentApiResults(store, tournament, body);
+    store.tournaments.forEach(t => {
+      t.realResults = tournament.realResults;
+      t.realResultsUpdatedAt = tournament.realResultsUpdatedAt;
+    });
+    writeStore(store);
+    send(res, 200, JSON.stringify({
+      ok: true,
+      ...result,
+      tournament: publicTournament(tournament)
+    }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleDeletePrivateTournament(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const store = readStore();
+    const admin = globalSessionUser(store, body.globalSessionToken || body.sessionToken);
+    if (!admin?.isSuperAdmin) {
+      send(res, 403, JSON.stringify({ error: "Superadmin required" }));
+      return;
+    }
+    const tournamentId = String(body.tournamentId || "").trim();
+    const tournament = store.tournaments.find(item => item.id === tournamentId);
+    if (!tournament) {
+      send(res, 404, JSON.stringify({ error: "Tournament not found" }));
+      return;
+    }
+    if (tournament.isGlobal || tournament.id === "global") {
+      send(res, 400, JSON.stringify({ error: "Global tournament cannot be deleted" }));
+      return;
+    }
+    store.tournaments = store.tournaments.filter(item => item.id !== tournamentId);
+    Object.values(store.tournamentAccess || {}).forEach(access => {
+      if (access && typeof access === "object") delete access[tournamentId];
+    });
+    if (tournament.tenantId && store.tenants?.[tournament.tenantId]?.dynamic === true) {
+      delete store.tenants[tournament.tenantId];
+      delete TENANTS[tournament.tenantId];
+    }
+    writeStore(store);
+    send(res, 200, JSON.stringify({ ok: true, deleted: tournamentId }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleGetMiniTournaments(req, res) {
+  const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+  const match = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/minitournaments$/);
+  if (!match) {
+    send(res, 404, JSON.stringify({ error: "Invalid path" }));
+    return;
+  }
+  const tournamentId = match[1];
+  const store = readStore();
+  const tournament = findTournament(store, tournamentId);
+  if (!tournament) {
+    send(res, 404, JSON.stringify({ error: "Tournament not found" }));
+    return;
+  }
+  const globalSessionToken = url.searchParams.get("globalSessionToken");
+  const sessionToken = url.searchParams.get("sessionToken");
+  const tenantId = url.searchParams.get("tenantId");
+
+  let user = globalSessionToken ? globalSessionUser(store, globalSessionToken) : null;
+  if (!user && sessionToken && tenantId) {
+    const tenant = tenantFromValue(tenantId);
+    if (tenant) user = sessionUser(store, tenant, sessionToken);
+  }
+  const userEmail = user ? normalizeEmail(user.email) : null;
+
+  const minitournaments = tournament.minitournaments || [];
+
+  let userMiniTournaments = [];
+  let visibleMinitournaments = [];
+  if (userEmail) {
+    visibleMinitournaments = minitournaments.filter(mt => (mt.participants || []).includes(userEmail) || user.isAdmin || user.isSuperAdmin);
+    userMiniTournaments = minitournaments.filter(mt => (mt.participants || []).includes(userEmail)).map(mt => mt.id);
+  }
+
+  send(res, 200, JSON.stringify({
+    minitournaments: visibleMinitournaments,
+    userMiniTournaments,
+    currentMiniTournament: userMiniTournaments[0] || null
+  }));
+}
+
+async function handleCreateMiniTournament(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const store = readStore();
+    const tournament = findTournament(store, body.tournamentId);
+    if (!tournament) {
+      send(res, 404, JSON.stringify({ error: "Tournament not found" }));
+      return;
+    }
+    const tenant = tenantFromValue(body.tenantId);
+    let user = globalSessionUser(store, body.globalSessionToken);
+    if (!user && tenant) {
+      user = sessionUser(store, tenant, body.sessionToken);
+    }
+    if (!user) {
+      send(res, 401, JSON.stringify({ error: "Login required" }));
+      return;
+    }
+
+    if (!tournament.minitournaments) tournament.minitournaments = [];
+
+    const minitournament = {
+      id: `mini-${Date.now()}-${randomCode()}`,
+      name: safeText(body.name, 100),
+      description: safeText(body.description, 200),
+      code: normalizeCode(body.code),
+      createdAt: new Date().toISOString(),
+      creatorEmail: normalizeEmail(user.email),
+      participants: [normalizeEmail(user.email)]
+    };
+
+    tournament.minitournaments.push(minitournament);
+    writeStore(store);
+
+    send(res, 200, JSON.stringify({ ok: true, minitournament }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleJoinMiniTournament(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const store = readStore();
+    const tournament = findTournament(store, body.tournamentId);
+    if (!tournament) {
+      send(res, 404, JSON.stringify({ error: "Tournament not found" }));
+      return;
+    }
+    const tenant = tenantFromValue(body.tenantId);
+    let user = globalSessionUser(store, body.globalSessionToken);
+    if (!user && tenant) {
+      user = sessionUser(store, tenant, body.sessionToken);
+    }
+    if (!user) {
+      send(res, 401, JSON.stringify({ error: "Login required" }));
+      return;
+    }
+
+    const name = safeText(body.name, 100).toLowerCase();
+    const code = normalizeCode(body.code);
+
+    const mt = (tournament.minitournaments || []).find(m => m.name.toLowerCase() === name && m.code === code);
+    if (!mt) {
+      send(res, 404, JSON.stringify({ error: "Nombre o contraseña incorrectos" }));
+      return;
+    }
+
+    if (!mt.participants) mt.participants = [];
+    const email = normalizeEmail(user.email);
+    if (!mt.participants.includes(email)) {
+      mt.participants.push(email);
+      writeStore(store);
+    }
+
+    send(res, 200, JSON.stringify({ ok: true, minitournamentId: mt.id }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleDeleteMiniTournament(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const store = readStore();
+    const tournament = findTournament(store, body.tournamentId);
+    if (!tournament) {
+      send(res, 404, JSON.stringify({ error: "Tournament not found" }));
+      return;
+    }
+    const tenant = tenantFromValue(body.tenantId);
+    let user = globalSessionUser(store, body.globalSessionToken);
+    if (!user && tenant) {
+      user = sessionUser(store, tenant, body.sessionToken);
+    }
+    if (!user) {
+      send(res, 401, JSON.stringify({ error: "Login required" }));
+      return;
+    }
+
+    const mtIndex = (tournament.minitournaments || []).findIndex(m => m.id === body.minitournamentId);
+    if (mtIndex === -1) {
+      send(res, 404, JSON.stringify({ error: "Minitournament not found" }));
+      return;
+    }
+
+    const mt = tournament.minitournaments[mtIndex];
+    if (mt.creatorEmail !== normalizeEmail(user.email) && !user.isAdmin && !user.isSuperAdmin) {
+      send(res, 403, JSON.stringify({ error: "Solo el creador o un administrador puede eliminar el minitorneo" }));
+      return;
+    }
+
+    tournament.minitournaments.splice(mtIndex, 1);
+    writeStore(store);
+
+    send(res, 200, JSON.stringify({ ok: true }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleRemoveMiniTournamentUser(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const store = readStore();
+    const tournament = findTournament(store, body.tournamentId);
+    if (!tournament) {
+      send(res, 404, JSON.stringify({ error: "Tournament not found" }));
+      return;
+    }
+    const tenant = tenantFromValue(body.tenantId);
+    let user = globalSessionUser(store, body.globalSessionToken);
+    if (!user && tenant) {
+      user = sessionUser(store, tenant, body.sessionToken);
+    }
+    if (!user) {
+      send(res, 401, JSON.stringify({ error: "Login required" }));
+      return;
+    }
+
+    const mt = (tournament.minitournaments || []).find(m => m.id === body.minitournamentId);
+    if (!mt) {
+      send(res, 404, JSON.stringify({ error: "Minitournament not found" }));
+      return;
+    }
+
+    if (mt.creatorEmail !== normalizeEmail(user.email) && !user.isAdmin && !user.isSuperAdmin) {
+      send(res, 403, JSON.stringify({ error: "Solo el creador o un administrador puede eliminar usuarios" }));
+      return;
+    }
+
+    const userToRemove = normalizeEmail(body.userEmailToRemove);
+    if (!mt.participants) mt.participants = [];
+    mt.participants = mt.participants.filter(email => email !== userToRemove);
+
+    writeStore(store);
+
+    send(res, 200, JSON.stringify({ ok: true }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+function handleSelectMiniTournament(req, res) {
+  send(res, 200, JSON.stringify({ ok: true }));
+}
+
+function handleLeaderboard(req, res) {
   const url = new URL(req.url, "http://localhost");
   const tournamentId = url.searchParams.get("tournamentId") || "global";
   const tenant = tenantFromValue(url.searchParams.get("tenant"));
   const area = normalizeAreaName(url.searchParams.get("area"));
-  const store = await readStore();
+  const minitournamentId = url.searchParams.get("minitournamentId");
+  const store = readStore();
   const tournament = store.tournaments.find(item => item.id === tournamentId);
   if (!tournament) {
     send(res, 404, JSON.stringify({ error: "Tournament not found" }));
@@ -1765,52 +4149,174 @@ async function handleLeaderboard(req, res) {
     send(res, 404, JSON.stringify({ error: "Tournament not found" }));
     return;
   }
-  const leaderboard = (tournament.submissions || [])
-    .filter(submission => !area || areaId(submission.player?.area) === areaId(area))
+  if (tenant) {
+    const companyUser = sessionUser(store, tenant, url.searchParams.get("sessionToken"));
+    const globalUser = globalSessionUser(store, url.searchParams.get("globalSessionToken"));
+    if (!companyUser && !hasTournamentAccess(store, globalUser, tournament)) {
+      send(res, 403, JSON.stringify({ error: "Tournament access is required" }));
+      return;
+    }
+  }
+  let mtParticipants = null;
+  let minitournamentName = null;
+  if (minitournamentId && tournament.minitournaments) {
+    const mt = tournament.minitournaments.find(m => m.id === minitournamentId);
+    if (mt) {
+      mtParticipants = mt.participants || [];
+      minitournamentName = mt.name;
+    }
+  }
+  let leaderboard = (tournament.submissions || [])
+    .filter(submission => {
+      if (!mtParticipants) return true;
+      return mtParticipants.includes(normalizeEmail(submission.player?.email));
+    })
     .map(submission => ({
       player: {
         name: submission.player?.name || "",
-        area: submission.player?.area || ""
+        area: submission.player?.area || "",
+        email: submission.player?.email || ""
       },
       createdAt: submission.createdAt,
       champion: submission.prediction?.custom?.champion || submission.prediction?.winners?.m104 || "",
-      score: scoreSubmission(submission.prediction, tournament.realResults, tournament.scoring)
-    }))
-    .sort((a, b) => b.score.points - a.score.points || new Date(a.createdAt) - new Date(b.createdAt));
+      score: scoreSubmission(submission.prediction, tournament.realResults, tournament.scoring, tournament),
+      prediction: submission.prediction
+    }));
+
+  if (mtParticipants) {
+    const existingEmails = leaderboard.map(row => normalizeEmail(row.player.email));
+    mtParticipants.forEach(email => {
+      if (!existingEmails.includes(email)) {
+        let name = "Jugador sin prode";
+        let area = "";
+        if (tenant && store.tenants?.[tenant.id]?.users?.[email]) {
+          name = store.tenants[tenant.id].users[email].name || name;
+          area = store.tenants[tenant.id].users[email].area || area;
+        } else if (store.users?.[email]) {
+          name = store.users[email].name || name;
+        }
+        leaderboard.push({
+          player: { name, area, email },
+          createdAt: new Date().toISOString(),
+          champion: "",
+          score: { points: 0, groupHits: 0, winnerHits: 0, exactScoreHits: 0, championHit: false },
+          prediction: null
+        });
+      }
+    });
+  } else {
+    const existingEmails = leaderboard.map(row => normalizeEmail(row.player.email));
+    if (tenant) {
+      const tenantData = store.tenants?.[tenant.id];
+      if (tenantData && tenantData.users) {
+        Object.values(tenantData.users).forEach(user => {
+          const email = normalizeEmail(user.email);
+          if (!existingEmails.includes(email) && user.active !== false) {
+            leaderboard.push({
+              player: { name: user.name, area: user.area || "", email },
+              createdAt: user.createdAt || new Date().toISOString(),
+              champion: "",
+              score: { points: 0, groupHits: 0, winnerHits: 0, exactScoreHits: 0, championHit: false },
+              prediction: null
+            });
+          }
+        });
+      }
+    } else if (tournament.isGlobal) {
+      Object.values(store.users || {}).forEach(user => {
+        const email = normalizeEmail(user.email);
+        if (!existingEmails.includes(email) && user.active !== false) {
+          leaderboard.push({
+            player: { name: user.name, area: "Global", email },
+            createdAt: user.createdAt || new Date().toISOString(),
+            champion: "",
+            score: { points: 0, groupHits: 0, winnerHits: 0, exactScoreHits: 0, championHit: false },
+            prediction: null
+          });
+        }
+      });
+    }
+  }
+
+  leaderboard.sort((a, b) => {
+    const aHas = a.prediction !== null;
+    const bHas = b.prediction !== null;
+    if (aHas && !bHas) return -1;
+    if (!aHas && bHas) return 1;
+    return b.score.points - a.score.points || new Date(a.createdAt) - new Date(b.createdAt);
+  });
+
   send(res, 200, JSON.stringify({
     tournament: publicTournament(tournament),
     area,
     hasRealResults: Boolean(tournament.realResults),
-    leaderboard
+    leaderboard,
+    minitournamentName
   }));
 }
 
-async function handleAdminSummary(req, res) {
+function handleAdminSummary(req, res) {
   const url = new URL(req.url, "http://localhost");
   const tenant = tenantFromValue(url.searchParams.get("tenant"));
   const adminKey = url.searchParams.get("adminKey");
   const sessionToken = url.searchParams.get("sessionToken");
+  const globalSessionToken = url.searchParams.get("globalSessionToken");
+  const store = readStore();
   if (!tenant) {
-    send(res, 404, JSON.stringify({ error: "Company not found" }));
+    const admin = requireGlobalAdmin(req, res, store, globalSessionToken);
+    if (!admin) return;
+    const users = Object.values(store.users || {})
+      .map(user => {
+        const role = userRole(null, user);
+        return {
+          name: user.name || "",
+          email: user.email || "",
+          area: "Global",
+          active: user.active !== false,
+          role,
+          isAdmin: role === "admin" || role === "superadmin",
+          isSuperAdmin: role === "superadmin",
+          registered: true,
+          registeredAt: user.createdAt || "",
+          updatedAt: user.updatedAt || "",
+          hasPrediction: false,
+          predictionUpdatedAt: "",
+          completedPhases: []
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name) || a.email.localeCompare(b.email));
+    send(res, 200, JSON.stringify({
+      scope: "global",
+      stats: {
+        users: users.length,
+        predictions: store.tournaments.reduce((total, tournament) => total + (tournament.submissions?.length || 0), 0),
+        areas: store.tournaments.length
+      },
+      tournaments: (store.tournaments || []).map(tournament => publicLobbyTournament(store, tournament, admin)),
+      users
+    }));
     return;
   }
-  if (!await requireAdmin(req, res, tenant, adminKey, sessionToken)) return;
-  const store = await readStore();
+  if (!requireAdmin(req, res, tenant, adminKey, sessionToken, globalSessionToken)) return;
   const tenantData = tenantStore(store, tenant.id);
   const tournament = store.tournaments.find(item => item.id === tenantTournamentId(tenant.id));
   const submissions = tournament?.submissions || [];
   const byEmail = new Map(submissions.map(submission => [normalizeEmail(submission.player?.email), submission]));
-    const users = Object.values(tenantData.users || {})
+  const users = Object.values(tenantData.users || {})
     .map(user => {
       const submission = byEmail.get(normalizeEmail(user.email));
-      const admin = Boolean(user.isAdmin || isAdminEmail(tenant.id, user.email));
+      const role = userRole(tenant.id, user);
+      const admin = role === "admin" || role === "superadmin";
+      if (user.role !== role) user.role = role;
       if (admin && !user.isAdmin) user.isAdmin = true;
       return {
         name: user.name || "",
         email: user.email || "",
         area: user.area || "",
         active: user.active !== false,
+        role,
         isAdmin: admin,
+        isSuperAdmin: role === "superadmin",
         registered: true,
         registeredAt: user.createdAt || "",
         updatedAt: user.updatedAt || "",
@@ -1827,7 +4333,9 @@ async function handleAdminSummary(req, res) {
       email: submission.player?.email || "",
       area: submission.player?.area || "",
       active: true,
+      role: "player",
       isAdmin: false,
+      isSuperAdmin: false,
       registered: false,
       registeredAt: "",
       updatedAt: "",
@@ -1847,10 +4355,72 @@ async function handleAdminSummary(req, res) {
   }));
 }
 
+let apiResultSyncRunning = false;
+
+async function syncApiResultsForAllTournaments() {
+  if (apiResultSyncRunning) return;
+  apiResultSyncRunning = true;
+  try {
+    const store = readStore();
+    let imported = 0;
+    let fixtures = 0;
+    const globalTournament = store.tournaments.find(t => t.id === "global");
+    if (globalTournament && globalTournament.templateId !== "worldcup-2026") {
+      try {
+        let result = null;
+        if (globalTournament.templateId === "argentina") {
+          result = await syncArgentinaApiResults(store, globalTournament);
+        } else if (footballDataCompetitionCode(globalTournament.templateId) && (process.env.FOOTBALL_DATA_TOKEN || process.env.FOOTBALLDATA_TOKEN)) {
+          result = await syncTournamentApiResults(store, globalTournament);
+        }
+        if (result) {
+          imported += result.imported || 0;
+          fixtures += result.fixtures || 0;
+          store.tournaments.forEach(t => {
+            t.realResults = globalTournament.realResults;
+            t.realResultsUpdatedAt = globalTournament.realResultsUpdatedAt;
+          });
+        }
+      } catch (error) {
+        console.warn(`No se pudo sincronizar global: ${error.message}`);
+      }
+    }
+    for (const tournament of store.tournaments || []) {
+      if (tournament.id === "global") continue;
+      if (tournament.templateId === "worldcup-2026") continue;
+      try {
+        let result = null;
+        if (tournament.templateId === "argentina") {
+          result = await syncArgentinaApiResults(store, tournament);
+        } else {
+          if (!footballDataCompetitionCode(tournament.templateId)) continue;
+          if (!process.env.FOOTBALL_DATA_TOKEN && !process.env.FOOTBALLDATA_TOKEN) continue;
+          result = await syncTournamentApiResults(store, tournament);
+        }
+        imported += result.imported || 0;
+        fixtures += result.fixtures || 0;
+      } catch (error) {
+        console.warn(`No se pudo sincronizar ${tournament.id}: ${error.message}`);
+      }
+    }
+    if (imported > 0 || fixtures > 0) writeStore(store);
+    console.log(`Sync API resultados: ${imported} resultados importados, ${fixtures} fixtures sincronizados`);
+  } finally {
+    apiResultSyncRunning = false;
+  }
+}
+
 function serveStatic(req, res) {
   const cleanUrl = decodeURIComponent(req.url.split("?")[0]);
-  const isCompanyView = /^\/empresa\/[^/.]+\/?$/.test(cleanUrl);
-  const requested = req.url === "/" || cleanUrl.startsWith("/join/") || cleanUrl.startsWith("/continuar/") || isCompanyView ? "/index.html" : cleanUrl;
+  const isCompanyView = /^\/(?:prode\/)?empresa\/[^/.]+\/?$/.test(cleanUrl);
+  const isProdeView = cleanUrl === "/prode" || cleanUrl === "/prode/" || cleanUrl === "/prode/global" || cleanUrl === "/prode/global/";
+  const staticMatch = cleanUrl.match(/^\/(?:prode-static|prode-global-static)\/(.+)$/);
+  const isResetPasswordView = cleanUrl.startsWith("/reset-password/") || cleanUrl.startsWith("/prode/reset-password/") || cleanUrl.startsWith("/prode/global/reset-password/");
+  const requested = req.url === "/" || isProdeView || cleanUrl.startsWith("/join/") || cleanUrl.startsWith("/continuar/") || isResetPasswordView || isCompanyView
+    ? "/index.html"
+    : staticMatch
+      ? `/${staticMatch[1]}`
+      : cleanUrl;
   const filePath = path.normalize(path.join(ROOT, requested));
   if (!filePath.startsWith(ROOT)) {
     send(res, 403, "Forbidden", "text/plain; charset=utf-8");
@@ -1861,37 +4431,45 @@ function serveStatic(req, res) {
       send(res, 404, "Not found", "text/plain; charset=utf-8");
       return;
     }
-    send(res, 200, data, MIME[path.extname(filePath)] || "application/octet-stream");
+    res.writeHead(200, {
+      "Content-Type": MIME[path.extname(filePath)] || "application/octet-stream",
+      "Cache-Control": "no-cache"
+    });
+    res.end(data);
   });
 }
 
-http.createServer(async (req, res) => {
+const server = http.createServer((req, res) => {
+  if (req.url.startsWith("/prode/api/")) {
+    req.url = req.url.replace(/^\/prode\/api\//, "/api/");
+  }
+
   if (req.method === "GET" && req.url === "/healthz") {
     send(res, 200, JSON.stringify({ ok: true }));
     return;
   }
   if (req.method === "POST" && req.url === "/api/send-prode") {
-    await handleApi(req, res);
+    handleApi(req, res);
     return;
   }
   if (req.method === "GET" && req.url.startsWith("/api/continue-prode")) {
-    await handleContinueProde(req, res);
+    handleContinueProde(req, res);
     return;
   }
   if (req.method === "POST" && req.url === "/api/register-payment") {
-    await handleRegisterPayment(req, res);
+    handleRegisterPayment(req, res);
     return;
   }
   if (req.method === "POST" && req.url.startsWith("/api/send-phase-reminders")) {
-    await handlePhaseReminders(req, res);
+    handlePhaseReminders(req, res);
     return;
   }
   if (req.method === "GET" && req.url.startsWith("/api/live-results")) {
-    await handleLiveResults(req, res);
+    handleLiveResults(req, res);
     return;
   }
   if (req.method === "POST" && req.url.startsWith("/api/live-results")) {
-    await handleSaveLiveResults(req, res);
+    handleSaveLiveResults(req, res);
     return;
   }
   if (req.method === "GET" && req.url === "/api/templates") {
@@ -1905,55 +4483,171 @@ http.createServer(async (req, res) => {
       send(res, 404, JSON.stringify({ error: "Company not found" }));
       return;
     }
-    const store = await readStore();
+    const store = readStore();
     send(res, 200, JSON.stringify({ tenant: publicTenant(tenant, tenantStore(store, tenant.id)) }));
     return;
   }
   if (req.method === "POST" && req.url === "/api/company-login") {
-    await handleCompanyLogin(req, res);
+    handleCompanyLogin(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/global-login") {
+    handleGlobalLogin(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/request-password-reset") {
+    handleRequestPasswordReset(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/reset-password") {
+    handleResetPassword(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/registrar-global") {
+    handleRegistrarGlobal(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/registrar-company") {
+    handleRegistrarCompany(req, res);
+    return;
+  }
+  if (req.method === "GET" && req.url.startsWith("/api/global-session")) {
+    handleGlobalSession(req, res);
+    return;
+  }
+  if (req.method === "GET" && req.url.startsWith("/api/tournament-lobby")) {
+    handleTournamentLobby(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/tournament-access") {
+    handleGrantTournamentAccess(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/lobby-tenant") {
+    handleCreateLobbyTenant(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/change-password") {
+    handleChangePassword(req, res);
     return;
   }
   if (req.method === "GET" && req.url.startsWith("/api/company-session")) {
-    await handleCompanySession(req, res);
+    handleCompanySession(req, res);
     return;
   }
   if (req.method === "POST" && req.url === "/api/admin-users") {
-    await handleAdminUpdateUser(req, res);
+    handleAdminUpdateUser(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/admin-users/delete") {
+    handleAdminDeleteUser(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/admin-theme") {
+    handleAdminTheme(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/admin-games") {
+    handleAdminGames(req, res);
+    return;
+  }
+  if (req.method === "GET" && req.url.startsWith("/api/global-games")) {
+    handleGlobalGames(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/daily-game-play") {
+    handleDailyGamePlay(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/company-areas/update") {
+    handleUpdateCompanyArea(req, res);
     return;
   }
   if (req.method === "POST" && req.url === "/api/company-areas") {
-    await handleCreateCompanyArea(req, res);
+    handleCreateCompanyArea(req, res);
     return;
   }
   if (req.method === "GET" && req.url.startsWith("/api/admin-summary")) {
-    await handleAdminSummary(req, res);
+    handleAdminSummary(req, res);
+    return;
+  }
+  if (req.method === "GET" && /^\/api\/tournaments\/[^/]+\/minitournaments/.test(req.url)) {
+    handleGetMiniTournaments(req, res);
     return;
   }
   if (req.method === "GET" && req.url.startsWith("/api/tournaments")) {
-    await handleTournaments(req, res);
+    handleTournaments(req, res);
     return;
   }
   if (req.method === "POST" && req.url === "/api/tournaments") {
-    await handleCreateTournament(req, res);
+    handleCreateTournament(req, res);
     return;
   }
   if (req.method === "POST" && req.url === "/api/join-tournament") {
-    await handleJoinTournament(req, res);
+    handleJoinTournament(req, res);
     return;
   }
   if (req.method === "POST" && req.url === "/api/submit-prode") {
-    await handleSubmitProde(req, res);
+    handleSubmitProde(req, res);
     return;
   }
   if (req.method === "POST" && req.url === "/api/real-results") {
-    await handleSaveRealResults(req, res);
+    handleSaveRealResults(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/import-api-results") {
+    handleImportApiResults(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/minitournaments") {
+    handleCreateMiniTournament(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/minitournaments/join") {
+    handleJoinMiniTournament(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/minitournaments/delete") {
+    handleDeleteMiniTournament(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/minitournaments/remove-user") {
+    handleRemoveMiniTournamentUser(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/minitournaments/select") {
+    handleSelectMiniTournament(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/delete-private-tournament") {
+    handleDeletePrivateTournament(req, res);
     return;
   }
   if (req.method === "GET" && req.url.startsWith("/api/leaderboard")) {
-    await handleLeaderboard(req, res);
+    handleLeaderboard(req, res);
     return;
   }
+  if (req.method === "POST" && req.url === "/api/request-verification") { handleRequestVerification(req, res); return; }
+  if (req.method === "POST" && req.url === "/api/verify-code") { handleVerifyCode(req, res); return; }
   serveStatic(req, res);
-}).listen(PORT, () => {
-  console.log(`Prode Mundial listo en http://localhost:${PORT}`);
+
 });
+
+async function startServer() {
+  try {
+    const store = readStore();
+    await syncStoreToMysql(store);
+    console.log(`MySQL conectado en ${DB_CONFIG.host}:${DB_CONFIG.port}/${DB_CONFIG.database} con usuario ${DB_CONFIG.user}`);
+    server.listen(PORT, () => {
+      console.log(`Prode Mundial listo en http://localhost:${PORT}`);
+      setTimeout(() => syncApiResultsForAllTournaments().catch(error => console.warn(`Sync API resultados fallo: ${error.message}`)), 5000);
+      setInterval(() => syncApiResultsForAllTournaments().catch(error => console.warn(`Sync API resultados fallo: ${error.message}`)), Number(process.env.API_RESULTS_SYNC_INTERVAL_MS || 1800000));
+    });
+  } catch (error) {
+    console.error("No se pudo iniciar porque MySQL es obligatorio:");
+    console.error(error.message);
+    process.exit(1);
+  }
+}
+
+startServer();

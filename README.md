@@ -1,6 +1,28 @@
 # Prode Mundial 2026
 
+Esta carpeta esta preparada como version **solo global**. No crea ni usa las versiones de empresa `sur`, `norte` o `acme`; los datos se guardan en `sistema_global/data/prode-store.json`.
+
 Web para pronosticar grupos y cruces del Mundial 2026, guardar prodes por torneo y mostrar leaderboards globales o privados.
+
+## Carga manual de resultados reales
+
+Para que una persona cargue los resultados que calculan el leaderboard sin tocar JSON ni endpoints, entra a:
+
+```txt
+http://179.43.123.103/prode/global/resultados
+```
+
+La pantalla pide la contraseña `RESULTS_ADMIN_PASSWORD` y despues muestra el formulario visual de resultados reales. Si no configuras la variable, la contraseña local por defecto es:
+
+```txt
+resultados2026
+```
+
+En produccion cambiala en `.env`:
+
+```bash
+RESULTS_ADMIN_PASSWORD=una-clave-tuya
+```
 
 ## Uso local
 
@@ -11,7 +33,7 @@ npm start
 Despues abri:
 
 ```txt
-http://localhost:3000
+http://179.43.123.103/prode/global
 ```
 
 ## Funciones
@@ -68,16 +90,11 @@ SMTP_PASS=tu_password
 MAIL_FROM=Prode Mundial <tu_usuario@dominio.com>
 ```
 
-Si no configuras SMTP, el boton de correo descarga el comprobante PDF y abre el cliente de email del usuario.
+Si no configuras SMTP, el boton de correo descarga el comprobante PDF y abre el cliente de email del usuario. Los avisos automaticos para continuar la proxima fecha tambien necesitan SMTP.
 
-## Modos de pronostico
+## Pronostico por fecha
 
-El selector **Modo** separa dos experiencias:
-
-- **Fecha por fecha**: muestra solo los partidos de la fecha elegida. En fase de grupos no muestra tablas, posiciones ni ordenamiento; al cambiar de fecha quedan visibles solo los partidos de la siguiente fecha.
-- **Todo junto**: muestra el prode completo tradicional con grupos, tablas, cruces y campeon.
-
-En **Fecha por fecha**, el selector **Fecha** permite guardar una etapa puntual:
+El selector **Fecha a pronosticar** permite guardar una etapa puntual:
 
 - Fecha 1: fase de grupos.
 - Fecha 2: fase de grupos.
@@ -89,7 +106,7 @@ En **Fecha por fecha**, el selector **Fecha** permite guardar una etapa puntual:
 - Final.
 - 3er puesto.
 
-Cuando el usuario entra despues con su link privado `/continuar/...`, puede cargar la siguiente fecha sin perder lo anterior. Cuando el administrador carga resultados reales, las rondas eliminatorias se arman con esos cruces reales.
+En las fechas de grupos se muestran solo los 24 partidos de esa jornada. Al guardar, el usuario no ve un link en pantalla: cuando el administrador carga resultados reales desde `/prode/global/resultados`, el sistema envia por email el link privado `/prode/global/continuar/...` de la proxima fecha. Cuando el administrador carga resultados reales, las rondas eliminatorias se arman con esos cruces reales.
 
 Para mandar recordatorios automaticos un dia antes de una fase, configura un cron externo que llame:
 
@@ -101,24 +118,45 @@ Variables de entorno:
 
 ```bash
 REMINDER_SECRET=tu_secreto
-PUBLIC_BASE_URL=https://tu-dominio.com
+PUBLIC_BASE_URL=http://179.43.123.103/prode/global
+APP_BASE_PATH=/prode/global
 PRODE_PHASE_SCHEDULE=[{"id":"group2","startAt":"2026-06-17T12:00:00-03:00"},{"id":"r32","startAt":"2026-06-28T12:00:00-03:00"}]
 ```
 
 `PRODE_PHASE_SCHEDULE` acepta los ids `group1`, `group2`, `group3`, `r32`, `r16`, `qf`, `sf`, `final` y `third`. El endpoint envia correo solo si SMTP esta configurado.
 
-El guardado normal tambien intenta enviar un correo con el link de continuacion y el link directo a la siguiente fecha. Si SMTP no esta configurado, el pronostico se guarda igual.
+## Pago Mercado Pago global
 
-## Panel admin
+En esta version global, el primer pronostico de cada email puede exigir pago con Checkout Pro. Luego ese usuario puede continuar y guardar nuevas fechas sin volver a pagar.
 
-La pestana **Admin** permite ver usuarios registrados, areas, prodes guardados y cargar resultados reales para recalcular rankings. Configura una clave:
+Configura la integracion con:
 
 ```bash
-ADMIN_KEY=clave-general
-ADMIN_KEY_ACME=clave-solo-acme
+PAYMENT_REQUIRED_GLOBAL=true
+PAYMENT_AMOUNT_GLOBAL=1
+PAYMENT_TITLE_GLOBAL=Inscripcion Prode Mundial
+PAYMENT_CURRENCY_GLOBAL=ARS
+MERCADOPAGO_ACCESS_TOKEN=APP_USR...
+MERCADOPAGO_WEBHOOK_SECRET=un-secreto-largo
+PUBLIC_BASE_URL=http://179.43.123.103/prode/global
+APP_BASE_PATH=/prode/global
 ```
 
-Si existe `ADMIN_KEY_ACME`, esa clave se usa para `/empresa/acme`; si no, se usa `ADMIN_KEY`.
+Si estas probando con el `.env` viejo de ACME, esta version global tambien acepta `PAYMENT_AMOUNT_ACME`, `PAYMENT_TITLE_ACME` y `PAYMENT_CURRENCY_ACME` como fallback.
+
+Flujo:
+
+- El frontend llama `POST /api/create-payment`.
+- El servidor crea una preferencia en Mercado Pago con `external_reference`.
+- Mercado Pago redirige al usuario al checkout.
+- Mercado Pago notifica `POST /api/mercadopago-webhook`.
+- El servidor consulta `/v1/payments/{id}` y marca el pago como `approved`.
+
+En Mercado Pago Developers, configura tambien la URL de notificacion:
+
+```txt
+https://tu-dominio.com/api/mercadopago-webhook?secret=un-secreto-largo
+```
 
 ## Resultados en vivo
 

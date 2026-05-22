@@ -9,9 +9,9 @@
   --gold: #d7a934;
   --blue: #1f5f8b;
   --tenant-tint-rgb: 13, 107, 87;
-  --decor-local-1: url("/th.webp");
-  --decor-local-2: url("/OIP.webp");
-  --decor-local-3: url("/descargar.webp");
+  --decor-local-1: url("/prode-static/th.webp");
+  --decor-local-2: url("/prode-static/OIP.webp");
+  --decor-local-3: url("/prode-static/descargar.webp");
   --decor-web-1: url("https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Lionel-Messi-Argentina-2022-FIFA-World-Cup.jpg/500px-Lionel-Messi-Argentina-2022-FIFA-World-Cup.jpg");
   --decor-web-2: url("https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Argentina_national_football_team_-_1_-_2022.jpg/640px-Argentina_national_football_team_-_1_-_2022.jpg");
   --decor-web-3: url("https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Argentina_national_football_team_-_2_-_2022.jpg/640px-Argentina_national_football_team_-_2_-_2022.jpg");
@@ -47,7 +47,7 @@ body::before {
   position: fixed;
   inset: 0;
   z-index: 0;
-  background-image: url("/descargar.webp");
+  background-image: url("/prode-static/descargar.webp");
   background-size: cover;
   background-position: center;
   opacity: 0.12;
@@ -56,14 +56,45 @@ body::before {
   pointer-events: none;
 }
 
-body > * {
+body>* {
   position: relative;
   z-index: 1;
 }
 
+body[data-auth-gate="global"] .topbar,
+body[data-auth-gate="global"] .summary-band,
+body[data-auth-gate="global"] .brand-watermark,
+body[data-auth-gate="global"] main>.view:not(#lobby),
+body[data-auth-gate="global"] #lobby>.section-head,
+body[data-auth-gate="global"] #globalTournamentLobby,
+body[data-auth-gate="global"] #globalSession {
+  display: none !important;
+}
+
+body[data-auth-gate="global"] #lobby {
+  display: block;
+}
+
+body[data-auth-gate="global"] #globalLogin {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 0;
+  background:
+    linear-gradient(135deg, rgba(255, 250, 241, 0.88), rgba(255, 255, 255, 0.92)),
+    url("/prode-static/descargar.webp") center / cover;
+}
+
 .brand-watermark {
   position: fixed;
-  right: 18px;
+  left: 50%;
+  /* Lo empuja al medio */
+  transform: translateX(-50%);
+  /* Lo centra perfectamente sobre su propio eje */
   bottom: 14px;
   z-index: 20;
   display: block;
@@ -80,8 +111,10 @@ body > * {
 }
 
 body[data-tenant] .brand-watermark {
-  right: 18px;
+  left: 50%;
+  transform: translateX(-50%);
   bottom: 104px;
+  /* Lo sube un poquito más cuando estás dentro de un torneo de empresa */
   z-index: 35;
   width: clamp(72px, 7vw, 98px);
   opacity: 1;
@@ -128,6 +161,7 @@ button.secondary {
   align-items: end;
   gap: 20px;
   padding: 28px clamp(16px, 4vw, 48px) 18px;
+  z-index: 100;
 }
 
 body[data-tenant] .topbar {
@@ -164,7 +198,7 @@ p {
 
 h1 {
   margin-bottom: 0;
-  font-size: clamp(2.1rem, 5vw, 4.8rem);
+  font-size: clamp(1.5rem, 3.5vw, 2.8rem);
   line-height: 0.95;
 }
 
@@ -271,10 +305,226 @@ main {
   display: block;
 }
 
+.home-matches-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 20px 0 16px;
+}
+
+.home-rules-list {
+  display: grid;
+  gap: 7px;
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.home-status-card {
+  min-height: 132px;
+}
+
+.home-empty {
+  align-self: center;
+  margin: 8px 0;
+  color: var(--ink);
+  font-weight: 750;
+  text-align: center;
+}
+
+.home-fixture-line {
+  display: grid;
+  /* CAMBIO CLAVE: Cambiamos 32px por auto para que se estire según el marcador */
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  font-weight: 900;
+}
+
+.home-fixture-line b {
+  color: var(--ink);
+  text-align: center;
+  /* NUEVO: Evita que el resultado se parta en dos renglones */
+  white-space: nowrap;
+  /* NUEVO: Le da un respiro a los costados para que no se pegue a las banderas */
+  padding: 0 5px;
+}
+
+.home-fixture-line .team-badge {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+
+.home-fixture-line .flag {
+  object-fit: cover !important;
+  object-position: center !important;
+}
+
+.home-rules-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 24px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 12px 28px rgba(33, 29, 22, 0.10);
+}
+
+.home-rules-panel h2,
+.home-rules-panel p {
+  margin: 0;
+}
+
+.home-rules-panel h2 {
+  font-size: 1.2rem;
+}
+
+.home-rules-panel p {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.home-rules-panel button {
+  min-width: 118px;
+}
+
+.match-schedule {
+  display: block;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.group-match .match-schedule {
+  grid-column: 1 / -1;
+}
+
 body[data-tenant] .tournament-admin-only,
 body[data-tenant] #tournamentList {
   display: none;
 }
+
+/* Avatar button for user session */
+.avatar-button {
+  width: 40px;
+  height: 40px;
+  padding: 4px;
+  border-radius: 10px;
+  background: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(16, 16, 16, 0.08);
+  cursor: pointer;
+}
+
+.avatar-button img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 7px;
+}
+
+/* Small modal panel used for the session menu */
+.modal-panel.small {
+  width: 280px;
+  max-width: calc(100% - 32px);
+}
+
+.session-menu-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 0 18px;
+}
+
+.session-menu-actions .secondary {
+  text-align: left;
+}
+
+.session-menu-actions .danger {
+  background: #b4233a;
+  color: white;
+  border: 0;
+}
+
+.info-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 12px;
+}
+
+.info-table td {
+  padding: 8px 6px;
+  vertical-align: middle;
+}
+
+.info-table input {
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Dropdown anchored to topbar avatar */
+.session-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.session-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 280px;
+  background: white;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(16, 16, 16, 0.12);
+  padding: 8px;
+  z-index: 9999;
+}
+
+.session-dropdown .session-dropdown-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px;
+}
+
+.session-dropdown .secondary {
+  width: 100%;
+  text-align: left;
+}
+
+.dropdown-info-panel {
+  padding: 8px;
+  border-top: 1px solid var(--line);
+  margin-top: 6px;
+}
+
+
 
 .lock-banner,
 .live-status,
@@ -290,8 +540,7 @@ body[data-tenant] #tournamentList {
   font-weight: 850;
 }
 
-.section-head,
-.submit-panel {
+.section-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -378,7 +627,8 @@ body[data-tenant] #tournamentList {
 }
 
 .company-login,
-.company-areas {
+.company-areas,
+.global-login {
   position: relative;
   display: grid;
   gap: 14px;
@@ -399,7 +649,7 @@ body[data-tenant] #tournamentList {
   min-height: 100vh;
   background:
     linear-gradient(135deg, rgba(50, 50, 50, 0.92), rgba(99, 16, 9, 0.92)),
-    url("/descargar.webp") center / cover;
+    url("/prode-static/descargar.webp") center / cover;
   border: 0;
   padding: 24px;
 }
@@ -466,6 +716,48 @@ body[data-tenant] #tournamentList {
   color: color-mix(in srgb, var(--muted) 72%, white);
 }
 
+.password-control {
+  position: relative;
+  display: block;
+}
+
+.password-control input {
+  width: 100%;
+  padding-right: 46px;
+}
+
+.password-toggle,
+.company-login-card .password-toggle,
+.modal-panel .password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #5f625f;
+  font-size: 1rem;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
+.password-toggle:hover {
+  background: rgba(99, 16, 9, 0.08);
+  filter: none;
+}
+
+.password-toggle.is-visible {
+  background: rgba(99, 16, 9, 0.12);
+  color: #631009;
+}
+
 .company-login-card button:not(.secondary) {
   width: 100%;
   background: #631009;
@@ -473,7 +765,16 @@ body[data-tenant] #tournamentList {
   min-height: 48px;
 }
 
-.company-login-card .login-create-toggle {
+.company-login-card .password-toggle {
+  width: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  background: transparent;
+  color: #5f625f;
+}
+
+.company-login-card .login-create-toggle,
+.company-login-card .login-forgot-toggle {
   width: 100%;
   justify-content: center;
   background: transparent;
@@ -481,15 +782,27 @@ body[data-tenant] #tournamentList {
   color: #631009;
 }
 
+.company-login-card .login-forgot-toggle {
+  min-height: 40px;
+  border-color: rgba(99, 16, 9, 0.34);
+  background: #fff8ec;
+  color: #631009;
+  font-weight: 900;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .company-login::before,
-.company-areas::before {
+.company-areas::before,
+.global-login::before {
   background-image: var(--decor-web-1);
   background-position: 76% center;
   opacity: 0.08;
 }
 
-.company-login > *,
-.company-areas > * {
+.company-login>*,
+.company-areas>*,
+.global-login>* {
   position: relative;
   z-index: 1;
 }
@@ -535,6 +848,7 @@ body[data-tenant] #tournamentList {
 .leaderboard-table {
   display: grid;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .tournament-card,
@@ -578,6 +892,34 @@ body[data-tenant] #tournamentList {
   gap: 10px;
 }
 
+.button-link {
+  min-height: 44px;
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, white);
+  border-radius: 6px;
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-weight: 850;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.lobby-list {
+  margin-top: 18px;
+}
+
+.lobby-admin-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+.lobby-card.is-locked {
+  opacity: 0.86;
+}
+
 .tournament-results {
   margin-top: 28px;
 }
@@ -591,6 +933,43 @@ body[data-tenant] #tournamentList {
 .admin-users {
   display: grid;
   gap: 14px;
+}
+
+.admin-global-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.admin-subtabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 10px;
+}
+
+.admin-subtab {
+  min-height: 38px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, white);
+  background: color-mix(in srgb, var(--accent) 10%, white);
+  color: var(--accent);
+}
+
+.admin-subtab.is-active {
+  background: var(--accent);
+  color: white;
+}
+
+.danger {
+  border-color: color-mix(in srgb, #9f1d1d 36%, var(--line));
+  color: #9f1d1d;
+}
+
+.danger:hover {
+  background: color-mix(in srgb, #9f1d1d 10%, white);
 }
 
 .admin-panel {
@@ -655,10 +1034,340 @@ body[data-tenant] #tournamentList {
   padding: 0 10px;
 }
 
+.home-games {
+  margin-top: 24px;
+}
+
+.game-center {
+  margin-top: 0;
+}
+
+.game-center-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.game-center-meta span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 82%, white);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 7px 10px;
+}
+
+.daily-games {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.game-card {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 16px;
+  overflow: hidden;
+}
+
+.game-card.is-completed> :not(.game-completed-panel) {
+  opacity: 0.28;
+  filter: saturate(0.8);
+  pointer-events: none;
+}
+
+.game-completed-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  padding: 22px;
+  text-align: center;
+  background:
+    linear-gradient(135deg, rgba(var(--tenant-tint-rgb), 0.16), rgba(255, 255, 255, 0.9)),
+    rgba(255, 255, 255, 0.82);
+  border: 2px solid color-mix(in srgb, var(--accent) 38%, white);
+}
+
+.game-completed-badge {
+  justify-self: center;
+  width: max-content;
+  border-radius: 999px;
+  background: #237a57;
+  color: white;
+  padding: 7px 12px;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.game-completed-panel strong {
+  color: var(--ink);
+  font-size: 1.35rem;
+}
+
+.game-completed-panel small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.game-card h3,
+.game-card p {
+  margin: 0;
+}
+
+.custom-match-card.is-locked {
+  background: color-mix(in srgb, var(--panel) 78%, #f1f1f1);
+}
+
+.custom-match-card.is-locked input,
+.custom-match-card.is-locked select {
+  opacity: 0.62;
+}
+
+.match-timing {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.game-shirt-frame {
+  display: grid;
+  place-items: center;
+  min-height: 150px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 9%, white);
+  overflow: hidden;
+}
+
+.game-shirt-placeholder {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4px;
+  width: 154px;
+  min-height: 124px;
+  border-radius: 6px 6px 14px 14px;
+  color: var(--shirt-secondary);
+  font-weight: 900;
+  background: var(--shirt-primary);
+  box-shadow: 0 14px 24px rgba(33, 29, 22, 0.18);
+}
+
+.game-shirt-placeholder.shirt-stripes {
+  background: repeating-linear-gradient(90deg, var(--shirt-primary) 0 24px, var(--shirt-secondary) 24px 48px);
+}
+
+.game-shirt-placeholder.shirt-center {
+  background: linear-gradient(90deg, var(--shirt-secondary) 0 28%, var(--shirt-primary) 28% 72%, var(--shirt-secondary) 72%);
+}
+
+.game-shirt-placeholder::before,
+.game-shirt-placeholder::after {
+  content: "";
+  position: absolute;
+  top: 18%;
+  width: 18%;
+  height: 42%;
+  border-radius: 8px;
+  background: var(--shirt-primary);
+}
+
+.game-shirt-placeholder::before {
+  left: 18%;
+  transform: rotate(18deg);
+}
+
+.game-shirt-placeholder::after {
+  right: 18%;
+  transform: rotate(-18deg);
+}
+
+.game-shirt-placeholder strong {
+  position: relative;
+  z-index: 1;
+  font-size: 58px;
+  line-height: 1;
+}
+
+.game-shirt-placeholder small {
+  position: relative;
+  z-index: 1;
+  max-width: 70%;
+  color: currentColor;
+  font-weight: 900;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.shirt-neck {
+  position: relative;
+  z-index: 1;
+  width: 56px;
+  height: 22px;
+  border-radius: 0 0 999px 999px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.camisetadle-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.camisetadle-form .letter-guess:first-child {
+  grid-column: 1 / -1;
+}
+
+.letter-guess {
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.letter-guess legend {
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.letter-grid,
+.wordle-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.letter-grid input {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: white;
+  color: var(--ink);
+  font-weight: 900;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.letter-gap {
+  width: 14px;
+  height: 34px;
+}
+
+.letter-grid input.hit {
+  background: #237a57;
+  border-color: #237a57;
+  color: white;
+}
+
+.letter-grid input.near {
+  background: #d7a934;
+  border-color: #d7a934;
+  color: #1d1d1d;
+}
+
+.letter-grid input.miss {
+  background: #e8e2d8;
+  color: var(--muted);
+}
+
+.game-guess-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.stadium-guess-form .letter-guess {
+  grid-column: 1 / -1;
+}
+
+.stadium-guess-form button {
+  justify-self: end;
+}
+
+.game-result {
+  min-height: 22px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.stadium-visual {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-items: end;
+  min-height: 118px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 9%, white);
+  overflow: hidden;
+}
+
+.stadium-visual span {
+  display: block;
+  height: 70%;
+  border: 2px solid color-mix(in srgb, var(--accent) 58%, white);
+  border-bottom: 0;
+  border-radius: 999px 999px 0 0;
+  background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--accent) 20%, white) 0 8px, rgba(255, 255, 255, 0.7) 8px 16px);
+  transform: translateY(22px);
+}
+
+.stadium-visual span:nth-child(2) {
+  height: 92%;
+  transform: translateY(8px);
+}
+
+.stadium-clues {
+  display: grid;
+  gap: 8px;
+}
+
+.stadium-clues p {
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, white);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 7%, white);
+  padding: 10px 12px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.admin-theme-form,
+.admin-games-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.admin-theme-form .wide,
+.admin-games-form .wide {
+  grid-column: span 4;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 1100;
+  z-index: 1300;
   display: grid;
   place-items: center;
   padding: 20px;
@@ -674,6 +1383,33 @@ body[data-tenant] #tournamentList {
   background: #fff8ec;
   box-shadow: 0 24px 80px rgba(99, 16, 9, 0.24);
   padding: 18px;
+}
+
+.verification-code-panel {
+  width: min(100%, 420px);
+}
+
+.verification-code-panel .section-head {
+  position: static;
+  margin-top: 0;
+}
+
+.verification-code-form input {
+  min-height: 54px;
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: 4px;
+}
+
+.verification-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.verification-actions button {
+  width: 100%;
 }
 
 .icon-close {
@@ -703,13 +1439,15 @@ body[data-tenant] #tournamentList {
 }
 
 .leaderboard-row {
-  display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) 100px 110px;
+  position: relative; /* Clave para poder centrar los puntos flotando */
+  display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
   padding: 12px;
   background: rgba(255, 255, 255, 0.74);
   backdrop-filter: blur(1px);
+  border-radius: 8px; 
+  flex-wrap: wrap;
 }
 
 .leaderboard-row b {
@@ -720,12 +1458,16 @@ body[data-tenant] #tournamentList {
   border-radius: 999px;
   background: var(--accent);
   color: white;
+  flex-shrink: 0;
+  margin-right: 12px;
 }
 
 .leaderboard-row span {
   display: grid;
   gap: 2px;
   font-weight: 900;
+  flex: 1; 
+  text-align: left;
 }
 
 .leaderboard-row small {
@@ -735,8 +1477,15 @@ body[data-tenant] #tournamentList {
 }
 
 .leaderboard-row strong {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   color: var(--accent-2);
   font-size: 1.05rem;
+  background: rgba(255, 255, 255, 0.6); 
+  padding: 2px 8px;
+  border-radius: 6px;
+  z-index: 2;
 }
 
 .leaderboard-row em {
@@ -744,6 +1493,8 @@ body[data-tenant] #tournamentList {
   font-style: normal;
   font-size: 0.8rem;
   font-weight: 800;
+  flex: 1; 
+  text-align: right;
 }
 
 label {
@@ -836,13 +1587,13 @@ textarea {
   opacity: 0.74;
 }
 
-.group-card > *,
-.custom-match-card > *,
-.match-card > *,
-.thirds-panel > *,
-.tournament-card > *,
-.leaderboard-panel > *,
-.live-card > * {
+.group-card>*,
+.custom-match-card>*,
+.match-card>*,
+.thirds-panel>*,
+.tournament-card>*,
+.leaderboard-panel>*,
+.live-card>* {
   position: relative;
   z-index: 1;
 }
@@ -955,7 +1706,7 @@ textarea {
   font-size: 0.8rem;
 }
 
-.group-title > span {
+.group-title>span {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -979,15 +1730,38 @@ textarea {
 .flag,
 .flag-placeholder {
   flex: 0 0 auto;
+  display: inline-block;
   width: 22px;
   height: 15px;
   border-radius: 2px;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.14);
   object-fit: cover;
+  /* Esto evita que se recorte, antes era cover */
+  object-position: center;
+  /* Esto la mantiene bien centrada */
+  background-color: transparent;
+  overflow: hidden;
 }
 
 .flag-placeholder {
-  background: #d9dedb;
+  display: inline-grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--accent) 14%, #d9dedb);
+  color: var(--accent);
+  font-size: 0.52rem;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.match-real-result {
+  width: fit-content;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 10%, white);
+  color: var(--accent);
+  padding: 5px 8px;
+  font-size: 0.76rem;
+  font-weight: 850;
 }
 
 .selectors {
@@ -1092,8 +1866,14 @@ textarea {
   text-align: center;
 }
 
-.group-match .team-badge {
+.group-match .team-badge,
+.teams-line .team-badge,
+.custom-match-line .team-badge {
   overflow: hidden;
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  /* Esto centra la bandera y el texto en su mitad */
 }
 
 .group-match .team-badge span {
@@ -1164,7 +1944,7 @@ textarea {
   pointer-events: none;
 }
 
-.selector-row > * {
+.selector-row>* {
   position: relative;
   z-index: 1;
 }
@@ -1286,6 +2066,12 @@ textarea {
 }
 
 .match-title {
+  display: flex;
+  justify-content: space-between;
+  /* Esto empuja un elemento a cada lado */
+  align-items: center;
+  /* Alinea los textos verticalmente */
+  width: 100%;
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 900;
@@ -1302,6 +2088,33 @@ textarea {
 
 .teams-line span {
   overflow-wrap: anywhere;
+}
+
+.knockout-team-side {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 48px;
+  align-items: center;
+  gap: 8px;
+}
+
+.knockout-team-right {
+  grid-template-columns: 48px minmax(0, 1fr);
+}
+
+.knockout-team-right .team-badge {
+  order: 2;
+}
+
+.knockout-team-right .knockout-score-input {
+  order: 1;
+}
+
+.knockout-score-input {
+  width: 48px;
+  min-height: 36px;
+  padding: 0 8px;
+  text-align: center;
+  font-weight: 900;
 }
 
 .teams-line .team-badge {
@@ -1335,23 +2148,119 @@ textarea {
   text-align: center;
 }
 
-.submit-panel {
-  margin-top: 26px;
-  padding: 18px;
-  border: 1px solid var(--line);
+/* Cuando el usuario está DENTRO de un torneo privado (Prueba1, etc.) */
+body[data-tenant] #dropdownLobbyBtn {
+  display: none !important;
+  /* Escondemos el botón de Torneos y Lobby */
+}
+
+body[data-tenant] #dropdownGlobalBtn {
+  display: none !important;
+  /* Forzamos a que se muestre el botón de Prode Global */
+}
+
+/* Forzar a que los párrafos del menú desplegable de usuario sean oscuros siempre */
+.session-dropdown p {
+  color: var(--ink) !important;
+}
+
+/* Fondo general de la pantalla de login: mezcla el color principal con tonos oscuros */
+.company-login {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 80%, var(--ink) 20%), color-mix(in srgb, var(--accent) 40%, var(--ink) 60%)),
+    url("/prode-static/descargar.webp") center / cover !important;
+}
+
+/* Tarjeta de login con fondo adaptable */
+.company-login-card {
+  background: var(--panel) !important;
+  border-color: var(--line) !important;
+}
+
+/* Textos de la tarjeta usando la tinta seleccionada */
+.company-login-card h2,
+.company-login-card p {
+  color: var(--ink) !important;
+}
+
+/* Kicker superior (Prode Mundial) y el botón principal */
+.company-login-card .login-kicker {
+  color: var(--accent) !important;
+}
+
+.company-login-card button:not(.secondary) {
+  background: var(--accent) !important;
+  color: #ffffff !important;
+}
+
+/* Inputs adaptados al panel */
+.company-login-card input {
+  background: color-mix(in srgb, var(--line) 30%, var(--panel)) !important;
+  color: var(--ink) !important;
+  border: 1px solid var(--line) !important;
+}
+
+.company-login-card input::placeholder {
+  color: var(--muted) !important;
+}
+
+/* Contenedor de logos gemelos */
+.login-logos-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.login-logos-container img {
+  max-height: 70px;
+  width: auto;
   border-radius: 8px;
-  background: var(--ink);
-  box-shadow: var(--shadow);
+  object-fit: contain;
+  margin: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  /* Sombra elegante para que resalten */
 }
 
-.submit-panel h2,
-.submit-panel p {
-  color: white;
+.submit-panel {
+  position: sticky;
+  bottom: 12px;
+  z-index: 20;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin: 26px 0 16px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line));
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 16px 36px rgba(33, 29, 22, 0.16);
+  backdrop-filter: blur(8px);
+}
+
+.submit-panel h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1rem;
 }
 
 .submit-panel p {
-  margin-bottom: 0;
-  opacity: 0.78;
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
+.submit-panel .actions {
+  flex: 0 0 auto;
+}
+
+.submit-panel #savePrediction {
+  min-width: 190px;
+  min-height: 48px;
+  box-shadow: 0 10px 22px rgba(12, 112, 77, 0.20);
 }
 
 .validator {
@@ -1483,6 +2392,76 @@ textarea {
   font-size: 1.3rem;
 }
 
+/* Estilos para Minitorneos */
+.minitournaments-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.minitournament-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.minitournament-card h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--ink);
+}
+
+.minitournament-card p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--ink-light);
+  flex: 1;
+}
+
+.mini-players {
+  font-size: 0.85rem;
+  color: var(--ink-lighter);
+  display: block;
+}
+
+.minitournament-card button {
+  margin-top: auto;
+  width: 100%;
+}
+
+.leaderboard-container, 
+#leaderboardView {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 0 !important; /* Eliminamos paddings raros que achiquen los carteles */
+  margin: 0 auto !important;
+  display: flex;
+  flex-direction: column;
+  gap: 12px; /* Separación elegante entre carteles */
+}
+
+/* Forzamos a que cada fila de usuario tenga el mismo ancho exacto que el cartel superior */
+.user-leaderboard-row,
+.leaderboard-card-row {
+  width: 100% !important;
+  box-sizing: border-box !important; /* Evita que el padding ensanche la caja por fuera */
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* Espaciado interno para el nuevo bloque de "Exactos" */
+.user-row-details {
+  margin-top: 4px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
 @media (max-width: 1050px) {
   .groups-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1490,6 +2469,14 @@ textarea {
 
   .live-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .daily-games {
+    grid-template-columns: 1fr;
+  }
+
+  .minitournaments-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   }
 
   .matchday-grid {
@@ -1502,6 +2489,7 @@ textarea {
 }
 
 @media (max-width: 780px) {
+
   .topbar,
   .section-head,
   .submit-panel {
@@ -1510,6 +2498,8 @@ textarea {
   }
 
   .summary-band,
+  .home-matches-grid,
+  .home-rules-panel,
   .player-form,
   .payment-gate,
   .company-login-form,
@@ -1524,13 +2514,56 @@ textarea {
 
   .live-grid,
   .matchday-grid,
+  .game-guess-form,
+  .camisetadle-form,
   .live-score,
-  .leaderboard-row,
   .admin-user-row,
   .thirds-grid,
   .group-match,
   .standings-row {
     grid-template-columns: 1fr;
+  }
+
+  .leaderboard-row {
+    display: grid !important;
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px 10px;
+    text-align: left !important;
+  }
+
+  .leaderboard-row b {
+    margin-right: 0;
+  }
+
+  .leaderboard-row span {
+    min-width: 0;
+  }
+
+  .leaderboard-row strong {
+    position: static;
+    transform: none;
+    justify-self: end;
+    white-space: nowrap;
+    font-size: 0.95rem;
+  }
+
+  .leaderboard-row em,
+  .leaderboard-row button {
+    grid-column: 2 / -1;
+    justify-self: stretch;
+    text-align: left !important;
+    min-width: 0 !important;
+  }
+
+  .admin-theme-form,
+  .admin-games-form {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-theme-form .wide,
+  .admin-games-form .wide {
+    grid-column: auto;
   }
 
   .groups-grid {
@@ -1540,4 +2573,113 @@ textarea {
   .actions button {
     flex: 1 1 150px;
   }
+
+  .modal-backdrop {
+    align-items: end;
+    place-items: end center;
+    padding: 12px;
+  }
+
+  .modal-panel {
+    width: 100%;
+    max-height: calc(100dvh - 24px);
+    padding: 14px;
+    border-radius: 10px;
+  }
+
+  .modal-panel .section-head.compact {
+    align-items: stretch;
+    gap: 8px;
+    margin: 0 0 12px;
+  }
+
+  .form-status,
+  .phase-status,
+  .live-status,
+  .lock-banner {
+    width: 100%;
+    margin: 12px 0;
+    padding: 12px;
+    font-size: 0.92rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .verification-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .submit-panel {
+    bottom: 8px;
+    padding: 12px;
+  }
+
+  .submit-panel .actions,
+  .submit-panel #savePrediction {
+    width: 100%;
+  }
+
+  .submit-panel p {
+    display: none;
+  }
+
+  .teams-line {
+    grid-template-columns: 1fr;
+  }
+
+  .teams-line b {
+    display: none;
+  }
+
+  .knockout-team-side,
+  .knockout-team-right {
+    grid-template-columns: minmax(0, 1fr) 48px;
+  }
+
+  .knockout-team-right .team-badge,
+  .knockout-team-right .knockout-score-input {
+    order: initial;
+  }
+}
+
+
+/* Password visibility buttons must stay inside the input, not inherit login button styles. */
+.company-login-card button.password-toggle,
+.modal-panel button.password-toggle,
+button.password-toggle {
+  position: absolute !important;
+  right: 8px !important;
+  top: 50% !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  width: 34px !important;
+  min-width: 34px !important;
+  max-width: 34px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  color: #5f625f !important;
+  transform: translateY(-50%) !important;
+  box-shadow: none !important;
+}
+
+.company-login-card button.password-toggle:hover,
+.modal-panel button.password-toggle:hover,
+button.password-toggle:hover,
+.company-login-card button.password-toggle.is-visible,
+.modal-panel button.password-toggle.is-visible,
+button.password-toggle.is-visible {
+  background: rgba(99, 16, 9, 0.10) !important;
+  color: #631009 !important;
+  filter: none !important;
+}
+
+.password-toggle svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
 }
