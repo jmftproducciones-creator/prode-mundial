@@ -705,6 +705,43 @@ http.createServer((req, res) => {
     handleLeaderboard(req, res);
     return;
   }
+  if (req.method === "POST" && req.url === "/api/change-password") {
+    let body = "";
+    req.on("data", chunk => { body += chunk.toString(); });
+    req.on("end", async () => {
+      try {
+        const { name, currentPassword, newPassword } = JSON.parse(body);
+        if (!name || !currentPassword || !newPassword) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ error: "Faltan datos obligatorios" }));
+        }
+        const currentHash = crypto.createHash('sha256').update(currentPassword).digest('hex');
+        const connection = await mysql.createConnection(DB_CONFIG);
+        const [rows] = await connection.execute('SELECT * FROM players WHERE name = ?', [name]);
+        if (rows.length === 0) {
+          connection.end();
+          res.writeHead(404, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ error: "Usuario no encontrado" }));
+        }
+        const user = rows[0];
+        if (user.password_hash !== currentHash) {
+          connection.end();
+          res.writeHead(401, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ error: "La contraseña actual es incorrecta" }));
+        }
+        const newHash = crypto.createHash('sha256').update(newPassword).digest('hex');
+        await connection.execute('UPDATE players SET password_hash = ? WHERE name = ?', [newHash, name]);
+        connection.end();
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: true }));
+      } catch (error) {
+        console.error("Error al cambiar contraseña:", error);
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Error interno del servidor" }));
+      }
+    });
+    return;
+  }
   serveStatic(req, res);
 }).listen(PORT, () => {
   console.log(`Prode Mundial listo en http://localhost:${PORT}`);

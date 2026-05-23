@@ -52,7 +52,7 @@
           <div id="dropdownInfoPanel" class="dropdown-info-panel" hidden>
             <div class="user-info-display" style="margin-bottom: 1rem; font-size: 0.9em; text-align: left;">
               <p style="margin: 0.25rem 0;"><strong>Nombre:</strong> <span id="dpUserName"></span></p>
-              <p style="margin: 0.25rem 0;"><strong>Email / DNI:</strong> <span id="dpUserEmail"></span></p>
+              <p style="margin: 0.25rem 0;"><strong>Email:</strong> <span id="dpUserEmail"></span></p>
               <p style="margin: 0.25rem 0;" id="dpUserAreaContainer"><strong>Área:</strong> <span
                   id="dpUserArea"></span></p>
             </div>
@@ -139,6 +139,13 @@
               ambos equipos (sumando 5 puntos en total).</li>
             <li><strong>Campeon (10 Puntos):</strong> Bonus especial si adivinas correctamente al campeon del torneo.
             </li>
+            <li><strong>Por Ejemplo:</strong> En un partido en el que Argentina <strong>Gana 2 a 0</strong> a Jordania,
+              <ul>
+                <li>Si tu pronostico fue que el partido empataba o que ganaba Jordania, <strong>no sumas puntos.</strong></li>
+                <li>Si tu pronostico fue de 2-1 que gana Argentina, <strong>sumas 3 puntos.</strong></li>
+                <li>Si tu pronostico fue 2-0 que gana Argentina, <strong>sumas 5 puntos</strong> (3 por el ganador + 2 por el resultado exacto).</li>
+              </ul>
+            </li>
           </ul>
         </div>
         <button id="btnGoToPredictor" type="button">Empezar</button>
@@ -177,14 +184,14 @@
               <input id="globalLoginName" autocomplete="name" placeholder="Nombre y apellido">
             </label>
             <label>
-              Correo Electronico / DNI
+              Correo Electronico
               <input id="globalLoginEmail" autocomplete="username" placeholder="nombre@email.com o DNI">
             </label>
             <label>
-              Contrasena
+              contraseña
               <span class="password-control">
                 <input id="globalLoginPassword" type="password" autocomplete="current-password" placeholder="********">
-                <button class="password-toggle" type="button" data-password-toggle="globalLoginPassword" aria-label="Mostrar contrasena">
+                <button class="password-toggle" type="button" data-password-toggle="globalLoginPassword" aria-label="Mostrar contraseña">
                   <span aria-hidden="true">&#128065;</span>
                 </button>
               </span>
@@ -193,7 +200,7 @@
               <button type="submit" id="globalLoginBtn" style="flex:1;">Ingresar</button>
               <button type="button" id="globalRegistrarBtn" class="secondary" style="flex:1;">Registrar</button>
             </div>
-            <button class="secondary login-forgot-toggle" type="button" id="openForgotPassword">Olvide mi contrasena</button>
+            <button class="secondary login-forgot-toggle" type="button" id="openForgotPassword">Olvide mi contraseña</button>
             <div style="margin-top: 10px; text-align: center;">
               <a href="#"
                 onclick="event.preventDefault(); document.querySelector('.tab[data-view=\'inicio\']').click();"
@@ -207,8 +214,8 @@
         <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="forgotPasswordTitle">
           <div class="section-head compact">
             <div>
-              <h2 id="forgotPasswordTitle">Recuperar contrasena</h2>
-              <p>Ingresa tu mail y te enviaremos un link para crear una nueva contrasena.</p>
+              <h2 id="forgotPasswordTitle">Recuperar contraseña</h2>
+              <p>Ingresa tu mail y te enviaremos un link para crear una nueva contraseña.</p>
             </div>
             <button class="secondary icon-close" type="button" id="closeForgotPassword">Cerrar</button>
           </div>
@@ -226,30 +233,30 @@
         <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="resetPasswordTitle">
           <div class="section-head compact">
             <div>
-              <h2 id="resetPasswordTitle">Nueva contrasena</h2>
-              <p>Escribe una contrasena nueva para volver a ingresar.</p>
+              <h2 id="resetPasswordTitle">Nueva contraseña</h2>
+              <p>Escribe una contraseña nueva para volver a ingresar.</p>
             </div>
           </div>
           <form class="company-login-form" id="resetPasswordForm">
             <label>
-              Nueva contrasena
+              Nueva contraseña
               <span class="password-control">
                 <input id="resetPasswordNew" type="password" autocomplete="new-password" placeholder="********">
-                <button class="password-toggle" type="button" data-password-toggle="resetPasswordNew" aria-label="Mostrar contrasena">
+                <button class="password-toggle" type="button" data-password-toggle="resetPasswordNew" aria-label="Mostrar contraseña">
                   <span aria-hidden="true">&#128065;</span>
                 </button>
               </span>
             </label>
             <label>
-              Repetir contrasena
+              Repetir contraseña
               <span class="password-control">
                 <input id="resetPasswordConfirm" type="password" autocomplete="new-password" placeholder="********">
-                <button class="password-toggle" type="button" data-password-toggle="resetPasswordConfirm" aria-label="Mostrar contrasena">
+                <button class="password-toggle" type="button" data-password-toggle="resetPasswordConfirm" aria-label="Mostrar contraseña">
                   <span aria-hidden="true">&#128065;</span>
                 </button>
               </span>
             </label>
-            <button type="submit">Guardar contrasena</button>
+            <button type="submit">Guardar contraseña</button>
           </form>
           <div class="form-status" id="resetPasswordStatus" hidden></div>
         </section>
@@ -336,7 +343,7 @@
               <input id="loginEmail" autocomplete="username" placeholder="nombre@email.com" autofocus>
             </label>
             <label>
-              Contrasena
+              contraseña
               <input id="loginPassword" type="password" autocomplete="current-password" placeholder="********">
             </label>
             <div style="display:flex; gap:10px; width: 100%;">
@@ -676,6 +683,70 @@
       <div class="live-grid" id="liveGrid"></div>
     </section>
   </main>
+
+  <div id="profileModal" class="modal-backdrop" hidden style="z-index: 10500;">
+    <div class="modal-content profile-card">
+      <div class="profile-header">
+        <h2>Mi Perfil</h2>
+        <button type="button" id="closeProfileModal" class="close-btn">&times;</button>
+      </div>
+      
+      <div class="profile-body">
+        <div class="profile-avatar-section">
+          <div class="avatar-container">
+            <img id="profileAvatarPreview" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ccc'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>" alt="Foto de perfil">
+          </div>
+          <label for="profileAvatarInput" class="btn-change-avatar">
+            <span>Cambiar Imagen</span>
+            <input type="file" id="profileAvatarInput" accept="image/*" style="display: none;">
+          </label>
+        </div>
+
+        <div class="profile-info-group">
+          <div class="info-item">
+            <label>Nombre</label>
+            <input type="text" id="profileNameInput" readonly class="readonly-field">
+          </div>
+          <div class="info-item">
+            <label>Email</label>
+            <input type="email" id="profileEmailInput" readonly class="readonly-field">
+          </div>
+        </div>
+
+        <button type="button" id="btnChangePasswordAction" class="btn-secondary-profile">Cambiar Contraseña</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="changePasswordModal" class="modal-backdrop" hidden style="z-index: 10505;">
+  <div class="modal-content profile-card">
+    <div class="profile-header">
+      <h2>Cambiar Contraseña</h2>
+      <button type="button" id="closeChangePasswordModal" class="close-btn">&times;</button>
+    </div>
+    
+    <form id="changePasswordForm" class="profile-body">
+      <div class="profile-info-group">
+        <div class="info-item">
+          <label>Contraseña Actual</label>
+          <input type="password" id="currentPasswordInput" required class="pw-input" placeholder="Tu clave actual">
+        </div>
+        <div class="info-item">
+          <label>Contraseña Nueva</label>
+          <input type="password" id="newPasswordInput" required class="pw-input" minlength="8" placeholder="Mínimo 8 caracteres">
+        </div>
+        <div class="info-item">
+          <label>Confirmar Contraseña</label>
+          <input type="password" id="confirmPasswordInput" required class="pw-input" minlength="8" placeholder="Repetir clave nueva">
+        </div>
+      </div>
+      
+      <button type="submit" class="btn-primary" style="width: 100%; margin-top: 10px; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; border: none; background: var(--accent); color: white;">
+        Actualizar Contraseña
+      </button>
+    </form>
+  </div>
+</div>
 
   <template id="groupTemplate">
     <article class="group-card">

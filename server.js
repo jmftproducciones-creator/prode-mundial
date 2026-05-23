@@ -2793,11 +2793,11 @@ async function sendPasswordResetMail({ to, resetUrl }) {
   await transporter.sendMail({
     from: '"Prode Bait" <ba.itsoft26@gmail.com>',
     to,
-    subject: "Recuperar contrasena - Prode Bait",
+    subject: "Recuperar contraseña - Prode Bait",
     text: [
-      "Recibimos un pedido para cambiar la contrasena de tu usuario.",
+      "Recibimos un pedido para cambiar la contraseña de tu usuario.",
       "",
-      "Abri este link para crear una contrasena nueva:",
+      "Abri este link para crear una contraseña nueva:",
       resetUrl,
       "",
       "El link vence en 1 hora. Si no pediste este cambio, podes ignorar este correo."
@@ -4527,10 +4527,6 @@ const server = http.createServer((req, res) => {
     handleCreateLobbyTenant(req, res);
     return;
   }
-  if (req.method === "POST" && req.url === "/api/change-password") {
-    handleChangePassword(req, res);
-    return;
-  }
   if (req.method === "GET" && req.url.startsWith("/api/company-session")) {
     handleCompanySession(req, res);
     return;
@@ -4629,8 +4625,90 @@ const server = http.createServer((req, res) => {
   }
   if (req.method === "POST" && req.url === "/api/request-verification") { handleRequestVerification(req, res); return; }
   if (req.method === "POST" && req.url === "/api/verify-code") { handleVerifyCode(req, res); return; }
-  serveStatic(req, res);
+  if (req.method === "POST" && req.url === "/api/change-password") {
+    let body = "";
+    req.on("data", chunk => { body += chunk.toString(); });
+    req.on("end", async () => {
+      let connection;
+      try {
+        const { name, currentPassword, newPassword } = JSON.parse(body);
+        
+        if (!name || !currentPassword || !newPassword) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ error: "Faltan datos obligatorios" }));
+        }
 
+        connection = await mysql.createConnection(DB_CONFIG);
+        
+        // Buscamos al usuario en la tabla 'users'
+        const [rows] = await connection.execute('SELECT * FROM users WHERE name = ?', [name]);
+        
+        if (rows.length === 0) {
+          connection.end();
+          res.writeHead(404, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ error: "Usuario no encontrado" }));
+        }
+        
+        const user = rows[0];
+        
+        // 1. Extraemos y parseamos el JSON de la columna raw_json
+        let rawData = {};
+        try {
+          rawData = JSON.parse(user.raw_json || "{}");
+        } catch (e) {
+          console.error("Error parseando raw_json");
+        }
+
+        // 2. Extraemos el hash y la sal. (Revisá si los nombres son exactos a los que usa tu compañero)
+        const storedHash = rawData.password || rawData.password_hash;
+        const storedSalt = rawData.salt;
+
+        if (!storedHash || !storedSalt) {
+          connection.end();
+          res.writeHead(500, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ error: "Estructura de seguridad no encontrada en el perfil" }));
+        }
+
+        // 3. Verificamos la clave actual usando PBKDF2 (Ajustá los números 10000 y 64 según tu registro si es distinto)
+        const hashToVerify = crypto.pbkdf2Sync(currentPassword, storedSalt, 10000, 64, 'sha512').toString('hex');
+
+        if (hashToVerify !== storedHash) {
+          connection.end();
+          res.writeHead(401, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ error: "La contraseña actual es incorrecta" }));
+        }
+        
+        // 4. Generamos una nueva SAL y un nuevo HASH para la contraseña nueva
+        const newSalt = crypto.randomBytes(16).toString('hex');
+        const newHash = crypto.pbkdf2Sync(newPassword, newSalt, 10000, 64, 'sha512').toString('hex');
+        
+        // 5. Actualizamos el objeto JSON con la nueva seguridad
+        rawData.password = newHash; // O usa rawData.password_hash según corresponda
+        rawData.salt = newSalt;
+        
+        const updatedJsonString = JSON.stringify(rawData);
+
+        // 6. Guardamos el JSON actualizado en la base de datos
+        await connection.execute('UPDATE users SET raw_json = ? WHERE name = ?', [updatedJsonString, name]);
+        
+        connection.end();
+        res.writeHead(200, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ success: true }));
+        
+      } catch (error) {
+        console.error("Error al cambiar contraseña:", error);
+        if (connection) {
+          try { connection.end(); } catch(e) {}
+        }
+        if (!res.headersSent) {
+          res.writeHead(500, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ error: "Error interno del servidor" }));
+        }
+      }
+    });
+    return;
+  }
+  serveStatic(req, res);
 });
 
 async function startServer() {
