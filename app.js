@@ -1626,6 +1626,7 @@ function renderDailyGames() {
             .then(() => {
               ((state.dailyGamePlays.camisetadle = { completed: !0 }),
                 clearDailyProgress("camisetadle", r.id),
+                sumarFanPoints(20),
                 renderDailyGames());
             })
             .catch((e) => {
@@ -1673,6 +1674,7 @@ function renderDailyGames() {
         .then(() => {
           ((state.dailyGamePlays.desafio = { completed: !0 }),
             clearDailyProgress("desafio", i.id),
+            sumarFanPoints(15),
             renderDailyGames());
         })
         .catch((e) => {
@@ -4136,6 +4138,93 @@ function renderLeaderboardBlock(e, t, n) {
     ? `\n      <div class="leaderboard-head" style="text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">\n        <div>\n          <h3>${t}</h3>\n          <p>${n}</p>\n        </div>\n        <strong>${e.leaderboard.length} jugadores</strong>\n      </div>\n      <div class="leaderboard-table" style="display: flex; flex-direction: column; align-items: center; width: 100%;">\n        ${e.leaderboard.map((e, t) => `\n          <div class="leaderboard-row" style="display:flex; align-items:center; justify-content:center; gap:0.5rem; flex-wrap:wrap; text-align:center; width:100%;">\n            <b style="flex-shrink:0;">${t + 1}</b>\n            <span style="flex:1; min-width: 120px;">${escapeHtml(e.player.name)}<small style="display:block;">${escapeHtml(e.player.area || "Participante")}</small></span>\n            <strong style="flex-shrink:0;">${e.score.points} pts</strong>\n            <em style="flex:2; min-width: 150px; display:block;">Exactos🎯:${e.score.exactScoreHits}</em>\n            <button class="secondary view-user-prode" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; flex-shrink:0;" data-email="${escapeHtml(e.player.email)}">Ver jugada</button>\n          </div>\n        `).join("")}\n      </div>\n    `
     : `<p class="empty" style="text-align: center;">Todavia no hay prodes guardados en ${t}.</p>`;
 }
+
+function buyBorder(borderType, cost) {
+  // Aquí deberías consultar los FanPoints reales del usuario.
+  // Por ahora, aplicamos directamente el efecto visual en la interfaz:
+  const avatarBtn = document.getElementById("topbarAvatar");
+  if (avatarBtn) {
+    // Limpiar bordes anteriores
+    avatarBtn.classList.remove('border-gold', 'border-neon', 'border-fire');
+    // Agregar el nuevo
+    avatarBtn.classList.add(`border-${borderType}`);
+    showToast(`¡Has desbloqueado el borde ${borderType}!`);
+    
+    // NOTA FUTURA: Aquí deberías enviar un POST a tu API (server.js) 
+    // para descontar los puntos y guardar el borde activo en la base de datos.
+  }
+}
+
+// ==========================================
+// --- SISTEMA DE BORDES DESBLOQUEABLES ---
+// ==========================================
+
+window.sumarFanPoints = function(cantidad) {
+  // Obtenemos los puntos guardados (si no hay, empezamos en 0)
+  let puntosGuardados = parseInt(localStorage.getItem("userFanPoints")) || 0;
+  
+  // Sumamos la cantidad
+  puntosGuardados += cantidad;
+  
+  // Guardamos el nuevo total en la memoria
+  localStorage.setItem("userFanPoints", puntosGuardados);
+  
+  // Actualizamos el número en la pantalla (en tu HTML)
+  const puntosElemento = document.getElementById("dpUserFanPoints");
+  if (puntosElemento) {
+    puntosElemento.innerText = puntosGuardados;
+  }
+  
+  // Mostramos el cartelito verde
+  showToast(`¡Ganaste ${cantidad} Fan Points! 🏆`);
+};
+
+window.buyBorder = function(borderType, cost) {
+  // Vemos cuántos puntos tiene el usuario en la memoria
+  let puntosActuales = parseInt(localStorage.getItem("userFanPoints")) || 0;
+  // VERIFICACIÓN CLAVE: ¿Le alcanza el saldo?
+  if (puntosActuales < cost) {
+    showToast(`No te alcanzan los Fan Points. Cuesta ${cost} y tenés ${puntosActuales}. 😢`);
+    return; // CORTAMOS LA FUNCIÓN ACÁ. No se aplica el borde ni se cobra.
+  }
+  // Si llegamos acá, es porque tiene saldo suficiente. ¡Cobramos!
+  puntosActuales -= cost;
+  localStorage.setItem("userFanPoints", puntosActuales);
+  // Actualizamos el saldo en pantalla
+  const puntosElemento = document.getElementById("dpUserFanPoints");
+  if (puntosElemento) {
+    puntosElemento.innerText = puntosActuales;
+  }
+  // Ahora sí, aplicamos el borde
+  const avatarBtn = document.getElementById("topbarAvatar");
+  if (avatarBtn) {
+    avatarBtn.classList.remove('border-gold', 'border-neon', 'border-fire');
+    avatarBtn.classList.add(`border-${borderType}`);
+    
+    showToast(`¡Has equipado el borde ${borderType}! (-${cost} FP)`);
+    localStorage.setItem("activeAvatarBorder", `border-${borderType}`);
+  }
+};
+
+function loadUserData() {
+  // Cargar Borde
+  const savedBorder = localStorage.getItem("activeAvatarBorder");
+  const avatarBtn = document.getElementById("topbarAvatar");
+  if (savedBorder && avatarBtn) {
+    avatarBtn.classList.add(savedBorder);
+  }
+  // Cargar Puntos
+  let puntosGuardados = parseInt(localStorage.getItem("userFanPoints")) || 0;
+  const puntosElemento = document.getElementById("dpUserFanPoints");
+  if (puntosElemento) {
+    puntosElemento.innerText = puntosGuardados;
+  }
+}
+// 4. Ejecutamos la carga apenas arranca la app
+document.addEventListener("DOMContentLoaded", () => {
+  setTimeout(loadUserData, 500); 
+});
+
 function showUserProde(e) {
   const t = (state.leaderboardData || []).find((t) => t.player.email === e);
   if (!t) return;

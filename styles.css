@@ -2153,6 +2153,65 @@ textarea {
   font-weight: 800;
 }
 
+/* --- BORDES DESBLOQUEABLES --- */
+.avatar-button {
+  transition: all 0.3s ease;
+}
+
+/* Borde Oro */
+.border-gold {
+  box-shadow: 0 0 0 3px var(--gold), 0 0 12px rgba(215, 169, 52, 0.6) !important;
+}
+
+/* Borde Neón (Animado) */
+.border-neon {
+  box-shadow: 0 0 0 3px #00ffcc, 0 0 15px rgba(0, 255, 204, 0.8) !important;
+  animation: pulse-neon 2s infinite alternate;
+}
+
+/* Borde Fuego (Animado) */
+.border-fire {
+  box-shadow: 0 0 0 3px #ff4500, 0 0 15px #ff8c00 !important;
+  animation: pulse-fire 1.5s infinite alternate;
+}
+
+@keyframes pulse-neon {
+  from { box-shadow: 0 0 0 2px #00ffcc, 0 0 10px rgba(0,255,204,0.5); }
+  to { box-shadow: 0 0 0 4px #00ffcc, 0 0 20px rgba(0,255,204,1); }
+}
+
+@keyframes pulse-fire {
+  from { box-shadow: 0 0 0 2px #ff4500, 0 0 10px #ff8c00; }
+  to { box-shadow: 0 0 0 4px #ff0000, 0 0 20px #ff4500; }
+}
+
+/* Tienda de recompensas */
+.rewards-store {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.reward-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.reward-card .preview-border {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--line);
+}
+
 .round {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));

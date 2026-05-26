@@ -1501,2563 +1501,7 @@
       "tenantId": "aaaa",
       "isGlobal": false,
       "createdAt": "2026-05-15T14:46:07.716Z",
-      "realResults": {
-        "custom": {
-          "matches": {
-            "espn-762774": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762774",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-22T22:00:00.000Z"
-            },
-            "espn-762776": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762776",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-23T01:00:00.000Z"
-            },
-            "espn-762788": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762788",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-23T01:00:00.000Z"
-            },
-            "espn-762779": {
-              "homeScore": 0,
-              "awayScore": 1,
-              "winner": "Gimnasia (Mendoza)",
-              "source": "ESPN",
-              "apiMatchId": "762779",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-23T03:15:00.000Z"
-            },
-            "espn-762783": {
-              "homeScore": 0,
-              "awayScore": 1,
-              "winner": "Vélez Sarsfield",
-              "source": "ESPN",
-              "apiMatchId": "762783",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-23T03:15:00.000Z"
-            },
-            "espn-762785": {
-              "homeScore": 2,
-              "awayScore": 3,
-              "winner": "Lanús",
-              "source": "ESPN",
-              "apiMatchId": "762785",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-24T00:00:00.000Z"
-            },
-            "espn-762781": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762781",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-24T01:00:00.000Z"
-            },
-            "espn-762782": {
-              "homeScore": 2,
-              "awayScore": 1,
-              "winner": "Independiente Rivadavia",
-              "source": "ESPN",
-              "apiMatchId": "762782",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-24T03:15:00.000Z"
-            },
-            "espn-762786": {
-              "homeScore": 2,
-              "awayScore": 1,
-              "winner": "Talleres (Córdoba)",
-              "source": "ESPN",
-              "apiMatchId": "762786",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-24T03:15:00.000Z"
-            },
-            "espn-762777": {
-              "homeScore": 0,
-              "awayScore": 1,
-              "winner": "River Plate",
-              "source": "ESPN",
-              "apiMatchId": "762777",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-24T22:00:00.000Z"
-            },
-            "espn-762780": {
-              "homeScore": 2,
-              "awayScore": 1,
-              "winner": "Gimnasia La Plata",
-              "source": "ESPN",
-              "apiMatchId": "762780",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-25T00:30:00.000Z"
-            },
-            "espn-762784": {
-              "homeScore": 1,
-              "awayScore": 2,
-              "winner": "Belgrano (Córdoba)",
-              "source": "ESPN",
-              "apiMatchId": "762784",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-25T03:00:00.000Z"
-            },
-            "espn-762778": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Boca Juniors",
-              "source": "ESPN",
-              "apiMatchId": "762778",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-25T23:30:00.000Z"
-            },
-            "espn-762775": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Argentinos Juniors",
-              "source": "ESPN",
-              "apiMatchId": "762775",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-26T02:00:00.000Z"
-            },
-            "espn-762787": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "Tigre",
-              "source": "ESPN",
-              "apiMatchId": "762787",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-26T02:00:00.000Z"
-            },
-            "espn-762799": {
-              "homeScore": 2,
-              "awayScore": 1,
-              "winner": "Platense",
-              "source": "ESPN",
-              "apiMatchId": "762799",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-26T22:00:00.000Z"
-            },
-            "espn-762802": {
-              "homeScore": 2,
-              "awayScore": 1,
-              "winner": "Vélez Sarsfield",
-              "source": "ESPN",
-              "apiMatchId": "762802",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-27T22:45:00.000Z"
-            },
-            "espn-762795": {
-              "homeScore": 0,
-              "awayScore": 1,
-              "winner": "San Lorenzo",
-              "source": "ESPN",
-              "apiMatchId": "762795",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-28T01:00:00.000Z"
-            },
-            "espn-762796": {
-              "homeScore": 1,
-              "awayScore": 2,
-              "winner": "Independiente Rivadavia",
-              "source": "ESPN",
-              "apiMatchId": "762796",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-28T01:00:00.000Z"
-            },
-            "espn-762803": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762803",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-28T03:15:00.000Z"
-            },
-            "espn-762798": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762798",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-28T03:15:00.000Z"
-            },
-            "espn-762789": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762789",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-28T22:00:00.000Z"
-            },
-            "espn-762800": {
-              "homeScore": 1,
-              "awayScore": 2,
-              "winner": "Rosario Central",
-              "source": "ESPN",
-              "apiMatchId": "762800",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-29T00:00:00.000Z"
-            },
-            "espn-762801": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "River Plate",
-              "source": "ESPN",
-              "apiMatchId": "762801",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-29T01:00:00.000Z"
-            },
-            "espn-762794": {
-              "homeScore": 2,
-              "awayScore": 1,
-              "winner": "Estudiantes de La Plata",
-              "source": "ESPN",
-              "apiMatchId": "762794",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-29T03:15:00.000Z"
-            },
-            "espn-762792": {
-              "homeScore": 0,
-              "awayScore": 1,
-              "winner": "Defensa y Justicia",
-              "source": "ESPN",
-              "apiMatchId": "762792",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-29T22:00:00.000Z"
-            },
-            "espn-762791": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762791",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-30T00:15:00.000Z"
-            },
-            "espn-762797": {
-              "homeScore": 2,
-              "awayScore": 1,
-              "winner": "Lanús",
-              "source": "ESPN",
-              "apiMatchId": "762797",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-30T00:15:00.000Z"
-            },
-            "espn-762793": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762793",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-30T02:30:00.000Z"
-            },
-            "espn-762790": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Sarmiento (Junín)",
-              "source": "ESPN",
-              "apiMatchId": "762790",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-30T02:30:00.000Z"
-            },
-            "espn-762815": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "San Lorenzo",
-              "source": "ESPN",
-              "apiMatchId": "762815",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-01-31T22:30:00.000Z"
-            },
-            "espn-762811": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762811",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-01T00:45:00.000Z"
-            },
-            "espn-762818": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762818",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-01T03:00:00.000Z"
-            },
-            "espn-762805": {
-              "homeScore": 1,
-              "awayScore": 2,
-              "winner": "Platense",
-              "source": "ESPN",
-              "apiMatchId": "762805",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-01T03:00:00.000Z"
-            },
-            "espn-762807": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762807",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-01T22:00:00.000Z"
-            },
-            "espn-762808": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "Boca Juniors",
-              "source": "ESPN",
-              "apiMatchId": "762808",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-02T00:15:00.000Z"
-            },
-            "espn-762814": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762814",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-02T02:30:00.000Z"
-            },
-            "espn-762810": {
-              "homeScore": 3,
-              "awayScore": 1,
-              "winner": "Gimnasia La Plata",
-              "source": "ESPN",
-              "apiMatchId": "762810",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-02T22:30:00.000Z"
-            },
-            "espn-762809": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762809",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-03T00:45:00.000Z"
-            },
-            "espn-762817": {
-              "homeScore": 3,
-              "awayScore": 1,
-              "winner": "Tigre",
-              "source": "ESPN",
-              "apiMatchId": "762817",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-03T00:45:00.000Z"
-            },
-            "espn-762804": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762804",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-03T03:00:00.000Z"
-            },
-            "espn-762816": {
-              "homeScore": 4,
-              "awayScore": 0,
-              "winner": "Unión (Santa Fe)",
-              "source": "ESPN",
-              "apiMatchId": "762816",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-03T03:00:00.000Z"
-            },
-            "espn-762806": {
-              "homeScore": 2,
-              "awayScore": 1,
-              "winner": "Banfield",
-              "source": "ESPN",
-              "apiMatchId": "762806",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-04T00:00:00.000Z"
-            },
-            "espn-762812": {
-              "homeScore": 2,
-              "awayScore": 1,
-              "winner": "Independiente Rivadavia",
-              "source": "ESPN",
-              "apiMatchId": "762812",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-04T02:15:00.000Z"
-            },
-            "espn-762813": {
-              "homeScore": 2,
-              "awayScore": 2,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762813",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-04T02:15:00.000Z"
-            },
-            "espn-762822": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Central Córdoba (Santiago del Estero)",
-              "source": "ESPN",
-              "apiMatchId": "762822",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-07T02:00:00.000Z"
-            },
-            "espn-762819": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762819",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-07T22:00:00.000Z"
-            },
-            "espn-762830": {
-              "homeScore": 2,
-              "awayScore": 1,
-              "winner": "Racing Club",
-              "source": "ESPN",
-              "apiMatchId": "762830",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-07T23:00:00.000Z"
-            },
-            "espn-762831": {
-              "homeScore": 1,
-              "awayScore": 4,
-              "winner": "Tigre",
-              "source": "ESPN",
-              "apiMatchId": "762831",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-08T01:00:00.000Z"
-            },
-            "espn-762821": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Belgrano (Córdoba)",
-              "source": "ESPN",
-              "apiMatchId": "762821",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-08T03:15:00.000Z"
-            },
-            "espn-762828": {
-              "homeScore": 2,
-              "awayScore": 3,
-              "winner": "Defensa y Justicia",
-              "source": "ESPN",
-              "apiMatchId": "762828",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-08T03:15:00.000Z"
-            },
-            "espn-762829": {
-              "homeScore": 0,
-              "awayScore": 1,
-              "winner": "Independiente",
-              "source": "ESPN",
-              "apiMatchId": "762829",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-08T22:00:00.000Z"
-            },
-            "espn-762832": {
-              "homeScore": 2,
-              "awayScore": 1,
-              "winner": "Sarmiento (Junín)",
-              "source": "ESPN",
-              "apiMatchId": "762832",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-08T22:00:00.000Z"
-            },
-            "espn-762826": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Huracán",
-              "source": "ESPN",
-              "apiMatchId": "762826",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-09T00:15:00.000Z"
-            },
-            "espn-762825": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Gimnasia (Mendoza)",
-              "source": "ESPN",
-              "apiMatchId": "762825",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-09T03:15:00.000Z"
-            },
-            "espn-762833": {
-              "homeScore": 2,
-              "awayScore": 1,
-              "winner": "Vélez Sarsfield",
-              "source": "ESPN",
-              "apiMatchId": "762833",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-09T03:15:00.000Z"
-            },
-            "espn-762820": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "Barracas Central",
-              "source": "ESPN",
-              "apiMatchId": "762820",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-09T22:00:00.000Z"
-            },
-            "espn-762824": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Estudiantes de La Plata",
-              "source": "ESPN",
-              "apiMatchId": "762824",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-10T00:15:00.000Z"
-            },
-            "espn-762827": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762827",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-10T00:15:00.000Z"
-            },
-            "espn-762823": {
-              "homeScore": 0,
-              "awayScore": 1,
-              "winner": "Independiente Rivadavia",
-              "source": "ESPN",
-              "apiMatchId": "762823",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-10T02:30:00.000Z"
-            },
-            "espn-762847": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Tigre",
-              "source": "ESPN",
-              "apiMatchId": "762847",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-13T00:00:00.000Z"
-            },
-            "espn-762834": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Argentinos Juniors",
-              "source": "ESPN",
-              "apiMatchId": "762834",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-13T02:15:00.000Z"
-            },
-            "espn-762842": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "Independiente",
-              "source": "ESPN",
-              "apiMatchId": "762842",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-14T01:00:00.000Z"
-            },
-            "espn-762838": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762838",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-14T03:15:00.000Z"
-            },
-            "espn-762848": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762848",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-14T03:15:00.000Z"
-            },
-            "espn-762836": {
-              "homeScore": 0,
-              "awayScore": 2,
-              "winner": "Racing Club",
-              "source": "ESPN",
-              "apiMatchId": "762836",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-14T22:30:00.000Z"
-            },
-            "espn-762841": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Huracán",
-              "source": "ESPN",
-              "apiMatchId": "762841",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-15T00:45:00.000Z"
-            },
-            "espn-762846": {
-              "homeScore": 2,
-              "awayScore": 1,
-              "winner": "Talleres (Córdoba)",
-              "source": "ESPN",
-              "apiMatchId": "762846",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-15T00:45:00.000Z"
-            },
-            "espn-762835": {
-              "homeScore": 4,
-              "awayScore": 0,
-              "winner": "Atlético Tucumán",
-              "source": "ESPN",
-              "apiMatchId": "762835",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-15T03:00:00.000Z"
-            },
-            "espn-762843": {
-              "homeScore": 0,
-              "awayScore": 1,
-              "winner": "Belgrano (Córdoba)",
-              "source": "ESPN",
-              "apiMatchId": "762843",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-15T03:00:00.000Z"
-            },
-            "espn-762840": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762840",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-15T22:00:00.000Z"
-            },
-            "espn-762837": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762837",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-16T00:30:00.000Z"
-            },
-            "espn-762844": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "Instituto (Córdoba)",
-              "source": "ESPN",
-              "apiMatchId": "762844",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-16T03:00:00.000Z"
-            },
-            "espn-762845": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "Rosario Central",
-              "source": "ESPN",
-              "apiMatchId": "762845",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-16T03:00:00.000Z"
-            },
-            "espn-762839": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762839",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-17T00:00:00.000Z"
-            },
-            "espn-762853": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762853",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-20T22:15:00.000Z"
-            },
-            "espn-762855": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Estudiantes de La Plata",
-              "source": "ESPN",
-              "apiMatchId": "762855",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-20T22:45:00.000Z"
-            },
-            "espn-762851": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762851",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-21T01:00:00.000Z"
-            },
-            "espn-762858": {
-              "homeScore": 2,
-              "awayScore": 1,
-              "winner": "Instituto (Córdoba)",
-              "source": "ESPN",
-              "apiMatchId": "762858",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-21T01:00:00.000Z"
-            },
-            "espn-762856": {
-              "homeScore": 0,
-              "awayScore": 1,
-              "winner": "Gimnasia La Plata",
-              "source": "ESPN",
-              "apiMatchId": "762856",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-21T03:15:00.000Z"
-            },
-            "espn-762860": {
-              "homeScore": 0,
-              "awayScore": 1,
-              "winner": "Talleres (Córdoba)",
-              "source": "ESPN",
-              "apiMatchId": "762860",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-21T03:15:00.000Z"
-            },
-            "espn-762857": {
-              "homeScore": 3,
-              "awayScore": 2,
-              "winner": "Independiente Rivadavia",
-              "source": "ESPN",
-              "apiMatchId": "762857",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-21T22:00:00.000Z"
-            },
-            "espn-762859": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Platense",
-              "source": "ESPN",
-              "apiMatchId": "762859",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-21T22:00:00.000Z"
-            },
-            "espn-762863": {
-              "homeScore": 3,
-              "awayScore": 0,
-              "winner": "Banfield",
-              "source": "ESPN",
-              "apiMatchId": "762863",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-22T00:15:00.000Z"
-            },
-            "espn-762854": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762854",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-22T00:15:00.000Z"
-            },
-            "espn-762852": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762852",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-22T02:30:00.000Z"
-            },
-            "espn-762861": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "San Lorenzo",
-              "source": "ESPN",
-              "apiMatchId": "762861",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-22T22:00:00.000Z"
-            },
-            "espn-762862": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Vélez Sarsfield",
-              "source": "ESPN",
-              "apiMatchId": "762862",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-23T00:15:00.000Z"
-            },
-            "espn-762850": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Unión (Santa Fe)",
-              "source": "ESPN",
-              "apiMatchId": "762850",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-23T02:30:00.000Z"
-            },
-            "espn-762865": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762865",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-24T22:00:00.000Z"
-            },
-            "espn-762868": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762868",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-25T00:15:00.000Z"
-            },
-            "espn-762874": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "Central Córdoba (Santiago del Estero)",
-              "source": "ESPN",
-              "apiMatchId": "762874",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-25T00:45:00.000Z"
-            },
-            "espn-762873": {
-              "homeScore": 3,
-              "awayScore": 1,
-              "winner": "Belgrano (Córdoba)",
-              "source": "ESPN",
-              "apiMatchId": "762873",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-25T02:30:00.000Z"
-            },
-            "espn-762877": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762877",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-25T03:00:00.000Z"
-            },
-            "espn-762872": {
-              "homeScore": 2,
-              "awayScore": 1,
-              "winner": "Barracas Central",
-              "source": "ESPN",
-              "apiMatchId": "762872",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-25T22:00:00.000Z"
-            },
-            "espn-762876": {
-              "homeScore": 1,
-              "awayScore": 2,
-              "winner": "Rosario Central",
-              "source": "ESPN",
-              "apiMatchId": "762876",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-25T22:00:00.000Z"
-            },
-            "espn-762864": {
-              "homeScore": 0,
-              "awayScore": 2,
-              "winner": "Estudiantes de La Plata",
-              "source": "ESPN",
-              "apiMatchId": "762864",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-26T00:30:00.000Z"
-            },
-            "espn-762870": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762870",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-26T00:30:00.000Z"
-            },
-            "espn-762866": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762866",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-26T22:15:00.000Z"
-            },
-            "espn-762869": {
-              "homeScore": 1,
-              "awayScore": 3,
-              "winner": "Unión (Santa Fe)",
-              "source": "ESPN",
-              "apiMatchId": "762869",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-26T22:15:00.000Z"
-            },
-            "espn-762875": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "Estudiantes de Río Cuarto",
-              "source": "ESPN",
-              "apiMatchId": "762875",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-27T00:30:00.000Z"
-            },
-            "espn-762867": {
-              "homeScore": 3,
-              "awayScore": 1,
-              "winner": "River Plate",
-              "source": "ESPN",
-              "apiMatchId": "762867",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-27T00:30:00.000Z"
-            },
-            "espn-762882": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762882",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-02-28T22:45:00.000Z"
-            },
-            "espn-762887": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "Independiente",
-              "source": "ESPN",
-              "apiMatchId": "762887",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-01T01:00:00.000Z"
-            },
-            "espn-762892": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762892",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-01T03:15:00.000Z"
-            },
-            "espn-762890": {
-              "homeScore": 0,
-              "awayScore": 2,
-              "winner": "Rosario Central",
-              "source": "ESPN",
-              "apiMatchId": "762890",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-01T22:00:00.000Z"
-            },
-            "espn-762879": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762879",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-02T00:15:00.000Z"
-            },
-            "espn-762889": {
-              "homeScore": 1,
-              "awayScore": 2,
-              "winner": "Unión (Santa Fe)",
-              "source": "ESPN",
-              "apiMatchId": "762889",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-02T00:15:00.000Z"
-            },
-            "espn-762883": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762883",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-02T02:30:00.000Z"
-            },
-            "espn-762893": {
-              "homeScore": 2,
-              "awayScore": 2,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762893",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-02T02:30:00.000Z"
-            },
-            "espn-762884": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762884",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-03T00:15:00.000Z"
-            },
-            "espn-762885": {
-              "homeScore": 0,
-              "awayScore": 1,
-              "winner": "Vélez Sarsfield",
-              "source": "ESPN",
-              "apiMatchId": "762885",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-03T00:15:00.000Z"
-            },
-            "espn-762881": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "Banfield",
-              "source": "ESPN",
-              "apiMatchId": "762881",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-03T02:30:00.000Z"
-            },
-            "espn-762888": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762888",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-03T02:30:00.000Z"
-            },
-            "espn-762891": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Sarmiento (Junín)",
-              "source": "ESPN",
-              "apiMatchId": "762891",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-04T00:00:00.000Z"
-            },
-            "espn-762886": {
-              "homeScore": 3,
-              "awayScore": 1,
-              "winner": "Huracán",
-              "source": "ESPN",
-              "apiMatchId": "762886",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-04T00:15:00.000Z"
-            },
-            "espn-762880": {
-              "homeScore": 0,
-              "awayScore": 3,
-              "winner": "Racing Club",
-              "source": "ESPN",
-              "apiMatchId": "762880",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-04T02:15:00.000Z"
-            },
-            "espn-762878": {
-              "homeScore": 0,
-              "awayScore": 3,
-              "winner": "Boca Juniors",
-              "source": "ESPN",
-              "apiMatchId": "762878",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-05T02:00:00.000Z"
-            },
-            "espn-762918": {
-              "homeScore": 4,
-              "awayScore": 4,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762918",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-11T00:45:00.000Z"
-            },
-            "espn-762914": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762914",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-11T00:45:00.000Z"
-            },
-            "espn-762920": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762920",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-11T03:00:00.000Z"
-            },
-            "espn-762921": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762921",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-11T03:00:00.000Z"
-            },
-            "espn-762909": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762909",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-11T22:30:00.000Z"
-            },
-            "espn-762911": {
-              "homeScore": 1,
-              "awayScore": 2,
-              "winner": "Gimnasia La Plata",
-              "source": "ESPN",
-              "apiMatchId": "762911",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-11T22:30:00.000Z"
-            },
-            "espn-762912": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762912",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-12T00:45:00.000Z"
-            },
-            "espn-762923": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762923",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-12T03:00:00.000Z"
-            },
-            "espn-762919": {
-              "homeScore": 1,
-              "awayScore": 2,
-              "winner": "Barracas Central",
-              "source": "ESPN",
-              "apiMatchId": "762919",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-12T03:00:00.000Z"
-            },
-            "espn-762913": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762913",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-12T22:00:00.000Z"
-            },
-            "espn-762910": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762910",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-12T22:00:00.000Z"
-            },
-            "espn-762915": {
-              "homeScore": 0,
-              "awayScore": 1,
-              "winner": "Belgrano (Córdoba)",
-              "source": "ESPN",
-              "apiMatchId": "762915",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-13T00:15:00.000Z"
-            },
-            "espn-762922": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "Talleres (Córdoba)",
-              "source": "ESPN",
-              "apiMatchId": "762922",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-13T00:15:00.000Z"
-            },
-            "espn-762917": {
-              "homeScore": 1,
-              "awayScore": 2,
-              "winner": "River Plate",
-              "source": "ESPN",
-              "apiMatchId": "762917",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-13T02:30:00.000Z"
-            },
-            "espn-762916": {
-              "homeScore": 0,
-              "awayScore": 1,
-              "winner": "Lanús",
-              "source": "ESPN",
-              "apiMatchId": "762916",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-14T01:00:00.000Z"
-            },
-            "espn-762932": {
-              "homeScore": 0,
-              "awayScore": 2,
-              "winner": "Vélez Sarsfield",
-              "source": "ESPN",
-              "apiMatchId": "762932",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-15T00:00:00.000Z"
-            },
-            "espn-762935": {
-              "homeScore": 2,
-              "awayScore": 1,
-              "winner": "Rosario Central",
-              "source": "ESPN",
-              "apiMatchId": "762935",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-15T02:00:00.000Z"
-            },
-            "espn-762928": {
-              "homeScore": 2,
-              "awayScore": 3,
-              "winner": "Independiente Rivadavia",
-              "source": "ESPN",
-              "apiMatchId": "762928",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-15T20:15:00.000Z"
-            },
-            "espn-762926": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762926",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-15T22:30:00.000Z"
-            },
-            "espn-762934": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "River Plate",
-              "source": "ESPN",
-              "apiMatchId": "762934",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-16T00:45:00.000Z"
-            },
-            "espn-762937": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762937",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-16T03:00:00.000Z"
-            },
-            "espn-762938": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762938",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-16T03:00:00.000Z"
-            },
-            "espn-762924": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762924",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-16T20:30:00.000Z"
-            },
-            "espn-762925": {
-              "homeScore": 2,
-              "awayScore": 1,
-              "winner": "Barracas Central",
-              "source": "ESPN",
-              "apiMatchId": "762925",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-16T20:30:00.000Z"
-            },
-            "espn-762936": {
-              "homeScore": 2,
-              "awayScore": 5,
-              "winner": "Defensa y Justicia",
-              "source": "ESPN",
-              "apiMatchId": "762936",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-16T23:30:00.000Z"
-            },
-            "espn-762933": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "Racing Club",
-              "source": "ESPN",
-              "apiMatchId": "762933",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-17T01:00:00.000Z"
-            },
-            "espn-762930": {
-              "homeScore": 2,
-              "awayScore": 1,
-              "winner": "Instituto (Córdoba)",
-              "source": "ESPN",
-              "apiMatchId": "762930",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-17T03:15:00.000Z"
-            },
-            "espn-762931": {
-              "homeScore": 5,
-              "awayScore": 0,
-              "winner": "Lanús",
-              "source": "ESPN",
-              "apiMatchId": "762931",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-18T00:00:00.000Z"
-            },
-            "espn-762927": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Central Córdoba (Santiago del Estero)",
-              "source": "ESPN",
-              "apiMatchId": "762927",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-18T02:15:00.000Z"
-            },
-            "espn-762929": {
-              "homeScore": 1,
-              "awayScore": 2,
-              "winner": "Estudiantes de La Plata",
-              "source": "ESPN",
-              "apiMatchId": "762929",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-18T02:15:00.000Z"
-            },
-            "espn-762940": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Atlético Tucumán",
-              "source": "ESPN",
-              "apiMatchId": "762940",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-21T02:00:00.000Z"
-            },
-            "espn-762941": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Banfield",
-              "source": "ESPN",
-              "apiMatchId": "762941",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-21T02:00:00.000Z"
-            },
-            "espn-762953": {
-              "homeScore": 0,
-              "awayScore": 1,
-              "winner": "Lanús",
-              "source": "ESPN",
-              "apiMatchId": "762953",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-21T20:30:00.000Z"
-            },
-            "espn-762944": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "Defensa y Justicia",
-              "source": "ESPN",
-              "apiMatchId": "762944",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-21T22:45:00.000Z"
-            },
-            "espn-762951": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Newell's Old Boys",
-              "source": "ESPN",
-              "apiMatchId": "762951",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-21T22:45:00.000Z"
-            },
-            "espn-762949": {
-              "homeScore": 1,
-              "awayScore": 2,
-              "winner": "Talleres (Córdoba)",
-              "source": "ESPN",
-              "apiMatchId": "762949",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-22T01:00:00.000Z"
-            },
-            "espn-762942": {
-              "homeScore": 1,
-              "awayScore": 2,
-              "winner": "Racing Club",
-              "source": "ESPN",
-              "apiMatchId": "762942",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-22T03:15:00.000Z"
-            },
-            "espn-762952": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "Sarmiento (Junín)",
-              "source": "ESPN",
-              "apiMatchId": "762952",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-22T20:30:00.000Z"
-            },
-            "espn-762946": {
-              "homeScore": 0,
-              "awayScore": 2,
-              "winner": "River Plate",
-              "source": "ESPN",
-              "apiMatchId": "762946",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-22T22:45:00.000Z"
-            },
-            "espn-762943": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "Boca Juniors",
-              "source": "ESPN",
-              "apiMatchId": "762943",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-23T01:00:00.000Z"
-            },
-            "espn-762939": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Argentinos Juniors",
-              "source": "ESPN",
-              "apiMatchId": "762939",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-23T03:15:00.000Z"
-            },
-            "espn-762950": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "Independiente Rivadavia",
-              "source": "ESPN",
-              "apiMatchId": "762950",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-23T03:15:00.000Z"
-            },
-            "espn-762947": {
-              "homeScore": 5,
-              "awayScore": 0,
-              "winner": "Estudiantes de La Plata",
-              "source": "ESPN",
-              "apiMatchId": "762947",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-24T00:00:00.000Z"
-            },
-            "espn-762948": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762948",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-24T02:15:00.000Z"
-            },
-            "espn-762945": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762945",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-26T00:00:00.000Z"
-            },
-            "espn-762849": {
-              "homeScore": 2,
-              "awayScore": 1,
-              "winner": "Argentinos Juniors",
-              "source": "ESPN",
-              "apiMatchId": "762849",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-27T02:00:00.000Z"
-            },
-            "espn-762871": {
-              "homeScore": 0,
-              "awayScore": 2,
-              "winner": "Argentinos Juniors",
-              "source": "ESPN",
-              "apiMatchId": "762871",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-03-31T19:00:00.000Z"
-            },
-            "espn-762959": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762959",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-02T01:00:00.000Z"
-            },
-            "espn-762955": {
-              "homeScore": 1,
-              "awayScore": 2,
-              "winner": "Sarmiento (Junín)",
-              "source": "ESPN",
-              "apiMatchId": "762955",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-02T20:00:00.000Z"
-            },
-            "espn-762964": {
-              "homeScore": 0,
-              "awayScore": 2,
-              "winner": "Independiente Rivadavia",
-              "source": "ESPN",
-              "apiMatchId": "762964",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-02T22:30:00.000Z"
-            },
-            "espn-762963": {
-              "homeScore": 0,
-              "awayScore": 1,
-              "winner": "Boca Juniors",
-              "source": "ESPN",
-              "apiMatchId": "762963",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-03T01:30:00.000Z"
-            },
-            "espn-762956": {
-              "homeScore": 3,
-              "awayScore": 2,
-              "winner": "Gimnasia (Mendoza)",
-              "source": "ESPN",
-              "apiMatchId": "762956",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-03T20:00:00.000Z"
-            },
-            "espn-762965": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "Unión (Santa Fe)",
-              "source": "ESPN",
-              "apiMatchId": "762965",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-03T22:15:00.000Z"
-            },
-            "espn-762962": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "San Lorenzo",
-              "source": "ESPN",
-              "apiMatchId": "762962",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-04T00:30:00.000Z"
-            },
-            "espn-762967": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762967",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-04T18:30:00.000Z"
-            },
-            "espn-762957": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Independiente",
-              "source": "ESPN",
-              "apiMatchId": "762957",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-04T22:30:00.000Z"
-            },
-            "espn-762961": {
-              "homeScore": 2,
-              "awayScore": 1,
-              "winner": "Rosario Central",
-              "source": "ESPN",
-              "apiMatchId": "762961",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-05T02:00:00.000Z"
-            },
-            "espn-762968": {
-              "homeScore": 0,
-              "awayScore": 3,
-              "winner": "Huracán",
-              "source": "ESPN",
-              "apiMatchId": "762968",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-05T20:30:00.000Z"
-            },
-            "espn-762960": {
-              "homeScore": 3,
-              "awayScore": 0,
-              "winner": "River Plate",
-              "source": "ESPN",
-              "apiMatchId": "762960",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-05T23:00:00.000Z"
-            },
-            "espn-762954": {
-              "homeScore": 1,
-              "awayScore": 3,
-              "winner": "Newell's Old Boys",
-              "source": "ESPN",
-              "apiMatchId": "762954",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-06T01:30:00.000Z"
-            },
-            "espn-762966": {
-              "homeScore": 3,
-              "awayScore": 2,
-              "winner": "Argentinos Juniors",
-              "source": "ESPN",
-              "apiMatchId": "762966",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-07T00:00:00.000Z"
-            },
-            "espn-762958": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "Instituto (Córdoba)",
-              "source": "ESPN",
-              "apiMatchId": "762958",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-07T02:15:00.000Z"
-            },
-            "espn-762969": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Belgrano (Córdoba)",
-              "source": "ESPN",
-              "apiMatchId": "762969",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-11T02:00:00.000Z"
-            },
-            "espn-762972": {
-              "homeScore": 0,
-              "awayScore": 1,
-              "winner": "Instituto (Córdoba)",
-              "source": "ESPN",
-              "apiMatchId": "762972",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-11T20:00:00.000Z"
-            },
-            "espn-762980": {
-              "homeScore": 3,
-              "awayScore": 1,
-              "winner": "Independiente Rivadavia",
-              "source": "ESPN",
-              "apiMatchId": "762980",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-11T20:30:00.000Z"
-            },
-            "espn-762981": {
-              "homeScore": 2,
-              "awayScore": 1,
-              "winner": "Estudiantes de La Plata",
-              "source": "ESPN",
-              "apiMatchId": "762981",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-11T22:15:00.000Z"
-            },
-            "espn-762970": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762970",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-12T00:30:00.000Z"
-            },
-            "espn-762973": {
-              "homeScore": 1,
-              "awayScore": 2,
-              "winner": "Barracas Central",
-              "source": "ESPN",
-              "apiMatchId": "762973",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-12T02:45:00.000Z"
-            },
-            "espn-762978": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762978",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-12T20:00:00.000Z"
-            },
-            "espn-762977": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762977",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-12T20:00:00.000Z"
-            },
-            "espn-762982": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762982",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-12T22:30:00.000Z"
-            },
-            "espn-762983": {
-              "homeScore": 3,
-              "awayScore": 1,
-              "winner": "Huracán",
-              "source": "ESPN",
-              "apiMatchId": "762983",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-12T22:30:00.000Z"
-            },
-            "espn-762976": {
-              "homeScore": 0,
-              "awayScore": 2,
-              "winner": "River Plate",
-              "source": "ESPN",
-              "apiMatchId": "762976",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-13T01:00:00.000Z"
-            },
-            "espn-762971": {
-              "homeScore": 1,
-              "awayScore": 2,
-              "winner": "Talleres (Córdoba)",
-              "source": "ESPN",
-              "apiMatchId": "762971",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-13T21:30:00.000Z"
-            },
-            "espn-762975": {
-              "homeScore": 1,
-              "awayScore": 2,
-              "winner": "Gimnasia La Plata",
-              "source": "ESPN",
-              "apiMatchId": "762975",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-13T21:30:00.000Z"
-            },
-            "espn-762979": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Lanús",
-              "source": "ESPN",
-              "apiMatchId": "762979",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-14T00:00:00.000Z"
-            },
-            "espn-762974": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Vélez Sarsfield",
-              "source": "ESPN",
-              "apiMatchId": "762974",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-14T02:30:00.000Z"
-            },
-            "espn-762984": {
-              "homeScore": 2,
-              "awayScore": 3,
-              "winner": "Newell's Old Boys",
-              "source": "ESPN",
-              "apiMatchId": "762984",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-18T01:30:00.000Z"
-            },
-            "espn-762991": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Gimnasia La Plata",
-              "source": "ESPN",
-              "apiMatchId": "762991",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-18T20:00:00.000Z"
-            },
-            "espn-762994": {
-              "homeScore": 0,
-              "awayScore": 1,
-              "winner": "Estudiantes de La Plata",
-              "source": "ESPN",
-              "apiMatchId": "762994",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-18T22:15:00.000Z"
-            },
-            "espn-762993": {
-              "homeScore": 3,
-              "awayScore": 1,
-              "winner": "Independiente",
-              "source": "ESPN",
-              "apiMatchId": "762993",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-19T00:30:00.000Z"
-            },
-            "espn-762987": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Argentinos Juniors",
-              "source": "ESPN",
-              "apiMatchId": "762987",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-19T02:45:00.000Z"
-            },
-            "espn-762986": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762986",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-19T18:30:00.000Z"
-            },
-            "espn-762995": {
-              "homeScore": 0,
-              "awayScore": 1,
-              "winner": "Boca Juniors",
-              "source": "ESPN",
-              "apiMatchId": "762995",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-19T22:00:00.000Z"
-            },
-            "espn-762996": {
-              "homeScore": 2,
-              "awayScore": 1,
-              "winner": "Rosario Central",
-              "source": "ESPN",
-              "apiMatchId": "762996",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-20T01:30:00.000Z"
-            },
-            "espn-762998": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "Talleres (Córdoba)",
-              "source": "ESPN",
-              "apiMatchId": "762998",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-20T01:30:00.000Z"
-            },
-            "espn-762989": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762989",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-20T20:00:00.000Z"
-            },
-            "espn-762988": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762988",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-20T22:15:00.000Z"
-            },
-            "espn-762990": {
-              "homeScore": 4,
-              "awayScore": 3,
-              "winner": "Central Córdoba (Santiago del Estero)",
-              "source": "ESPN",
-              "apiMatchId": "762990",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-20T22:15:00.000Z"
-            },
-            "espn-762997": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762997",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-21T00:30:00.000Z"
-            },
-            "espn-762992": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Gimnasia (Mendoza)",
-              "source": "ESPN",
-              "apiMatchId": "762992",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-21T02:45:00.000Z"
-            },
-            "espn-762985": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762985",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-21T02:45:00.000Z"
-            },
-            "espn-763011": {
-              "homeScore": 0,
-              "awayScore": 4,
-              "winner": "Boca Juniors",
-              "source": "ESPN",
-              "apiMatchId": "763011",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-24T01:00:00.000Z"
-            },
-            "espn-763010": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "Deportivo Riestra",
-              "source": "ESPN",
-              "apiMatchId": "763010",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-24T22:00:00.000Z"
-            },
-            "espn-763009": {
-              "homeScore": 1,
-              "awayScore": 2,
-              "winner": "Rosario Central",
-              "source": "ESPN",
-              "apiMatchId": "763009",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-25T00:15:00.000Z"
-            },
-            "espn-763005": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "763005",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-25T00:15:00.000Z"
-            },
-            "espn-763012": {
-              "homeScore": 0,
-              "awayScore": 1,
-              "winner": "San Lorenzo",
-              "source": "ESPN",
-              "apiMatchId": "763012",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-25T02:30:00.000Z"
-            },
-            "espn-763013": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "763013",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-25T02:30:00.000Z"
-            },
-            "espn-763008": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "763008",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-25T22:00:00.000Z"
-            },
-            "espn-763002": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Sarmiento (Junín)",
-              "source": "ESPN",
-              "apiMatchId": "763002",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-26T00:15:00.000Z"
-            },
-            "espn-763001": {
-              "homeScore": 3,
-              "awayScore": 1,
-              "winner": "River Plate",
-              "source": "ESPN",
-              "apiMatchId": "763001",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-26T02:30:00.000Z"
-            },
-            "espn-763006": {
-              "homeScore": 5,
-              "awayScore": 1,
-              "winner": "Independiente Rivadavia",
-              "source": "ESPN",
-              "apiMatchId": "763006",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-26T20:00:00.000Z"
-            },
-            "espn-763000": {
-              "homeScore": 0,
-              "awayScore": 1,
-              "winner": "Gimnasia La Plata",
-              "source": "ESPN",
-              "apiMatchId": "763000",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-26T22:30:00.000Z"
-            },
-            "espn-763004": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "763004",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-26T22:30:00.000Z"
-            },
-            "espn-762999": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762999",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-27T01:00:00.000Z"
-            },
-            "espn-763003": {
-              "homeScore": 2,
-              "awayScore": 2,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "763003",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-27T23:45:00.000Z"
-            },
-            "espn-763007": {
-              "homeScore": 1,
-              "awayScore": 2,
-              "winner": "Argentinos Juniors",
-              "source": "ESPN",
-              "apiMatchId": "763007",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-04-28T02:00:00.000Z"
-            },
-            "espn-762905": {
-              "homeScore": 1,
-              "awayScore": 2,
-              "winner": "Banfield",
-              "source": "ESPN",
-              "apiMatchId": "762905",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-02T19:00:00.000Z"
-            },
-            "espn-762896": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762896",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-02T19:30:00.000Z"
-            },
-            "espn-762907": {
-              "homeScore": 1,
-              "awayScore": 2,
-              "winner": "Boca Juniors",
-              "source": "ESPN",
-              "apiMatchId": "762907",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-02T21:15:00.000Z"
-            },
-            "espn-762901": {
-              "homeScore": 1,
-              "awayScore": 2,
-              "winner": "Independiente",
-              "source": "ESPN",
-              "apiMatchId": "762901",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-02T23:45:00.000Z"
-            },
-            "espn-762902": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762902",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-02T23:45:00.000Z"
-            },
-            "espn-762897": {
-              "homeScore": 0,
-              "awayScore": 2,
-              "winner": "Estudiantes de La Plata",
-              "source": "ESPN",
-              "apiMatchId": "762897",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-03T02:15:00.000Z"
-            },
-            "espn-762904": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762904",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-03T18:30:00.000Z"
-            },
-            "espn-762906": {
-              "homeScore": 4,
-              "awayScore": 0,
-              "winner": "Belgrano (Córdoba)",
-              "source": "ESPN",
-              "apiMatchId": "762906",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-03T21:00:00.000Z"
-            },
-            "espn-762894": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "Gimnasia La Plata",
-              "source": "ESPN",
-              "apiMatchId": "762894",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-03T21:00:00.000Z"
-            },
-            "espn-762898": {
-              "homeScore": 0,
-              "awayScore": 0,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762898",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-03T21:00:00.000Z"
-            },
-            "espn-762900": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762900",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-03T21:00:00.000Z"
-            },
-            "espn-762899": {
-              "homeScore": 0,
-              "awayScore": 1,
-              "winner": "Atlético Tucumán",
-              "source": "ESPN",
-              "apiMatchId": "762899",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-03T23:30:00.000Z"
-            },
-            "espn-762895": {
-              "homeScore": 2,
-              "awayScore": 1,
-              "winner": "Gimnasia (Mendoza)",
-              "source": "ESPN",
-              "apiMatchId": "762895",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-04T22:00:00.000Z"
-            },
-            "espn-762903": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "draw",
-              "source": "ESPN",
-              "apiMatchId": "762903",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-05T00:15:00.000Z"
-            },
-            "espn-762908": {
-              "homeScore": 0,
-              "awayScore": 2,
-              "winner": "Instituto (Córdoba)",
-              "source": "ESPN",
-              "apiMatchId": "762908",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-05T02:30:00.000Z"
-            },
-            "espn-401871432": {
-              "homeScore": 0,
-              "awayScore": 1,
-              "winner": "Belgrano (Córdoba)",
-              "source": "ESPN",
-              "apiMatchId": "401871432",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-09T21:30:00.000Z"
-            },
-            "espn-401871437": {
-              "homeScore": 2,
-              "awayScore": 3,
-              "winner": "Huracán",
-              "source": "ESPN",
-              "apiMatchId": "401871437",
-              "status": "Final Score - After Extra Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-10T00:00:00.000Z"
-            },
-            "espn-401871433": {
-              "homeScore": 1,
-              "awayScore": 2,
-              "winner": "Unión (Santa Fe)",
-              "source": "ESPN",
-              "apiMatchId": "401871433",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-10T02:30:00.000Z"
-            },
-            "espn-401871435": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "Argentinos Juniors",
-              "source": "ESPN",
-              "apiMatchId": "401871435",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-10T03:15:00.000Z"
-            },
-            "espn-401871431": {
-              "homeScore": 3,
-              "awayScore": 1,
-              "winner": "Rosario Central",
-              "source": "ESPN",
-              "apiMatchId": "401871431",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-10T20:00:00.000Z"
-            },
-            "espn-401871434": {
-              "homeScore": 0,
-              "awayScore": 1,
-              "winner": "Racing Club",
-              "source": "ESPN",
-              "apiMatchId": "401871434",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-10T22:00:00.000Z"
-            },
-            "espn-401871430": {
-              "homeScore": 2,
-              "awayScore": 2,
-              "winner": "River Plate",
-              "source": "ESPN",
-              "apiMatchId": "401871430",
-              "status": "Final Score - After Penalties",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-11T00:00:00.000Z"
-            },
-            "espn-401871436": {
-              "homeScore": 0,
-              "awayScore": 1,
-              "winner": "Gimnasia La Plata",
-              "source": "ESPN",
-              "apiMatchId": "401871436",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-11T02:30:00.000Z"
-            },
-            "espn-401872290": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "Belgrano (Córdoba)",
-              "source": "ESPN",
-              "apiMatchId": "401872290",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-13T00:00:00.000Z"
-            },
-            "espn-401872291": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "Argentinos Juniors",
-              "source": "ESPN",
-              "apiMatchId": "401872291",
-              "status": "Final Score - After Extra Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-13T02:30:00.000Z"
-            },
-            "espn-401872179": {
-              "homeScore": 2,
-              "awayScore": 1,
-              "winner": "Rosario Central",
-              "source": "ESPN",
-              "apiMatchId": "401872179",
-              "status": "Final Score - After Extra Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-13T23:45:00.000Z"
-            },
-            "espn-401872546": {
-              "homeScore": 2,
-              "awayScore": 0,
-              "winner": "River Plate",
-              "source": "ESPN",
-              "apiMatchId": "401872546",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-14T02:45:00.000Z"
-            },
-            "espn-401872650": {
-              "homeScore": 1,
-              "awayScore": 0,
-              "winner": "River Plate",
-              "source": "ESPN",
-              "apiMatchId": "401872650",
-              "status": "Full Time",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-17T00:30:00.000Z"
-            },
-            "espn-401872677": {
-              "homeScore": 1,
-              "awayScore": 1,
-              "winner": "Belgrano (Córdoba)",
-              "source": "ESPN",
-              "apiMatchId": "401872677",
-              "status": "Final Score - After Penalties",
-              "updatedAt": "2026-05-23T18:21:06.663Z",
-              "finishedAt": "2026-05-17T22:00:00.000Z"
-            }
-          },
-          "champion": ""
-        },
-        "apiSource": {
-          "provider": "ESPN",
-          "competitionCode": "arg.1",
-          "season": "2026",
-          "syncedAt": "2026-05-23T18:21:06.663Z",
-          "fixtures": 495,
-          "matched": 254,
-          "imported": 254
-        },
-        "updatedAt": "2026-05-23T18:21:06.663Z"
-      },
+      "realResults": null,
       "templateId": "argentina",
       "mode": "fixture",
       "scoring": {
@@ -8566,7 +6010,7 @@
           "scoringDelayMinutesAfterResult": 0
         }
       },
-      "realResultsUpdatedAt": "2026-05-23T18:21:06.663Z"
+      "realResultsUpdatedAt": null
     },
     {
       "id": "empresa-aaaaa",
@@ -10337,6 +7781,26 @@
         }
       },
       "realResultsUpdatedAt": null
+    },
+    {
+      "id": "empresa-altoque",
+      "name": "Altoque",
+      "code": "EMPRESA-ALTOQUE",
+      "tenantId": "altoque",
+      "isGlobal": false,
+      "createdAt": "2026-05-25T04:02:45.249Z",
+      "realResults": null,
+      "templateId": "worldcup-2026",
+      "mode": "groups-knockout",
+      "scoring": {
+        "groupPosition": 1,
+        "knockoutWinner": 3,
+        "exactScore": 2,
+        "champion": 10
+      },
+      "payment": null,
+      "payments": {},
+      "submissions": []
     }
   ],
   "tenants": {
@@ -11863,6 +9327,456 @@
       "gamePlays": {},
       "createdAt": "2026-05-15T14:51:56.383Z",
       "createdBy": "admin@prodeglobal.com"
+    },
+    "altoque": {
+      "id": "altoque",
+      "dynamic": true,
+      "templateId": "acme-private-shell",
+      "competitionTemplateId": "worldcup-2026",
+      "name": "Altoque",
+      "displayName": "Altoque",
+      "eyebrow": "Prode corporativo",
+      "title": "Prode Altoque",
+      "description": "Predicciones y ranking exclusivo para Altoque.",
+      "areas": [
+        "Sistemas",
+        "RRHH",
+        "Comercial",
+        "Administracion"
+      ],
+      "users": {},
+      "sessions": {},
+      "theme": {
+        "bg": "#F2E6CF",
+        "ink": "#323232",
+        "muted": "#6f6259",
+        "line": "#d8c8ad",
+        "panel": "#fff8ec",
+        "accent": "#631009",
+        "accent2": "#323232",
+        "gold": "#b98d3d",
+        "blue": "#6b5d56",
+        "image": "/th.webp",
+        "tintRgb": "99, 16, 9"
+      },
+      "baseTheme": {
+        "bg": "#F2E6CF",
+        "ink": "#323232",
+        "muted": "#6f6259",
+        "line": "#d8c8ad",
+        "panel": "#fff8ec",
+        "accent": "#631009",
+        "accent2": "#323232",
+        "gold": "#b98d3d",
+        "blue": "#6b5d56",
+        "image": "/th.webp",
+        "tintRgb": "99, 16, 9"
+      },
+      "games": {
+        "enabled": true,
+        "title": "Centro de minijuegos",
+        "intro": "Desafios rapidos para sumar ritmo al prode diario.",
+        "rewardName": "Fan Points",
+        "points": {
+          "camisetadle": 20,
+          "desafio": 15
+        },
+        "camisetas": [
+          {
+            "id": "messi-10-arg-2022",
+            "player": "Lionel Messi",
+            "number": "10",
+            "team": "Argentina",
+            "tournament": "Mundial 2022",
+            "hint": "Campeon en Qatar"
+          },
+          {
+            "id": "mbappe-10-fra-2018",
+            "player": "Kylian Mbappe",
+            "number": "10",
+            "team": "Francia",
+            "tournament": "Mundial 2018",
+            "hint": "Campeon en Rusia"
+          },
+          {
+            "id": "ronaldo-7-por-2006",
+            "player": "Cristiano Ronaldo",
+            "number": "7",
+            "team": "Portugal",
+            "tournament": "Mundial 2006",
+            "hint": "Debuto mundialista en Alemania"
+          },
+          {
+            "id": "neymar-10-bra-2014",
+            "player": "Neymar",
+            "number": "10",
+            "team": "Brasil",
+            "tournament": "Mundial 2014",
+            "hint": "Local y figura de Brasil"
+          },
+          {
+            "id": "iniesta-6-esp-2010",
+            "player": "Andres Iniesta",
+            "number": "6",
+            "team": "Espana",
+            "tournament": "Mundial 2010",
+            "hint": "Gol historico en la final"
+          },
+          {
+            "id": "zidane-10-fra-1998",
+            "player": "Zinedine Zidane",
+            "number": "10",
+            "team": "Francia",
+            "tournament": "Mundial 1998",
+            "hint": "Dos goles en la final"
+          },
+          {
+            "id": "ronaldo-9-bra-2002",
+            "player": "Ronaldo",
+            "number": "9",
+            "team": "Brasil",
+            "tournament": "Mundial 2002",
+            "hint": "Maximo goleador del campeon"
+          },
+          {
+            "id": "klose-11-ger-2014",
+            "player": "Miroslav Klose",
+            "number": "11",
+            "team": "Alemania",
+            "tournament": "Mundial 2014",
+            "hint": "Record goleador mundialista"
+          },
+          {
+            "id": "forlan-10-uru-2010",
+            "player": "Diego Forlan",
+            "number": "10",
+            "team": "Uruguay",
+            "tournament": "Mundial 2010",
+            "hint": "Balon de oro del torneo"
+          },
+          {
+            "id": "modric-10-cro-2018",
+            "player": "Luka Modric",
+            "number": "10",
+            "team": "Croacia",
+            "tournament": "Mundial 2018",
+            "hint": "Condujo a su seleccion a la final"
+          },
+          {
+            "id": "kane-9-eng-2018",
+            "player": "Harry Kane",
+            "number": "9",
+            "team": "Inglaterra",
+            "tournament": "Mundial 2018",
+            "hint": "Bota de oro en Rusia"
+          },
+          {
+            "id": "suarez-9-uru-2014",
+            "player": "Luis Suarez",
+            "number": "9",
+            "team": "Uruguay",
+            "tournament": "Mundial 2014",
+            "hint": "Figura charrua en Brasil"
+          },
+          {
+            "id": "robben-11-ned-2014",
+            "player": "Arjen Robben",
+            "number": "11",
+            "team": "Paises Bajos",
+            "tournament": "Mundial 2014",
+            "hint": "Velocidad por derecha"
+          },
+          {
+            "id": "james-10-col-2014",
+            "player": "James Rodriguez",
+            "number": "10",
+            "team": "Colombia",
+            "tournament": "Mundial 2014",
+            "hint": "Golazo de volea ante Uruguay"
+          },
+          {
+            "id": "maradona-10-arg-1986",
+            "player": "Diego Maradona",
+            "number": "10",
+            "team": "Argentina",
+            "tournament": "Mundial 1986",
+            "hint": "Mexico y una camiseta eterna"
+          },
+          {
+            "id": "baggio-10-ita-1994",
+            "player": "Roberto Baggio",
+            "number": "10",
+            "team": "Italia",
+            "tournament": "Mundial 1994",
+            "hint": "Llevo a Italia a la final"
+          },
+          {
+            "id": "pirlo-21-ita-2006",
+            "player": "Andrea Pirlo",
+            "number": "21",
+            "team": "Italia",
+            "tournament": "Mundial 2006",
+            "hint": "Cerebro del campeon"
+          },
+          {
+            "id": "xavi-8-esp-2010",
+            "player": "Xavi",
+            "number": "8",
+            "team": "Espana",
+            "tournament": "Mundial 2010",
+            "hint": "Motor del tiki taka"
+          },
+          {
+            "id": "ozil-8-ger-2010",
+            "player": "Mesut Ozil",
+            "number": "8",
+            "team": "Alemania",
+            "tournament": "Mundial 2010",
+            "hint": "Zurda fina alemana"
+          },
+          {
+            "id": "hazard-10-bel-2018",
+            "player": "Eden Hazard",
+            "number": "10",
+            "team": "Belgica",
+            "tournament": "Mundial 2018",
+            "hint": "Capitan de la generacion dorada"
+          }
+        ],
+        "desafio": [
+          {
+            "id": "azteca",
+            "type": "estadio",
+            "answer": "Estadio Azteca",
+            "title": "Adivina el estadio",
+            "subtitle": "Mundial 2026",
+            "clues": [
+              "Fue sede de dos finales mundialistas",
+              "Esta en Ciudad de Mexico",
+              "Tambien recibe partidos del Mundial 2026"
+            ]
+          },
+          {
+            "id": "maradona",
+            "type": "jugador",
+            "answer": "Diego Maradona",
+            "title": "Adivina el jugador",
+            "subtitle": "Argentina",
+            "clues": [
+              "Uso la 10",
+              "Fue campeon del mundo en 1986",
+              "Su gol mas famoso fue en Mexico"
+            ]
+          },
+          {
+            "id": "lusail",
+            "type": "estadio",
+            "answer": "Estadio Lusail",
+            "title": "Adivina el estadio",
+            "subtitle": "Qatar 2022",
+            "clues": [
+              "Recibio la final de 2022",
+              "Argentina levanto alli la copa",
+              "Esta en Lusail"
+            ]
+          },
+          {
+            "id": "wembley",
+            "type": "estadio",
+            "answer": "Wembley",
+            "title": "Adivina el estadio",
+            "subtitle": "Inglaterra",
+            "clues": [
+              "Tiene un arco sobre su techo",
+              "Fue sede de finales europeas",
+              "Esta en Londres"
+            ]
+          },
+          {
+            "id": "maracana",
+            "type": "estadio",
+            "answer": "Maracana",
+            "title": "Adivina el estadio",
+            "subtitle": "Brasil",
+            "clues": [
+              "Fue sede de finales mundialistas",
+              "Esta en Rio de Janeiro",
+              "Su nombre completo homenajea a Mario Filho"
+            ]
+          },
+          {
+            "id": "bernabeu",
+            "type": "estadio",
+            "answer": "Santiago Bernabeu",
+            "title": "Adivina el estadio",
+            "subtitle": "Espana",
+            "clues": [
+              "Casa del Real Madrid",
+              "Esta en Madrid",
+              "Lleva el nombre de un historico presidente"
+            ]
+          },
+          {
+            "id": "camp-nou",
+            "type": "estadio",
+            "answer": "Camp Nou",
+            "title": "Adivina el estadio",
+            "subtitle": "Espana",
+            "clues": [
+              "Casa del Barcelona",
+              "Su nombre significa campo nuevo",
+              "Esta en Catalunya"
+            ]
+          },
+          {
+            "id": "bombonera",
+            "type": "estadio",
+            "answer": "La Bombonera",
+            "title": "Adivina el estadio",
+            "subtitle": "Argentina",
+            "clues": [
+              "Tiene tribunas muy empinadas",
+              "Esta en La Boca",
+              "Casa de Boca Juniors"
+            ]
+          },
+          {
+            "id": "monumental",
+            "type": "estadio",
+            "answer": "Monumental",
+            "title": "Adivina el estadio",
+            "subtitle": "Argentina",
+            "clues": [
+              "Casa de River Plate",
+              "Sede frecuente de la seleccion argentina",
+              "Esta en Nunez"
+            ]
+          },
+          {
+            "id": "san-siro",
+            "type": "estadio",
+            "answer": "San Siro",
+            "title": "Adivina el estadio",
+            "subtitle": "Italia",
+            "clues": [
+              "Lo comparten dos gigantes de Milan",
+              "Tambien se llama Giuseppe Meazza",
+              "Tiene torres exteriores muy reconocibles"
+            ]
+          },
+          {
+            "id": "allianz-arena",
+            "type": "estadio",
+            "answer": "Allianz Arena",
+            "title": "Adivina el estadio",
+            "subtitle": "Alemania",
+            "clues": [
+              "Su fachada se ilumina",
+              "Casa del Bayern Munich",
+              "Esta en Munich"
+            ]
+          },
+          {
+            "id": "old-trafford",
+            "type": "estadio",
+            "answer": "Old Trafford",
+            "title": "Adivina el estadio",
+            "subtitle": "Inglaterra",
+            "clues": [
+              "Conocido como el Teatro de los Suenos",
+              "Casa del Manchester United",
+              "Esta en Greater Manchester"
+            ]
+          },
+          {
+            "id": "pele",
+            "type": "jugador",
+            "answer": "Pele",
+            "title": "Adivina el jugador",
+            "subtitle": "Brasil",
+            "clues": [
+              "Gano tres Mundiales",
+              "Debuto mundialista con 17 anos",
+              "Es una leyenda del Santos"
+            ]
+          },
+          {
+            "id": "beckenbauer",
+            "type": "jugador",
+            "answer": "Franz Beckenbauer",
+            "title": "Adivina el jugador",
+            "subtitle": "Alemania",
+            "clues": [
+              "Fue campeon como jugador y entrenador",
+              "Lo llamaban el Kaiser",
+              "Defensor elegante"
+            ]
+          },
+          {
+            "id": "cruyff",
+            "type": "jugador",
+            "answer": "Johan Cruyff",
+            "title": "Adivina el jugador",
+            "subtitle": "Paises Bajos",
+            "clues": [
+              "Simbolo de la Naranja Mecanica",
+              "Uso la 14",
+              "Influyo en Ajax y Barcelona"
+            ]
+          },
+          {
+            "id": "zidane",
+            "type": "jugador",
+            "answer": "Zinedine Zidane",
+            "title": "Adivina el jugador",
+            "subtitle": "Francia",
+            "clues": [
+              "Campeon mundial en 1998",
+              "Uso la 10",
+              "Marco dos goles de cabeza en una final"
+            ]
+          },
+          {
+            "id": "marta",
+            "type": "jugadora",
+            "answer": "Marta",
+            "title": "Adivina la jugadora",
+            "subtitle": "Brasil",
+            "clues": [
+              "Leyenda del futbol femenino",
+              "Zurda brasileña",
+              "Multiple ganadora del premio FIFA"
+            ]
+          },
+          {
+            "id": "la-mano-de-dios",
+            "type": "frase",
+            "answer": "La mano de Dios",
+            "title": "Adivina la frase",
+            "subtitle": "Mundial 1986",
+            "clues": [
+              "Nacio en Mexico",
+              "Esta ligada a Argentina-Inglaterra",
+              "La dijo Diego Maradona"
+            ]
+          },
+          {
+            "id": "tiki-taka",
+            "type": "concepto",
+            "answer": "Tiki taka",
+            "title": "Adivina el concepto",
+            "subtitle": "Espana",
+            "clues": [
+              "Asociado a posesion y pases cortos",
+              "Marco una epoca en Barcelona y Espana",
+              "Fue clave en 2010"
+            ]
+          }
+        ]
+      },
+      "gamePlays": {},
+      "createdAt": "2026-05-25T04:02:45.249Z",
+      "createdBy": "admin@prodeglobal.com"
     }
   },
   "users": {
@@ -11877,7 +9791,7 @@
         "salt": "ec1db51069db93e9f3b429d7bd71e4b4",
         "hash": "c0ec6c0dc04ed728808d401d48b47c6c9b60aa9d7a8b34ba5333419134467fc7"
       },
-      "updatedAt": "2026-05-23T12:57:37.411Z",
+      "updatedAt": "2026-05-25T03:39:29.843Z",
       "createdAt": "2026-05-15T04:38:17.884Z"
     },
     "titoalovero@gmail.com": {
@@ -11890,7 +9804,7 @@
         "salt": "5dad3e6df4c5d1164f1a945b658b806a",
         "hash": "fd852a717d103ef0428e4c2440b965062431b42c7aeb919a7c7ccddc59b55c2a"
       },
-      "updatedAt": "2026-05-23T17:50:39.300Z",
+      "updatedAt": "2026-05-25T03:28:34.622Z",
       "createdAt": "2026-05-23T15:05:48.644Z"
     },
     "tiitoo277@gmail.com": {
@@ -11914,7 +9828,9 @@
     "RDVB4H-GKL5XC-mpijoar6": "titoalovero@gmail.com",
     "P06GK7-SKOF30-mpin9m10": "titoalovero@gmail.com",
     "1DHRMG-NZYY3S-mpinju9c": "tiitoo277@gmail.com",
-    "IY3QA2-HY06CK-mpio0wey": "tiitoo277@gmail.com"
+    "IY3QA2-HY06CK-mpio0wey": "tiitoo277@gmail.com",
+    "CJNQED-0982YR-mpkncoce": "titoalovero@gmail.com",
+    "C4WQ86-ZP3Y4Z-mpknqpws": "admin@prodeglobal.com"
   },
   "tournamentAccess": {
     "admin@prodeglobal.com": {
@@ -11933,6 +9849,12 @@
       "empresa-aaaaa": {
         "tournamentId": "empresa-aaaaa",
         "grantedAt": "2026-05-15T14:51:56.383Z",
+        "grantedByPassword": false,
+        "grantedByAdmin": true
+      },
+      "empresa-altoque": {
+        "tournamentId": "empresa-altoque",
+        "grantedAt": "2026-05-25T04:02:45.249Z",
         "grantedByPassword": false,
         "grantedByAdmin": true
       }
@@ -12340,6 +10262,85 @@
       }
     ]
   },
-  "globalGamePlays": {},
+  "globalGamePlays": {
+    "tiitoo277@gmail.com": {
+      "2026-05-25": {
+        "desafio": {
+          "gameType": "desafio",
+          "challengeId": "lusail",
+          "date": "2026-05-25",
+          "attempts": 1,
+          "completed": true,
+          "completedAt": "2026-05-25T03:18:09.802Z",
+          "points": 15,
+          "rewardName": "Fan Points",
+          "updatedAt": "2026-05-25T03:18:09.802Z"
+        },
+        "camisetadle": {
+          "gameType": "camisetadle",
+          "challengeId": "ozil-8-ger-2010",
+          "date": "2026-05-25",
+          "attempts": 1,
+          "completed": true,
+          "completedAt": "2026-05-25T03:22:46.430Z",
+          "points": 20,
+          "rewardName": "Fan Points",
+          "updatedAt": "2026-05-25T03:22:46.430Z"
+        }
+      }
+    },
+    "titoalovero@gmail.com": {
+      "2026-05-25": {
+        "camisetadle": {
+          "gameType": "camisetadle",
+          "challengeId": "ozil-8-ger-2010",
+          "date": "2026-05-25",
+          "attempts": 1,
+          "completed": true,
+          "completedAt": "2026-05-25T03:28:57.011Z",
+          "points": 20,
+          "rewardName": "Fan Points",
+          "updatedAt": "2026-05-25T03:28:57.011Z"
+        },
+        "desafio": {
+          "gameType": "desafio",
+          "challengeId": "lusail",
+          "date": "2026-05-25",
+          "attempts": 1,
+          "completed": true,
+          "completedAt": "2026-05-25T03:29:20.352Z",
+          "points": 15,
+          "rewardName": "Fan Points",
+          "updatedAt": "2026-05-25T03:29:20.352Z"
+        }
+      }
+    },
+    "admin@prodeglobal.com": {
+      "2026-05-25": {
+        "camisetadle": {
+          "gameType": "camisetadle",
+          "challengeId": "ozil-8-ger-2010",
+          "date": "2026-05-25",
+          "attempts": 1,
+          "completed": true,
+          "completedAt": "2026-05-25T03:39:42.429Z",
+          "points": 20,
+          "rewardName": "Fan Points",
+          "updatedAt": "2026-05-25T03:39:42.429Z"
+        },
+        "desafio": {
+          "gameType": "desafio",
+          "challengeId": "lusail",
+          "date": "2026-05-25",
+          "attempts": 1,
+          "completed": true,
+          "completedAt": "2026-05-25T03:41:09.372Z",
+          "points": 15,
+          "rewardName": "Fan Points",
+          "updatedAt": "2026-05-25T03:41:09.372Z"
+        }
+      }
+    }
+  },
   "passwordResets": {}
 }

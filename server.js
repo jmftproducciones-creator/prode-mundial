@@ -155,7 +155,7 @@ const DEFAULT_DAILY_GAMES = {
     { id: "ozil-8-ger-2010", player: "Mesut Ozil", number: "8", team: "Alemania", tournament: "Mundial 2010", hint: "Zurda fina alemana" },
     { id: "hazard-10-bel-2018", player: "Eden Hazard", number: "10", team: "Belgica", tournament: "Mundial 2018", hint: "Capitan de la generacion dorada" }
   ],
-  desafios: [
+  desafio: [
     {
       id: "azteca",
       type: "estadio",
