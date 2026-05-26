@@ -2588,15 +2588,19 @@ function thirdSelectionCandidates(e) {
       ? t
       : thirdPlaceTeams(e);
 }
-function allowedThirdPlaceTeams(e, t, { allowFallback: n = !1 } = {}) {
-  const a = THIRD_PLACE_SLOTS[t] || [],
-    o = thirdSelectionCandidates(e),
-    s = new Map(o.map((e) => [e.group, e])),
-    r = a
-      .filter((e) => s.has(e))
-      .map((e) => s.get(e))
-      .filter((e) => e?.team);
-  return r.length || !n ? r : o.filter((e) => e?.team);
+function allowedThirdPlaceTeams(model) {
+  const thirds = groupKeys().map(group => {
+    // Buscamos al tercer equipo de cada grupo (índice 2)
+    const team = model.groups[group]?.[2];
+    if (!team) return null;
+    // Calculamos la tabla del grupo para extraer sus estadísticas
+    const table = groupStandings(model, group);
+    const stats = table.find(r => r.team === team) || { pts: 0, gd: 0, gf: 0 };
+    return { group, team, pts: stats.pts, gd: stats.gd, gf: stats.gf };
+  }).filter(item => item && item.team);
+  // Ordenamos: 1° Puntos, 2° Diferencia de goles, 3° Goles a favor, 4° Alfabético
+  thirds.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf || a.team.localeCompare(b.team));
+  return thirds;
 }
 function thirdMatchIds() {
   return R32_MATCHES.filter(([, , e]) => "3*" === e).map(([e]) => e);
@@ -2682,62 +2686,70 @@ function enhanceScoreInputs() {
   });
 }
 
-function renderThirdAssignments(e, t) {
-  const n = document.getElementById(e);
-  if (!n) return;
-  const a = thirdPlaceTeams(t),
-    o = thirdMatchIds();
-  if (((n.innerHTML = ""), !a.length))
-    return void (n.innerHTML =
-      '<div class="thirds-empty">Completa el tercer puesto de cada grupo para asignar mejores terceros.</div>');
-  const s = getBestThirds(t),
-    r = getThirdPlaceRankings(t),
-    i = 12 === r.length && 8 === s.length;
-  let d =
-    "Cada llave muestra solo los terceros de grupos permitidos para ese cruce.";
-  i
-    ? (d =
-        "Los 8 mejores terceros se detectaron automaticamente. Podes cambiarlos manualmente si queres ajustar los cruces.")
-    : s.length > 8 && 12 === getThirdPlaceRankings(t).length
-      ? (d = "Hay empate en el 8vo puesto. Elegi manualmente para desempatar.")
-      : r.length < 12 &&
-        (d =
-          "Faltan grupos por completar. Mientras tanto podes asignar manualmente con los terceros disponibles.");
-  const l = Object.values(t.thirdAssignments || {}).filter(Boolean);
-  n.innerHTML = `\n    <div class="thirds-head">\n      <h3>Asignacion de mejores terceros</h3>\n      <p>${d}</p>\n    </div>\n  `;
-  const m = document.createElement("div");
-  ((m.className = "thirds-grid"),
-    o.forEach((e) => {
-      t.thirdAssignments || (t.thirdAssignments = {});
-      const [, n] = R32_MATCHES.find(([t]) => t === e),
-        a = resolveSlot(n, t, e),
-        o = allowedThirdPlaceTeams(t, e, { allowFallback: !i }),
-        s = t.thirdAssignments[e] || "";
-      s && !o.some((e) => e.team === s) && (t.thirdAssignments[e] = "");
-      const r = document.createElement("label");
-      r.className = "third-select";
-      const d = MATCH_SCHEDULE[e]?.number;
-      r.innerHTML = `<span>${d ? `Partido ${d}` : e.toUpperCase()} vs ${teamLabel(a) || n}</span>`;
-      const c = document.createElement("select");
-      ((c.innerHTML = `<option value="">Elegir tercero</option>${o
-        .map((e) => {
-          const t = l.includes(e.team) && e.team !== s ? "disabled" : "";
-          return `<option value="${e.team}" ${t}>${e.team} (3${e.group})</option>`;
-        })
-        .join("")}`),
-        (c.value = t.thirdAssignments[e] || ""),
-        (c.disabled = !1),
-        c.addEventListener("change", (n) => {
-          ((t.thirdAssignments[e] = n.target.value),
-            (t.winners[e] = ""),
-            pruneDependentWinners(t, Number(e.slice(1))),
-            renderAll());
-        }),
-        r.appendChild(c),
-        m.appendChild(r));
-    }),
-    n.appendChild(m));
+function renderThirdAssignments(mode, model) {
+  const container = document.getElementById("thirdPlaceContainer");
+  if (!container) return;
+  // Mostrar u ocultar dependiendo de si estamos en modo predicción
+  if (container.classList.toggle("hidden", "prediction" !== mode), "prediction" !== mode) return;
+  container.innerHTML = "<h4>Asignar Mejores Terceros (16avos)</h4>";
+  // Obtenemos los 12 terceros ordenados y los equipos que ya asignamos
+  const thirdsData = allowedThirdPlaceTeams(model);
+  const usedTeams = Object.values(model.thirdAssignments || {}).filter(Boolean);
+  
+  // Si no hay al menos 8, pedimos completar la fase de grupos
+  if (thirdsData.length < 8) {
+    container.innerHTML += "<p>Completa la fase de grupos para asignar los terceros.</p>";
+    return;
+  }
+  
+  const grid = document.createElement("div");
+  grid.className = "third-assignments-grid";
+  
+  // Los ID exactos de los partidos de 16avos donde van los terceros
+  const matchIds = ["73", "74", "75", "77", "81", "82", "83", "84"];
+  
+  matchIds.forEach(matchId => {
+    const row = document.createElement("div");
+    row.className = "third-assignment-row";
+    
+    const label = document.createElement("span");
+    label.textContent = `Partido ${matchId}:`;
+    
+    const select = document.createElement("select");
+    let optionsHtml = '<option value="">Elegir tercero</option>';
+    
+    thirdsData.forEach((item, index) => {
+      // Deshabilitamos si ya fue elegido en otro partido
+      const disabled = usedTeams.includes(item.team) && model.thirdAssignments?.[matchId] !== item.team ? "disabled" : "";
+      const gdText = item.gd > 0 ? "+" + item.gd : item.gd;
+      
+      optionsHtml += `<option value="${item.team}" ${disabled}>${index + 1}º | ${item.team} (Gpo ${item.group}) | ${item.pts}pts, ${gdText}dg, ${item.gf}gf</option>`;
+    });
+    
+    select.innerHTML = optionsHtml;
+    select.value = model.thirdAssignments?.[matchId] || "";
+    
+    // Qué pasa cuando el usuario elige un equipo
+    select.addEventListener("change", (ev) => {
+      const selectedTeam = ev.target.value;
+      model.thirdAssignments || (model.thirdAssignments = {});
+      
+      if (selectedTeam) {
+        model.thirdAssignments[matchId] = selectedTeam;
+      } else {
+        delete model.thirdAssignments[matchId];
+      }
+      renderAll();
+    });
+    
+    row.appendChild(label);
+    row.appendChild(select);
+    grid.appendChild(row);
+  });
+  
+  container.appendChild(grid);
 }
+
 function calculateMatchPoints(e, t) {
   if (
     !t ||
@@ -2919,6 +2931,33 @@ function renderMatchdayMatches(e, t, n, a) {
       : (o.innerHTML =
           '<p class="empty">No hay partidos configurados para esta fecha.</p>'));
 }
+
+function renderStandingsIfGroupPhase() {
+    const standingsPanel = document.getElementById("standingsPanel");
+    const phase = state.currentPhaseId;
+
+    // Filtramos para que SOLO aparezca si la fase es de grupos
+    // Ajusta 'group1', 'group2', etc., según cómo se llamen en tu state
+    if (phase.includes("group")) { 
+        standingsPanel.hidden = false;
+        // Aquí generamos el HTML de todas las tablas
+        // Para que se vean 4 por fila, usa CSS Grid en tu styles.css
+        standingsPanel.innerHTML = `
+            <div class="standings-grid">
+                ${groupKeys().map(g => `
+                    <div class="group-card">
+                        <h4>Grupo ${g}</h4>
+                        ${standingsMarkup(state.prediction, g)}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } else {
+        // Si es fase eliminatoria, ocultamos
+        standingsPanel.hidden = true;
+    }
+}
+
 function removeDuplicates(e, t, n) {
   const a = e.groups[t][n];
   a && (e.groups[t] = e.groups[t].map((e, t) => (t !== n && e === a ? "" : e)));
@@ -2964,45 +3003,39 @@ function renderBracket(e, t, n, a = {}) {
             setFlagBackground(l, r, "--team-flag-left"),
             setFlagBackground(l, i, "--team-flag-right"));
           const m = MATCH_SCHEDULE[e]?.number;
-          l.innerHTML = `\n        <div class="match-title">${m ? `Partido ${m}` : e.toUpperCase()}</div>\n        <div class="teams-line">\n          <span class="knockout-team-side knockout-team-left">${teamBadge(r) || a}</span>\n          <b>vs</b>\n          <span class="knockout-team-side knockout-team-right">${teamBadge(i) || o}</span>\n        </div>\n        ${getScheduleHtml(e)}\n      `;
-          const c = document.createElement("input");
-          ((c.type = "number"),
-            (c.min = "0"),
-            (c.max = "20"),
-            (c.placeholder = "-"),
-            (c.value = t.scores[e].left),
-            (c.className = "knockout-score-input"));
-          const u = document.createElement("input");
-          ((u.type = "number"),
-            (u.min = "0"),
-            (u.max = "20"),
-            (u.placeholder = "-"),
-            (u.value = t.scores[e].right),
-            (u.className = "knockout-score-input"));
+          l.innerHTML = `
+        <div class="match-title">${m ? `Partido ${m}` : e.toUpperCase()}</div>
+        <div class="group-match" style="margin: 12px 0;">
+          <span>${teamBadge(r) || a}</span>
+          <input type="number" min="0" max="20" placeholder="-" value="${t.scores[e].left || ""}" class="knockout-score-input" data-side="left">
+          <b>-</b>
+          <input type="number" min="0" max="20" placeholder="-" value="${t.scores[e].right || ""}" class="knockout-score-input" data-side="right">
+          <span>${teamBadge(i) || o}</span>
+        </div>
+        ${getScheduleHtml(e)}
+      `;
+
           const p = "prediction" === n,
             g = state.real?.scores?.[e],
             y = state.real?.winners?.[e],
-            f =
-              g &&
-              "" !== g.left &&
-              void 0 !== g.left &&
-              "" !== g.right &&
-              void 0 !== g.right,
+            f = g && "" !== g.left && void 0 !== g.left && "" !== g.right && void 0 !== g.right,
             h = y && "" !== y,
             b = isMatchTimeLocked(e),
             v = p && (f || h || b);
-          ((c.disabled = d.length < 2 || v),
-            (u.disabled = d.length < 2 || v),
-            v && l.classList.add("is-locked"),
-            [c, u].forEach((n, a) => {
-              n.addEventListener("input", (n) => {
-                ((t.scores[e][0 === a ? "left" : "right"] = n.target.value),
-                  setWinnerFromScore(t, e, r, i),
-                  renderAll());
-              });
-            }),
-            l.querySelector(".knockout-team-left")?.appendChild(c),
-            l.querySelector(".knockout-team-right")?.appendChild(u));
+
+          if (v) l.classList.add("is-locked");
+
+          const uInputs = l.querySelectorAll(".knockout-score-input");
+          uInputs.forEach((input) => {
+            input.disabled = d.length < 2 || v;
+            const handler = (ev) => {
+              t.scores[e][ev.target.dataset.side] = ev.target.value;
+              setWinnerFromScore(t, e, r, i);
+              renderAll();
+            };
+            input.addEventListener("input", handler);
+            input.addEventListener("change", handler);
+          });
           const E = document.createElement("label");
           E.textContent = "Ganador";
           const S = document.createElement("select");
@@ -3247,6 +3280,7 @@ function renderAll() {
     syncLobbyTabVisibility(),
     updateHomeMatchesView());
     enhanceScoreInputs();
+    renderStandingsIfGroupPhase();
 }
 function syncLobbyTabVisibility() {
   const e = document.querySelector('.tab[data-view="lobby"]');
