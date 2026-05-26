@@ -1850,6 +1850,38 @@ textarea {
   max-width: 78%;
 }
 
+.round button.score-btn.up {
+  width: 47px;
+}
+
+.round button.score-btn.down {
+  width: 47px;
+}
+
+.standings-panel {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    -webkit-overflow-scrolling: touch; /* Suaviza el scroll en iOS */
+}
+/* Distribución: 6 grupos por fila en móviles, 4 en escritorio */
+.standings-grid {
+    display: grid;
+    /* En móviles (pantallas pequeñas), definimos 6 columnas */
+    grid-template-columns: repeat(6, 200px); 
+    gap: 10px;
+    padding: 10px;
+}
+
+.group-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 0.8rem; /* Tamaño optimizado para leer bien en móvil */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
 .team-badge {
   display: inline-flex;
   align-items: center;
@@ -2214,8 +2246,8 @@ textarea {
 
 .round {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
   min-width: 0;
 }
 
@@ -2731,6 +2763,12 @@ input[type="number"] {
   margin: 0;
 }
 
+@media (min-width: 1051px) {
+    .standings-grid {
+        grid-template-columns: repeat(4, 1fr); /* Vuelve a 4 columnas */
+    }
+}
+
 @media (max-width: 1050px) {
   .groups-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2755,6 +2793,16 @@ input[type="number"] {
   .thirds-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .standings-row {
+  display: flex;
+  justify-content: space-between;
+  grid-template-columns: 24px minmax(0, 1fr) 34px 34px 34px;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+  font-size: 0.74rem;
+}
 }
 
 @media (max-width: 780px) {
@@ -2838,6 +2886,76 @@ input[type="number"] {
   .groups-grid {
     grid-template-columns: 1fr;
   }
+
+  .round {
+    grid-template-columns: 1fr;
+  }
+
+  .group-match {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: nowrap !important; /* La magia: prohíbe el salto de línea */
+    gap: 8px !important; /* Reduce un poquito el espacio entre elementos */
+  }
+
+  .knockout-score-input {
+    width: 45px !important; /* Achicamos el input para que no ocupe toda la pantalla */
+    text-align: center;
+    padding: 4px;
+  }
+
+  .group-match span {
+    flex-shrink: 0; /* Evita que las banderitas se aplasten o se deformen */
+    min-width: 35px;
+    text-align: center;
+  }
+
+  .round .score-btn {
+    width: 53px !important; /* Achicamos un poco el ancho del botón */
+    height: 22px !important; /* Achicamos la altura */
+    padding: 0 !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transform: scale(0.85); /* Reduce el botón entero proporcionalmente para que no sobresalga */
+  }
+  
+  .round .score-row { /* Si los botones están dentro de un contenedor propio que los empuja, ajustamos su espacio */
+    gap: 4px !important; /* Le quitamos separación a los elementos para que todo encaje */
+  }
+  
+  .round .group-match {
+    gap: 4px !important; /* Aseguramos que el contenedor del input + botones no desborde */
+  }
+
+  .group-card table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem; /* Fuente más pequeña para que quepa todo */
+  }
+
+  .group-card th, .group-card td {
+      padding: 2px 4px; /* Reducimos el padding al mínimo */
+      text-align: center;
+  }
+
+  /* Alineación específica para el nombre del equipo a la izquierda */
+  .group-card td:nth-child(1) {
+      text-align: left;
+      font-weight: bold;
+      white-space: nowrap; /* Evita que el nombre del equipo se parta en dos líneas */
+  }
+
+  .standings-row {
+  display: flex;
+  justify-content: space-between
+  grid-template-columns: 24px minmax(0, 1fr) 34px 34px 34px;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+  font-size: 0.74rem;
+}
 
   .actions button {
     flex: 1 1 150px;
