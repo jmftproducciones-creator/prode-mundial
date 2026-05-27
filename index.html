@@ -46,31 +46,6 @@
           <div class="session-dropdown-actions">
             <button id="dropdownInfoBtn" class="secondary">Información</button>
             <button id="dropdownLobbyBtn" class="secondary">Torneos y Lobby</button>
-            <div class="user-rewards-section" style="margin-top: 15px; border-top: 1px solid var(--line); padding-top: 15px;">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <strong>Tus Fan Points:</strong>
-                <span id="dpUserFanPoints" style="color: var(--accent); font-weight: 900; font-size: 1.2rem;">0</span>
-              </div>
-              
-              <p style="font-size: 0.8rem; margin: 10px 0 5px;">Tienda de Bordes</p>
-              <div class="rewards-store">
-                <div class="reward-card">
-                  <div class="preview-border border-gold"></div>
-                  <small>Oro</small>
-                  <button class="mini-button" onclick="buyBorder('gold', 100)" type="button">100 FP</button>
-                </div>
-                <div class="reward-card">
-                  <div class="preview-border border-neon"></div>
-                  <small>Neón</small>
-                  <button class="mini-button" onclick="buyBorder('neon', 300)" type="button">300 FP</button>
-                </div>
-                <div class="reward-card">
-                  <div class="preview-border border-fire"></div>
-                  <small>Fuego</small>
-                  <button class="mini-button" onclick="buyBorder('fire', 500)" type="button">500 FP</button>
-                </div>
-              </div>
-            </div>
             <button id="dropdownGlobalBtn" class="secondary" hidden>Prode global</button>
             <button id="dropdownLogoutBtn" class="secondary danger">Cerrar sesión</button>
           </div>
@@ -78,7 +53,8 @@
             <div class="user-info-display" style="margin-bottom: 1rem; font-size: 0.9em; text-align: left;">
               <p style="margin: 0.25rem 0;"><strong>Nombre:</strong> <span id="dpUserName"></span></p>
               <p style="margin: 0.25rem 0;"><strong>Email:</strong> <span id="dpUserEmail"></span></p>
-              <p style="margin: 0.25rem 0;" id="dpUserAreaContainer"><strong>Área:</strong> <span id="dpUserArea"></span></p>
+              <p style="margin: 0.25rem 0;" id="dpUserAreaContainer"><strong>Área:</strong> <span
+                  id="dpUserArea"></span></p>
             </div>
             <form id="dropdownChangePasswordForm" class="company-login-form">
               <table class="info-table">
@@ -367,7 +343,7 @@
               <input id="loginEmail" autocomplete="username" placeholder="nombre@email.com" autofocus>
             </label>
             <label>
-              Contraseña
+              contraseña
               <input id="loginPassword" type="password" autocomplete="current-password" placeholder="********">
             </label>
             <div class="login-actions">
@@ -419,16 +395,16 @@
       <div class="groups-grid" id="groupsGrid" data-worldcup-editor></div>
       <div class="matchday-grid" id="matchdayGrid" data-worldcup-editor hidden></div>
       <div class="custom-sheet" id="customSheet" data-custom-editor hidden></div>
-      <div class="standings-panel" id="standingsPanel" data-worldcup-editor hidden></div>
 
       <div class="section-head compact" data-worldcup-editor data-worldcup-stage="thirds">
         <div>
           <h2>Cruces eliminatorios</h2>
-          <p>Si queres poner que un equipo gana en penales a partir de esta instancia, debes poner un empate y luego debajo elegir el ganador. NO ES NECESARIO PONER EL RESULTADO DE LOS PENALES.</p>
+          <p>Antes de elegir ganadores, asigna manualmente los mejores terceros a cada cruce.</p>
         </div>
       </div>
       <div class="thirds-panel" id="thirdsPanel" data-worldcup-editor></div>
       <div class="bracket" id="bracket" data-worldcup-editor></div>
+
       <div class="submit-panel">
         <div>
           <h2>Guardar jugada</h2>
@@ -780,7 +756,7 @@
     </article>
   </template>
 
-  <script src="/prode-global-static/app.js?v=20260527-admin-revalidate-2"></script>
+  <script src="/prode-global-static/app.js?v=20260527-admin-global-fix-1"></script>
 </body>
 
 </html>

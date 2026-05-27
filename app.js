@@ -828,8 +828,9 @@ function isAdminSession() {
 }
 function isGlobalAdminSession() {
   return Boolean(
-    state.globalSession?.user?.isAdmin ||
-    state.globalSession?.user?.isSuperAdmin,
+    state.globalSession?.token &&
+      (state.globalSession?.user?.isAdmin ||
+        state.globalSession?.user?.isSuperAdmin),
   );
 }
 function canUseAdminPanel() {
@@ -1155,6 +1156,7 @@ async function refreshGlobalSession() {
     !state.globalSession?.token)
   )
     return (
+      syncAdminNavigation(),
       renderGlobalLobby(),
       void loadGlobalGames().catch(() => renderDailyGames())
     );
@@ -1166,7 +1168,9 @@ async function refreshGlobalSession() {
   } catch {
     clearGlobalSession();
   }
-  (renderGlobalLobby(), loadGlobalGames().catch(() => renderDailyGames()));
+  (syncAdminNavigation(),
+    renderGlobalLobby(),
+    loadGlobalGames().catch(() => renderDailyGames()));
 }
 async function loginGlobalUser({ name: e, email: t, password: n }) {
   const a = await apiJson("/api/global-login", {
@@ -1175,11 +1179,12 @@ async function loginGlobalUser({ name: e, email: t, password: n }) {
   });
   return (
     saveGlobalSession({ token: a.token, user: a.user }),
-    (state.lobbyTournaments = a.tournaments || []),
-    (state.lobbyTemplates = a.templates || state.lobbyTemplates || []),
-    renderGlobalLobby(),
-    loadGlobalGames().catch(() => renderDailyGames()),
-    a.user
+      (state.lobbyTournaments = a.tournaments || []),
+      (state.lobbyTemplates = a.templates || state.lobbyTemplates || []),
+      syncAdminNavigation(),
+      renderGlobalLobby(),
+      loadGlobalGames().catch(() => renderDailyGames()),
+      a.user
   );
 }
 async function requestPasswordReset(e) {
@@ -1626,7 +1631,6 @@ function renderDailyGames() {
             .then(() => {
               ((state.dailyGamePlays.camisetadle = { completed: !0 }),
                 clearDailyProgress("camisetadle", r.id),
-                sumarFanPoints(20),
                 renderDailyGames());
             })
             .catch((e) => {
@@ -1674,7 +1678,6 @@ function renderDailyGames() {
         .then(() => {
           ((state.dailyGamePlays.desafio = { completed: !0 }),
             clearDailyProgress("desafio", i.id),
-            sumarFanPoints(15),
             renderDailyGames());
         })
         .catch((e) => {
@@ -2590,19 +2593,15 @@ function thirdSelectionCandidates(e) {
       ? t
       : thirdPlaceTeams(e);
 }
-function allowedThirdPlaceTeams(model) {
-  const thirds = groupKeys().map(group => {
-    // Buscamos al tercer equipo de cada grupo (índice 2)
-    const team = model.groups[group]?.[2];
-    if (!team) return null;
-    // Calculamos la tabla del grupo para extraer sus estadísticas
-    const table = groupStandings(model, group);
-    const stats = table.find(r => r.team === team) || { pts: 0, gd: 0, gf: 0 };
-    return { group, team, pts: stats.pts, gd: stats.gd, gf: stats.gf };
-  }).filter(item => item && item.team);
-  // Ordenamos: 1° Puntos, 2° Diferencia de goles, 3° Goles a favor, 4° Alfabético
-  thirds.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf || a.team.localeCompare(b.team));
-  return thirds;
+function allowedThirdPlaceTeams(e, t, { allowFallback: n = !1 } = {}) {
+  const a = THIRD_PLACE_SLOTS[t] || [],
+    o = thirdSelectionCandidates(e),
+    s = new Map(o.map((e) => [e.group, e])),
+    r = a
+      .filter((e) => s.has(e))
+      .map((e) => s.get(e))
+      .filter((e) => e?.team);
+  return r.length || !n ? r : o.filter((e) => e?.team);
 }
 function thirdMatchIds() {
   return R32_MATCHES.filter(([, , e]) => "3*" === e).map(([e]) => e);
@@ -2688,70 +2687,62 @@ function enhanceScoreInputs() {
   });
 }
 
-function renderThirdAssignments(mode, model) {
-  const container = document.getElementById("thirdPlaceContainer");
-  if (!container) return;
-  // Mostrar u ocultar dependiendo de si estamos en modo predicción
-  if (container.classList.toggle("hidden", "prediction" !== mode), "prediction" !== mode) return;
-  container.innerHTML = "<h4>Asignar Mejores Terceros (16avos)</h4>";
-  // Obtenemos los 12 terceros ordenados y los equipos que ya asignamos
-  const thirdsData = allowedThirdPlaceTeams(model);
-  const usedTeams = Object.values(model.thirdAssignments || {}).filter(Boolean);
-  
-  // Si no hay al menos 8, pedimos completar la fase de grupos
-  if (thirdsData.length < 8) {
-    container.innerHTML += "<p>Completa la fase de grupos para asignar los terceros.</p>";
-    return;
-  }
-  
-  const grid = document.createElement("div");
-  grid.className = "third-assignments-grid";
-  
-  // Los ID exactos de los partidos de 16avos donde van los terceros
-  const matchIds = ["73", "74", "75", "77", "81", "82", "83", "84"];
-  
-  matchIds.forEach(matchId => {
-    const row = document.createElement("div");
-    row.className = "third-assignment-row";
-    
-    const label = document.createElement("span");
-    label.textContent = `Partido ${matchId}:`;
-    
-    const select = document.createElement("select");
-    let optionsHtml = '<option value="">Elegir tercero</option>';
-    
-    thirdsData.forEach((item, index) => {
-      // Deshabilitamos si ya fue elegido en otro partido
-      const disabled = usedTeams.includes(item.team) && model.thirdAssignments?.[matchId] !== item.team ? "disabled" : "";
-      const gdText = item.gd > 0 ? "+" + item.gd : item.gd;
-      
-      optionsHtml += `<option value="${item.team}" ${disabled}>${index + 1}º | ${item.team} (Gpo ${item.group}) | ${item.pts}pts, ${gdText}dg, ${item.gf}gf</option>`;
-    });
-    
-    select.innerHTML = optionsHtml;
-    select.value = model.thirdAssignments?.[matchId] || "";
-    
-    // Qué pasa cuando el usuario elige un equipo
-    select.addEventListener("change", (ev) => {
-      const selectedTeam = ev.target.value;
-      model.thirdAssignments || (model.thirdAssignments = {});
-      
-      if (selectedTeam) {
-        model.thirdAssignments[matchId] = selectedTeam;
-      } else {
-        delete model.thirdAssignments[matchId];
-      }
-      renderAll();
-    });
-    
-    row.appendChild(label);
-    row.appendChild(select);
-    grid.appendChild(row);
-  });
-  
-  container.appendChild(grid);
+function renderThirdAssignments(e, t) {
+  const n = document.getElementById(e);
+  if (!n) return;
+  const a = thirdPlaceTeams(t),
+    o = thirdMatchIds();
+  if (((n.innerHTML = ""), !a.length))
+    return void (n.innerHTML =
+      '<div class="thirds-empty">Completa el tercer puesto de cada grupo para asignar mejores terceros.</div>');
+  const s = getBestThirds(t),
+    r = getThirdPlaceRankings(t),
+    i = 12 === r.length && 8 === s.length;
+  let d =
+    "Cada llave muestra solo los terceros de grupos permitidos para ese cruce.";
+  i
+    ? (d =
+        "Los 8 mejores terceros se detectaron automaticamente. Podes cambiarlos manualmente si queres ajustar los cruces.")
+    : s.length > 8 && 12 === getThirdPlaceRankings(t).length
+      ? (d = "Hay empate en el 8vo puesto. Elegi manualmente para desempatar.")
+      : r.length < 12 &&
+        (d =
+          "Faltan grupos por completar. Mientras tanto podes asignar manualmente con los terceros disponibles.");
+  const l = Object.values(t.thirdAssignments || {}).filter(Boolean);
+  n.innerHTML = `\n    <div class="thirds-head">\n      <h3>Asignacion de mejores terceros</h3>\n      <p>${d}</p>\n    </div>\n  `;
+  const m = document.createElement("div");
+  ((m.className = "thirds-grid"),
+    o.forEach((e) => {
+      t.thirdAssignments || (t.thirdAssignments = {});
+      const [, n] = R32_MATCHES.find(([t]) => t === e),
+        a = resolveSlot(n, t, e),
+        o = allowedThirdPlaceTeams(t, e, { allowFallback: !i }),
+        s = t.thirdAssignments[e] || "";
+      s && !o.some((e) => e.team === s) && (t.thirdAssignments[e] = "");
+      const r = document.createElement("label");
+      r.className = "third-select";
+      const d = MATCH_SCHEDULE[e]?.number;
+      r.innerHTML = `<span>${d ? `Partido ${d}` : e.toUpperCase()} vs ${teamLabel(a) || n}</span>`;
+      const c = document.createElement("select");
+      ((c.innerHTML = `<option value="">Elegir tercero</option>${o
+        .map((e) => {
+          const t = l.includes(e.team) && e.team !== s ? "disabled" : "";
+          return `<option value="${e.team}" ${t}>${e.team} (3${e.group})</option>`;
+        })
+        .join("")}`),
+        (c.value = t.thirdAssignments[e] || ""),
+        (c.disabled = !1),
+        c.addEventListener("change", (n) => {
+          ((t.thirdAssignments[e] = n.target.value),
+            (t.winners[e] = ""),
+            pruneDependentWinners(t, Number(e.slice(1))),
+            renderAll());
+        }),
+        r.appendChild(c),
+        m.appendChild(r));
+    }),
+    n.appendChild(m));
 }
-
 function calculateMatchPoints(e, t) {
   if (
     !t ||
@@ -2856,9 +2847,6 @@ function renderGroups(e, t, n, a = {}) {
               syncGroupScoresFromDom(l, t));
             const o = l.querySelector(".group-standings-body");
             o && (o.innerHTML = standingsMarkup(t, e));
-            if (typeof renderStandingsIfGroupPhase === 'function') {
-              renderStandingsIfGroupPhase();
-            }
           };
         (u[0].addEventListener("input", p),
           u[0].addEventListener("change", p),
@@ -2925,9 +2913,6 @@ function renderMatchdayMatches(e, t, n, a) {
             (n.addEventListener("input", (n) => {
               getGroupMatch(t, e.id, e.home, e.away)[n.target.dataset.side] =
                 n.target.value;
-              if (typeof renderStandingsIfGroupPhase === 'function') {
-                  renderStandingsIfGroupPhase();
-              }
             }),
               n.addEventListener("change", (n) => {
                 getGroupMatch(t, e.id, e.home, e.away)[n.target.dataset.side] =
@@ -2939,33 +2924,6 @@ function renderMatchdayMatches(e, t, n, a) {
       : (o.innerHTML =
           '<p class="empty">No hay partidos configurados para esta fecha.</p>'));
 }
-
-function renderStandingsIfGroupPhase() {
-    const standingsPanel = document.getElementById("standingsPanel");
-    const phase = state.currentPhaseId;
-
-    // Filtramos para que SOLO aparezca si la fase es de grupos
-    // Ajusta 'group1', 'group2', etc., según cómo se llamen en tu state
-    if (phase.includes("group")) { 
-        standingsPanel.hidden = false;
-        // Aquí generamos el HTML de todas las tablas
-        // Para que se vean 4 por fila, usa CSS Grid en tu styles.css
-        standingsPanel.innerHTML = `
-            <div class="standings-grid">
-                ${groupKeys().map(g => `
-                    <div class="group-card">
-                        <h4>Grupo ${g}</h4>
-                        ${standingsMarkup(state.prediction, g)}
-                    </div>
-                `).join('')}
-            </div>
-        `;
-    } else {
-        // Si es fase eliminatoria, ocultamos
-        standingsPanel.hidden = true;
-    }
-}
-
 function removeDuplicates(e, t, n) {
   const a = e.groups[t][n];
   a && (e.groups[t] = e.groups[t].map((e, t) => (t !== n && e === a ? "" : e)));
@@ -3011,39 +2969,45 @@ function renderBracket(e, t, n, a = {}) {
             setFlagBackground(l, r, "--team-flag-left"),
             setFlagBackground(l, i, "--team-flag-right"));
           const m = MATCH_SCHEDULE[e]?.number;
-          l.innerHTML = `
-        <div class="match-title">${m ? `Partido ${m}` : e.toUpperCase()}</div>
-        <div class="group-match" style="margin: 12px 0;">
-          <span>${teamBadge(r) || a}</span>
-          <input type="number" min="0" max="20" placeholder="-" value="${t.scores[e].left || ""}" class="knockout-score-input" data-side="left">
-          <b>-</b>
-          <input type="number" min="0" max="20" placeholder="-" value="${t.scores[e].right || ""}" class="knockout-score-input" data-side="right">
-          <span>${teamBadge(i) || o}</span>
-        </div>
-        ${getScheduleHtml(e)}
-      `;
-
+          l.innerHTML = `\n        <div class="match-title">${m ? `Partido ${m}` : e.toUpperCase()}</div>\n        <div class="teams-line">\n          <span class="knockout-team-side knockout-team-left">${teamBadge(r) || a}</span>\n          <b>vs</b>\n          <span class="knockout-team-side knockout-team-right">${teamBadge(i) || o}</span>\n        </div>\n        ${getScheduleHtml(e)}\n      `;
+          const c = document.createElement("input");
+          ((c.type = "number"),
+            (c.min = "0"),
+            (c.max = "20"),
+            (c.placeholder = "-"),
+            (c.value = t.scores[e].left),
+            (c.className = "knockout-score-input"));
+          const u = document.createElement("input");
+          ((u.type = "number"),
+            (u.min = "0"),
+            (u.max = "20"),
+            (u.placeholder = "-"),
+            (u.value = t.scores[e].right),
+            (u.className = "knockout-score-input"));
           const p = "prediction" === n,
             g = state.real?.scores?.[e],
             y = state.real?.winners?.[e],
-            f = g && "" !== g.left && void 0 !== g.left && "" !== g.right && void 0 !== g.right,
+            f =
+              g &&
+              "" !== g.left &&
+              void 0 !== g.left &&
+              "" !== g.right &&
+              void 0 !== g.right,
             h = y && "" !== y,
             b = isMatchTimeLocked(e),
             v = p && (f || h || b);
-
-          if (v) l.classList.add("is-locked");
-
-          const uInputs = l.querySelectorAll(".knockout-score-input");
-          uInputs.forEach((input) => {
-            input.disabled = d.length < 2 || v;
-            const handler = (ev) => {
-              t.scores[e][ev.target.dataset.side] = ev.target.value;
-              setWinnerFromScore(t, e, r, i);
-              renderAll();
-            };
-            input.addEventListener("input", handler);
-            input.addEventListener("change", handler);
-          });
+          ((c.disabled = d.length < 2 || v),
+            (u.disabled = d.length < 2 || v),
+            v && l.classList.add("is-locked"),
+            [c, u].forEach((n, a) => {
+              n.addEventListener("input", (n) => {
+                ((t.scores[e][0 === a ? "left" : "right"] = n.target.value),
+                  setWinnerFromScore(t, e, r, i),
+                  renderAll());
+              });
+            }),
+            l.querySelector(".knockout-team-left")?.appendChild(c),
+            l.querySelector(".knockout-team-right")?.appendChild(u));
           const E = document.createElement("label");
           E.textContent = "Ganador";
           const S = document.createElement("select");
@@ -3288,7 +3252,6 @@ function renderAll() {
     syncLobbyTabVisibility(),
     updateHomeMatchesView());
     enhanceScoreInputs();
-    renderStandingsIfGroupPhase();
 }
 function syncLobbyTabVisibility() {
   const e = document.querySelector('.tab[data-view="lobby"]');
@@ -4085,40 +4048,6 @@ async function loadAdminSummary() {
     : (t.innerHTML =
         '<p class="empty">Todavia no hay usuarios registrados.</p>');
 }
-function showAdminLoadError(e) {
-  const t = document.getElementById("adminStatus"),
-    n = document.getElementById("adminLoginForm"),
-    a = document.getElementById("adminDashboard");
-  ((state.adminUnlocked = !1),
-    n && (n.hidden = !0),
-    a && (a.hidden = !0),
-    t &&
-      ((t.hidden = !1),
-      (t.textContent = `No se pudo cargar administracion: ${e.message}. Inicia sesion con un usuario admin global.`)));
-}
-function showAdminRequired() {
-  const e = document.getElementById("adminStatus"),
-    t = document.getElementById("adminLoginForm"),
-    n = document.getElementById("adminDashboard");
-  ((state.adminUnlocked = !1),
-    t && (t.hidden = !0),
-    n && (n.hidden = !0),
-    e &&
-      ((e.hidden = !1),
-      (e.textContent =
-        "Inicia sesion con un usuario admin global para usar Administracion.")));
-}
-async function openAdminView() {
-  updateAdminSections(state.adminSection);
-  fillAdminThemeForm();
-  fillAdminGamesForm();
-  await refreshGlobalSession();
-  syncAdminNavigation();
-  if (!canUseAdminPanel()) return showAdminRequired();
-  ((state.adminUnlocked = !0),
-    (document.getElementById("adminLoginForm").hidden = !0),
-    await loadAdminSummary().catch(showAdminLoadError));
-}
 async function loadLeaderboard() {
   const e = document.getElementById("leaderboardPanel"),
     t = document.getElementById("mainLeaderboardPanel");
@@ -4212,93 +4141,6 @@ function renderLeaderboardBlock(e, t, n) {
     ? `\n      <div class="leaderboard-head" style="text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">\n        <div>\n          <h3>${t}</h3>\n          <p>${n}</p>\n        </div>\n        <strong>${e.leaderboard.length} jugadores</strong>\n      </div>\n      <div class="leaderboard-table" style="display: flex; flex-direction: column; align-items: center; width: 100%;">\n        ${e.leaderboard.map((e, t) => `\n          <div class="leaderboard-row" style="display:flex; align-items:center; justify-content:center; gap:0.5rem; flex-wrap:wrap; text-align:center; width:100%;">\n            <b style="flex-shrink:0;">${t + 1}</b>\n            <span style="flex:1; min-width: 120px;">${escapeHtml(e.player.name)}<small style="display:block;">${escapeHtml(e.player.area || "Participante")}</small></span>\n            <strong style="flex-shrink:0;">${e.score.points} pts</strong>\n            <em style="flex:2; min-width: 150px; display:block;">Exactos🎯:${e.score.exactScoreHits}</em>\n            <button class="secondary view-user-prode" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; flex-shrink:0;" data-email="${escapeHtml(e.player.email)}">Ver jugada</button>\n          </div>\n        `).join("")}\n      </div>\n    `
     : `<p class="empty" style="text-align: center;">Todavia no hay prodes guardados en ${t}.</p>`;
 }
-
-function buyBorder(borderType, cost) {
-  // Aquí deberías consultar los FanPoints reales del usuario.
-  // Por ahora, aplicamos directamente el efecto visual en la interfaz:
-  const avatarBtn = document.getElementById("topbarAvatar");
-  if (avatarBtn) {
-    // Limpiar bordes anteriores
-    avatarBtn.classList.remove('border-gold', 'border-neon', 'border-fire');
-    // Agregar el nuevo
-    avatarBtn.classList.add(`border-${borderType}`);
-    showToast(`¡Has desbloqueado el borde ${borderType}!`);
-    
-    // NOTA FUTURA: Aquí deberías enviar un POST a tu API (server.js) 
-    // para descontar los puntos y guardar el borde activo en la base de datos.
-  }
-}
-
-// ==========================================
-// --- SISTEMA DE BORDES DESBLOQUEABLES ---
-// ==========================================
-
-window.sumarFanPoints = function(cantidad) {
-  // Obtenemos los puntos guardados (si no hay, empezamos en 0)
-  let puntosGuardados = parseInt(localStorage.getItem("userFanPoints")) || 0;
-  
-  // Sumamos la cantidad
-  puntosGuardados += cantidad;
-  
-  // Guardamos el nuevo total en la memoria
-  localStorage.setItem("userFanPoints", puntosGuardados);
-  
-  // Actualizamos el número en la pantalla (en tu HTML)
-  const puntosElemento = document.getElementById("dpUserFanPoints");
-  if (puntosElemento) {
-    puntosElemento.innerText = puntosGuardados;
-  }
-  
-  // Mostramos el cartelito verde
-  showToast(`¡Ganaste ${cantidad} Fan Points! 🏆`);
-};
-
-window.buyBorder = function(borderType, cost) {
-  // Vemos cuántos puntos tiene el usuario en la memoria
-  let puntosActuales = parseInt(localStorage.getItem("userFanPoints")) || 0;
-  // VERIFICACIÓN CLAVE: ¿Le alcanza el saldo?
-  if (puntosActuales < cost) {
-    showToast(`No te alcanzan los Fan Points. Cuesta ${cost} y tenés ${puntosActuales}. 😢`);
-    return; // CORTAMOS LA FUNCIÓN ACÁ. No se aplica el borde ni se cobra.
-  }
-  // Si llegamos acá, es porque tiene saldo suficiente. ¡Cobramos!
-  puntosActuales -= cost;
-  localStorage.setItem("userFanPoints", puntosActuales);
-  // Actualizamos el saldo en pantalla
-  const puntosElemento = document.getElementById("dpUserFanPoints");
-  if (puntosElemento) {
-    puntosElemento.innerText = puntosActuales;
-  }
-  // Ahora sí, aplicamos el borde
-  const avatarBtn = document.getElementById("topbarAvatar");
-  if (avatarBtn) {
-    avatarBtn.classList.remove('border-gold', 'border-neon', 'border-fire');
-    avatarBtn.classList.add(`border-${borderType}`);
-    
-    showToast(`¡Has equipado el borde ${borderType}! (-${cost} FP)`);
-    localStorage.setItem("activeAvatarBorder", `border-${borderType}`);
-  }
-};
-
-function loadUserData() {
-  // Cargar Borde
-  const savedBorder = localStorage.getItem("activeAvatarBorder");
-  const avatarBtn = document.getElementById("topbarAvatar");
-  if (savedBorder && avatarBtn) {
-    avatarBtn.classList.add(savedBorder);
-  }
-  // Cargar Puntos
-  let puntosGuardados = parseInt(localStorage.getItem("userFanPoints")) || 0;
-  const puntosElemento = document.getElementById("dpUserFanPoints");
-  if (puntosElemento) {
-    puntosElemento.innerText = puntosGuardados;
-  }
-}
-// 4. Ejecutamos la carga apenas arranca la app
-document.addEventListener("DOMContentLoaded", () => {
-  setTimeout(loadUserData, 500); 
-});
-
 function showUserProde(e) {
   const t = (state.leaderboardData || []).find((t) => t.player.email === e);
   if (!t) return;
@@ -5043,6 +4885,36 @@ function extractPayloadFromPdf(e) {
   );
   return t ? JSON.parse(decodeURIComponent(escape(atob(t[1])))) : null;
 }
+function showAdminRequired() {
+  const e = document.getElementById("adminStatus"),
+    t = document.getElementById("adminLoginForm"),
+    n = document.getElementById("adminDashboard");
+  (t && (t.hidden = !0),
+    n && (n.hidden = !0),
+    e &&
+      ((e.hidden = !1),
+      (e.textContent =
+        "Administracion disponible solo para el admin global. Inicia sesion con admin@prodeglobal.com.")));
+}
+function showAdminLoadError(e) {
+  const t = document.getElementById("adminStatus"),
+    n = document.getElementById("adminDashboard");
+  (n && (n.hidden = !0),
+    t &&
+      ((t.hidden = !1),
+      (t.textContent = `No se pudo cargar administracion: ${e.message}.`)));
+}
+async function openAdminView() {
+  (updateAdminSections(state.adminSection),
+    fillAdminThemeForm(),
+    fillAdminGamesForm(),
+    await refreshGlobalSession(),
+    syncAdminNavigation());
+  if (!canUseAdminPanel()) return showAdminRequired();
+  ((state.adminUnlocked = !1),
+    (document.getElementById("adminLoginForm").hidden = !0),
+    await loadAdminSummary().catch(showAdminLoadError));
+}
 function openView(e) {
   const t = document.querySelector(`.tab[data-view="${e}"]`),
     n = document.getElementById(e);
@@ -5068,11 +4940,11 @@ function openView(e) {
         ? renderDailyGames()
         : loadGlobalGames().catch(() => renderDailyGames())),
     "lobby" === e && loadGlobalLobby().catch(() => renderGlobalLobby()),
-    "live" === e && loadLiveResults(),
-    "tournaments" === e && renderTournamentControls(),
-    "admin" === e && openAdminView().catch(showAdminLoadError),
-    "main-leaderboard" === e && loadLeaderboard(),
-    syncTopbarVisibility());
+      "live" === e && loadLiveResults(),
+      "tournaments" === e && renderTournamentControls(),
+      "admin" === e && openAdminView(),
+      "main-leaderboard" === e && loadLeaderboard(),
+      syncTopbarVisibility());
 }
 (document.querySelectorAll(".tab").forEach((e) => {
   e.addEventListener("click", () => {
@@ -5082,17 +4954,18 @@ function openView(e) {
   document.querySelectorAll(".admin-subtab").forEach((e) => {
     e.addEventListener("click", () => {
       (updateAdminSections(e.dataset.adminSection || "users"),
-        fillAdminThemeForm(),
-        fillAdminGamesForm(),
-        canUseAdminPanel() &&
-          loadAdminSummary().catch((e) => {
-            const t = document.getElementById("adminStatus");
-            t &&
-              ((t.hidden = !1),
-              (t.textContent = `No se pudo cargar admin: ${e.message}`));
-          }));
-    });
-  }),
+          fillAdminThemeForm(),
+          fillAdminGamesForm(),
+          canUseAdminPanel()
+            ? loadAdminSummary().catch((e) => {
+              const t = document.getElementById("adminStatus");
+              t &&
+                ((t.hidden = !1),
+                (t.textContent = `No se pudo cargar admin: ${e.message}`));
+            })
+            : showAdminRequired());
+      });
+    }),
   document
     .getElementById("autoFill")
     .addEventListener("click", () => fillModel(state.prediction)),
@@ -5149,17 +5022,16 @@ function openView(e) {
         e && (e.textContent = `No se pudo importar desde API: ${t.message}`);
       }
     }),
-  document
-    .getElementById("adminLoginForm")
-    .addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const t = document.getElementById("adminStatus");
-      (state.adminKey = "");
-      t &&
-        ((t.hidden = !1),
-        (t.textContent =
-          "La administracion se habilita solo iniciando sesion como admin global."));
-    }),
+    document
+      .getElementById("adminLoginForm")
+      .addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const t = document.getElementById("adminStatus");
+        ((state.adminKey = ""),
+          (t.hidden = !1),
+          (t.textContent =
+            "La administracion usa solamente la sesion de admin global."));
+      }),
   document.getElementById("refreshAdminUsers").addEventListener("click", () => {
     loadAdminSummary().catch((e) => {
       const t = document.getElementById("adminStatus");
