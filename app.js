@@ -4108,6 +4108,17 @@ function showAdminRequired() {
       (e.textContent =
         "Inicia sesion con un usuario admin global para usar Administracion.")));
 }
+async function openAdminView() {
+  updateAdminSections(state.adminSection);
+  fillAdminThemeForm();
+  fillAdminGamesForm();
+  await refreshGlobalSession();
+  syncAdminNavigation();
+  if (!canUseAdminPanel()) return showAdminRequired();
+  ((state.adminUnlocked = !0),
+    (document.getElementById("adminLoginForm").hidden = !0),
+    await loadAdminSummary().catch(showAdminLoadError));
+}
 async function loadLeaderboard() {
   const e = document.getElementById("leaderboardPanel"),
     t = document.getElementById("mainLeaderboardPanel");
@@ -5059,15 +5070,7 @@ function openView(e) {
     "lobby" === e && loadGlobalLobby().catch(() => renderGlobalLobby()),
     "live" === e && loadLiveResults(),
     "tournaments" === e && renderTournamentControls(),
-    "admin" === e &&
-      (updateAdminSections(state.adminSection),
-      fillAdminThemeForm(),
-      fillAdminGamesForm(),
-      canUseAdminPanel()
-        ? ((state.adminUnlocked = !0),
-          (document.getElementById("adminLoginForm").hidden = !0),
-          loadAdminSummary().catch(showAdminLoadError))
-        : showAdminRequired()),
+    "admin" === e && openAdminView().catch(showAdminLoadError),
     "main-leaderboard" === e && loadLeaderboard(),
     syncTopbarVisibility());
 }
