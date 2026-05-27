@@ -833,7 +833,7 @@ function isGlobalAdminSession() {
   );
 }
 function canUseAdminPanel() {
-  return isAdminSession() || isGlobalAdminSession() || state.adminUnlocked;
+  return isGlobalAdminSession();
 }
 function syncAdminNavigation() {
   document.querySelectorAll("[data-admin-tab]").forEach((e) => {
@@ -4090,11 +4090,23 @@ function showAdminLoadError(e) {
     n = document.getElementById("adminLoginForm"),
     a = document.getElementById("adminDashboard");
   ((state.adminUnlocked = !1),
-    n && (n.hidden = !1),
+    n && (n.hidden = !0),
     a && (a.hidden = !0),
     t &&
       ((t.hidden = !1),
-      (t.textContent = `No se pudo cargar admin: ${e.message}`)));
+      (t.textContent = `No se pudo cargar administracion: ${e.message}. Inicia sesion con un usuario admin global.`)));
+}
+function showAdminRequired() {
+  const e = document.getElementById("adminStatus"),
+    t = document.getElementById("adminLoginForm"),
+    n = document.getElementById("adminDashboard");
+  ((state.adminUnlocked = !1),
+    t && (t.hidden = !0),
+    n && (n.hidden = !0),
+    e &&
+      ((e.hidden = !1),
+      (e.textContent =
+        "Inicia sesion con un usuario admin global para usar Administracion.")));
 }
 async function loadLeaderboard() {
   const e = document.getElementById("leaderboardPanel"),
@@ -5055,10 +5067,7 @@ function openView(e) {
         ? ((state.adminUnlocked = !0),
           (document.getElementById("adminLoginForm").hidden = !0),
           loadAdminSummary().catch(showAdminLoadError))
-        : state.adminUnlocked
-          ? loadAdminSummary().catch(showAdminLoadError)
-          : ((document.getElementById("adminLoginForm").hidden = !1),
-            (document.getElementById("adminDashboard").hidden = !0))),
+        : showAdminRequired()),
     "main-leaderboard" === e && loadLeaderboard(),
     syncTopbarVisibility());
 }
@@ -5142,16 +5151,11 @@ function openView(e) {
     .addEventListener("submit", async (e) => {
       e.preventDefault();
       const t = document.getElementById("adminStatus");
-      ((state.adminKey = document.getElementById("adminKey").value),
-        (t.hidden = !1),
-        (t.textContent = "Validando admin..."));
-      try {
-        (await loadAdminSummary(),
-          (state.adminUnlocked = !0),
-          syncAdminNavigation());
-      } catch (e) {
-        t.textContent = `No se pudo abrir admin: ${e.message}`;
-      }
+      (state.adminKey = "");
+      t &&
+        ((t.hidden = !1),
+        (t.textContent =
+          "La administracion se habilita solo iniciando sesion como admin global."));
     }),
   document.getElementById("refreshAdminUsers").addEventListener("click", () => {
     loadAdminSummary().catch((e) => {
