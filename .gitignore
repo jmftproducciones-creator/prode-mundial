@@ -1,0 +1,10 @@
+.env
+.env.*
+node_modules/
+backups/
+*.backup*
+*.bak*
+*.bak-*
+data/*.bak*
+*.log
+npm-debug.log*
