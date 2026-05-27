@@ -48,6 +48,8 @@ const DB_CONFIG = {
   database: process.env.DB_NAME || "prode_mundial_2026",
   port: Number(process.env.DB_PORT || 3306)
 };
+let STORE_CACHE = null;
+let mysqlSyncQueue = Promise.resolve();
 
 function envFlag(name, fallback = false) {
   const value = process.env[name];
@@ -609,6 +611,11 @@ function emptyStore() {
 function tenantFromValue(value) {
   const id = slug(value);
   if (TENANTS[id]) return TENANTS[id];
+  const cachedTenant = STORE_CACHE?.tenants?.[id];
+  if (cachedTenant?.dynamic === true) {
+    registerDynamicTenant(id, cachedTenant);
+    return TENANTS[id] || null;
+  }
   try {
     if (!fs.existsSync(STORE_FILE)) return null;
     const store = JSON.parse(fs.readFileSync(STORE_FILE, "utf8"));
@@ -758,6 +765,44 @@ function toMysqlDate(value) {
   return d.toISOString().slice(0, 19).replace("T", " ");
 }
 
+function parseMysqlJson(value, fallback = null) {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === "object") return value;
+  try {
+    return JSON.parse(String(value));
+  } catch {
+    return fallback;
+  }
+}
+
+function normalizeStoreShape(store) {
+  const normalized = store && typeof store === "object" ? store : emptyStore();
+  if (!Array.isArray(normalized.tournaments)) normalized.tournaments = [];
+  if (!normalized.users || typeof normalized.users !== "object") normalized.users = {};
+  if (!normalized.globalSessions || typeof normalized.globalSessions !== "object") normalized.globalSessions = {};
+  if (!normalized.passwordResets || typeof normalized.passwordResets !== "object") normalized.passwordResets = {};
+  if (!normalized.tournamentAccess || typeof normalized.tournamentAccess !== "object") normalized.tournamentAccess = {};
+  if (!normalized.globalGames || typeof normalized.globalGames !== "object") normalized.globalGames = JSON.parse(JSON.stringify(DEFAULT_DAILY_GAMES));
+  if (!normalized.globalGamePlays || typeof normalized.globalGamePlays !== "object") normalized.globalGamePlays = {};
+  if (!normalized.tenants || typeof normalized.tenants !== "object") normalized.tenants = {};
+  registerDynamicTenants(normalized);
+  if (!normalized.tournaments.some(tournament => tournament.id === "global")) {
+    normalized.tournaments.unshift(emptyStore().tournaments[0]);
+  }
+  ensureTenantTournaments(normalized);
+  return normalized;
+}
+
+function readStoreFileFallback() {
+  try {
+    if (!fs.existsSync(STORE_FILE)) return null;
+    const store = JSON.parse(fs.readFileSync(STORE_FILE, "utf8"));
+    return normalizeStoreShape(store);
+  } catch {
+    return null;
+  }
+}
+
 async function getMysqlConnection() {
   const dbName = String(DB_CONFIG.database || "").replace(/[^a-zA-Z0-9_]/g, "");
   if (!dbName) throw new Error("DB_NAME is invalid");
@@ -827,13 +872,31 @@ async function ensureMysqlSchema(db) {
       PRIMARY KEY (user_email, tournament_id)
     )
   `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS app_state (
+      state_key VARCHAR(80) PRIMARY KEY,
+      raw_json JSON,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+  `);
 }
 
 async function syncStoreToMysql(store) {
   const db = await getMysqlConnection();
+  let committed = false;
 
   try {
+    await db.beginTransaction();
     const tournaments = store.tournaments || [];
+    const tournamentIds = tournaments.map(t => t.id).filter(Boolean);
+    const submissionIds = tournaments.flatMap(t => (t.submissions || []).map(s => s.id).filter(Boolean));
+    const userEmails = Object.entries(store.users || {}).map(([email, user]) => normalizeEmail(user.email || email)).filter(Boolean);
+    const accessPairs = [];
+    for (const [email, accessByTournament] of Object.entries(store.tournamentAccess || {})) {
+      for (const tournamentId of Object.keys(accessByTournament || {})) {
+        accessPairs.push([normalizeEmail(email), tournamentId]);
+      }
+    }
 
     for (const t of tournaments) {
       await db.execute(
@@ -935,46 +998,171 @@ async function syncStoreToMysql(store) {
         );
       }
     }
+    const appState = {
+      globalSessions: store.globalSessions || {},
+      passwordResets: store.passwordResets || {},
+      globalGames: store.globalGames || {},
+      globalGamePlays: store.globalGamePlays || {},
+      tenants: store.tenants || {}
+    };
+    for (const [stateKey, stateValue] of Object.entries(appState)) {
+      await db.execute(
+        `INSERT INTO app_state (state_key, raw_json)
+         VALUES (?, CAST(? AS JSON))
+         ON DUPLICATE KEY UPDATE raw_json=VALUES(raw_json)`,
+        [stateKey, JSON.stringify(stateValue)]
+      );
+    }
+
+    if (submissionIds.length) {
+      await db.query(`DELETE FROM submissions WHERE id NOT IN (?)`, [submissionIds]);
+    } else {
+      await db.query(`DELETE FROM submissions`);
+    }
+    if (tournamentIds.length) {
+      await db.query(`DELETE FROM tournaments WHERE id NOT IN (?)`, [tournamentIds]);
+    } else {
+      await db.query(`DELETE FROM tournaments`);
+    }
+    if (userEmails.length) {
+      await db.query(`DELETE FROM users WHERE email NOT IN (?)`, [userEmails]);
+    } else {
+      await db.query(`DELETE FROM users`);
+    }
+    if (accessPairs.length) {
+      const clauses = accessPairs.map(() => "(user_email = ? AND tournament_id = ?)").join(" OR ");
+      await db.execute(`DELETE FROM tournament_access WHERE NOT (${clauses})`, accessPairs.flat());
+    } else {
+      await db.query(`DELETE FROM tournament_access`);
+    }
+    await db.commit();
+    committed = true;
+  } finally {
+    if (!committed) {
+      try { await db.rollback(); } catch {}
+    }
+    await db.end();
+  }
+}
+
+async function loadStoreFromMysql() {
+  const db = await getMysqlConnection();
+  try {
+    const [[tournamentCount]] = await db.query(`SELECT COUNT(*) AS total FROM tournaments`);
+    if (!Number(tournamentCount?.total || 0)) return null;
+
+    const store = emptyStore();
+    store.tournaments = [];
+    store.users = {};
+    store.tournamentAccess = {};
+
+    const [stateRows] = await db.query(`SELECT state_key, raw_json FROM app_state`);
+    for (const row of stateRows || []) {
+      const value = parseMysqlJson(row.raw_json, {});
+      if (row.state_key === "globalSessions") store.globalSessions = value;
+      if (row.state_key === "passwordResets") store.passwordResets = value;
+      if (row.state_key === "globalGames") store.globalGames = value;
+      if (row.state_key === "globalGamePlays") store.globalGamePlays = value;
+      if (row.state_key === "tenants") store.tenants = value;
+    }
+
+    const fileFallback = readStoreFileFallback();
+    if (!store.globalSessions || !Object.keys(store.globalSessions).length) store.globalSessions = fileFallback?.globalSessions || {};
+    if (!store.passwordResets || typeof store.passwordResets !== "object") store.passwordResets = fileFallback?.passwordResets || {};
+    if (!store.globalGames || typeof store.globalGames !== "object") store.globalGames = fileFallback?.globalGames || JSON.parse(JSON.stringify(DEFAULT_DAILY_GAMES));
+    if (!store.globalGamePlays || typeof store.globalGamePlays !== "object") store.globalGamePlays = fileFallback?.globalGamePlays || {};
+    if (!store.tenants || !Object.keys(store.tenants).length) store.tenants = fileFallback?.tenants || {};
+
+    const [tournamentRows] = await db.query(`SELECT * FROM tournaments`);
+    for (const row of tournamentRows || []) {
+      const raw = parseMysqlJson(row.raw_json, null);
+      const tournament = raw && typeof raw === "object" ? raw : {
+        id: row.id,
+        name: row.name,
+        code: row.code,
+        isGlobal: Boolean(row.is_global),
+        creatorEmail: row.creator_email || "",
+        creatorKey: row.creator_key || "",
+        templateId: row.template_id || "worldcup-2026",
+        mode: row.mode || "groups-knockout",
+        customTemplate: parseMysqlJson(row.custom_template, null),
+        scoring: parseMysqlJson(row.scoring, DEFAULT_SCORING),
+        realResults: parseMysqlJson(row.real_results, null),
+        realResultsUpdatedAt: row.real_results_updated_at ? new Date(row.real_results_updated_at).toISOString() : null,
+        createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+        submissions: []
+      };
+      tournament.submissions = [];
+      store.tournaments.push(tournament);
+    }
+
+    const tournamentById = new Map(store.tournaments.map(tournament => [tournament.id, tournament]));
+    const [submissionRows] = await db.query(`SELECT * FROM submissions`);
+    for (const row of submissionRows || []) {
+      const tournament = tournamentById.get(row.tournament_id);
+      if (!tournament) continue;
+      const raw = parseMysqlJson(row.raw_json, null);
+      const submission = raw && typeof raw === "object" ? raw : {
+        id: row.id,
+        createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+        player: parseMysqlJson(row.player, {}),
+        prediction: parseMysqlJson(row.prediction, null)
+      };
+      tournament.submissions.push(submission);
+    }
+
+    const [userRows] = await db.query(`SELECT * FROM users`);
+    for (const row of userRows || []) {
+      const raw = parseMysqlJson(row.raw_json, null);
+      const email = normalizeEmail(row.email || raw?.email);
+      if (!email) continue;
+      store.users[email] = raw && typeof raw === "object" ? raw : {
+        email,
+        name: row.name || "",
+        active: row.active !== false && row.active !== 0,
+        createdAt: row.created_at ? new Date(row.created_at).toISOString() : ""
+      };
+    }
+
+    const [accessRows] = await db.query(`SELECT * FROM tournament_access`);
+    for (const row of accessRows || []) {
+      const email = normalizeEmail(row.user_email);
+      if (!email || !row.tournament_id) continue;
+      if (!store.tournamentAccess[email]) store.tournamentAccess[email] = {};
+      const raw = parseMysqlJson(row.raw_json, null);
+      store.tournamentAccess[email][row.tournament_id] = raw && typeof raw === "object" ? raw : {
+        tournamentId: row.tournament_id,
+        grantedAt: row.granted_at ? new Date(row.granted_at).toISOString() : new Date().toISOString(),
+        grantedByPassword: row.granted_by_password !== false && row.granted_by_password !== 0
+      };
+    }
+
+    return normalizeStoreShape(store);
   } finally {
     await db.end();
   }
 }
-function ensureDataDir() {
-  fs.mkdirSync(path.dirname(STORE_FILE), { recursive: true });
+
+async function loadInitialStore() {
+  const mysqlStore = await loadStoreFromMysql();
+  if (mysqlStore) return mysqlStore;
+  return readStoreFileFallback() || normalizeStoreShape(emptyStore());
 }
 
 function readStore() {
-  ensureDataDir();
-  try {
-    const store = JSON.parse(fs.readFileSync(STORE_FILE, "utf8"));
-    if (!Array.isArray(store.tournaments)) return emptyStore();
-    if (!store.users || typeof store.users !== "object") store.users = {};
-    if (!store.globalSessions || typeof store.globalSessions !== "object") store.globalSessions = {};
-    if (!store.passwordResets || typeof store.passwordResets !== "object") store.passwordResets = {};
-    if (!store.tournamentAccess || typeof store.tournamentAccess !== "object") store.tournamentAccess = {};
-    if (!store.globalGames || typeof store.globalGames !== "object") store.globalGames = JSON.parse(JSON.stringify(DEFAULT_DAILY_GAMES));
-    if (!store.globalGamePlays || typeof store.globalGamePlays !== "object") store.globalGamePlays = {};
-    registerDynamicTenants(store);
-    if (!store.tournaments.some(tournament => tournament.id === "global")) {
-      store.tournaments.unshift(emptyStore().tournaments[0]);
-    }
-    ensureTenantTournaments(store);
-    return store;
-  } catch {
-    const store = emptyStore();
-    registerDynamicTenants(store);
-    ensureTenantTournaments(store);
-    writeStore(store);
-    return store;
-  }
+  if (!STORE_CACHE) STORE_CACHE = normalizeStoreShape(emptyStore());
+  return STORE_CACHE;
 }
 
 function writeStore(store) {
-  ensureDataDir();
-  fs.writeFileSync(STORE_FILE, JSON.stringify(store, null, 2));
-  syncStoreToMysql(store).catch((err) => {
-    console.error("Error sincronizando store a MySQL:", err);
-  });
+  STORE_CACHE = normalizeStoreShape(store);
+  const snapshot = JSON.parse(JSON.stringify(STORE_CACHE));
+  mysqlSyncQueue = mysqlSyncQueue
+    .then(() => syncStoreToMysql(snapshot))
+    .catch((err) => {
+      console.error("Error sincronizando store a MySQL:", err);
+    });
+  return STORE_CACHE;
 }
 
 function publicTournament(tournament, options = {}) {
@@ -4668,8 +4856,8 @@ const server = http.createServer((req, res) => {
 
 async function startServer() {
   try {
-    const store = readStore();
-    await syncStoreToMysql(store);
+    STORE_CACHE = await loadInitialStore();
+    await syncStoreToMysql(STORE_CACHE);
     console.log(`MySQL conectado en ${DB_CONFIG.host}:${DB_CONFIG.port}/${DB_CONFIG.database} con usuario ${DB_CONFIG.user}`);
     server.listen(PORT, () => {
       console.log(`Prode Mundial listo en http://localhost:${PORT}`);
