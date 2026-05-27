@@ -4,6 +4,15 @@ const path = require("path");
 const tls = require("tls");
 const net = require("net");
 const crypto = require("crypto");
+const nodemailer = require('nodemailer');
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'ba.itsoft26@gmail.com',
+    pass: 'fhnipndmbbgksmld'
+  }
+});
+const verificationCodes = {};
 try {
   require("dotenv").config();
 } catch {
@@ -306,6 +315,7 @@ const MIME = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
+  ".json": "application/manifest+json; charset=utf-8",
   ".md": "text/markdown; charset=utf-8",
   ".png": "image/png",
   ".webp": "image/webp"
@@ -353,12 +363,138 @@ function laligaTimingLabFixtures() {
   ];
 }
 
+const ARGENTINA_2026_ZONES = {
+  A: [
+    "Platense",
+    "Defensa y Justicia",
+    "Central Cordoba",
+    "Lanus",
+    "Deportivo Riestra",
+    "Talleres",
+    "Boca Juniors",
+    "Estudiantes",
+    "Instituto",
+    "Gimnasia Mendoza",
+    "San Lorenzo",
+    "Independiente",
+    "Newell's",
+    "Union",
+    "Velez"
+  ],
+  B: [
+    "Argentinos Juniors",
+    "Aldosivi",
+    "Atletico Tucuman",
+    "Banfield",
+    "Barracas Central",
+    "Belgrano",
+    "River Plate",
+    "Gimnasia La Plata",
+    "Estudiantes de Rio Cuarto",
+    "Independiente Rivadavia",
+    "Huracan",
+    "Racing",
+    "Rosario Central",
+    "Sarmiento",
+    "Tigre"
+  ]
+};
+
+const ARGENTINA_2026_INTERZONAL = [
+  ["Velez", "River Plate"],
+  ["Barracas Central", "Platense"],
+  ["Talleres", "Rosario Central"],
+  ["Sarmiento", "Estudiantes"],
+  ["Defensa y Justicia", "Belgrano"],
+  ["Argentinos Juniors", "Lanus"],
+  ["Boca Juniors", "Racing"],
+  ["Independiente Rivadavia", "Independiente"],
+  ["Union", "Aldosivi"],
+  ["Atletico Tucuman", "Instituto"],
+  ["San Lorenzo", "Estudiantes de Rio Cuarto"],
+  ["Gimnasia La Plata", "Gimnasia Mendoza"],
+  ["Central Cordoba", "Tigre"],
+  ["Huracan", "Deportivo Riestra"],
+  ["Newell's", "Banfield"]
+];
+
+const ARGENTINA_2026_CLASSICS = [
+  ["Boca Juniors", "River Plate"],
+  ["Independiente", "Racing"],
+  ["Huracan", "San Lorenzo"],
+  ["Newell's", "Rosario Central"],
+  ["Estudiantes", "Gimnasia La Plata"],
+  ["Gimnasia Mendoza", "Independiente Rivadavia"],
+  ["Banfield", "Lanus"],
+  ["Belgrano", "Talleres"],
+  ["Argentinos Juniors", "Platense"],
+  ["Tigre", "Velez"],
+  ["Estudiantes de Rio Cuarto", "Instituto"],
+  ["Atletico Tucuman", "Central Cordoba"],
+  ["Sarmiento", "Union"],
+  ["Barracas Central", "Deportivo Riestra"],
+  ["Aldosivi", "Defensa y Justicia"]
+];
+
+function zonalRoundRobinFixtures(zoneId, teams) {
+  const rotation = teams.length % 2 === 0 ? [...teams] : [...teams, ""];
+  const rounds = rotation.length - 1;
+  const half = rotation.length / 2;
+  const fixtures = [];
+  for (let round = 0; round < rounds; round += 1) {
+    for (let i = 0; i < half; i += 1) {
+      const home = rotation[i];
+      const away = rotation[rotation.length - 1 - i];
+      if (home && away) {
+        const swap = round % 2 === 1;
+        fixtures.push(fixture(
+          `arg-${zoneId.toLowerCase()}-${round + 1}-${i + 1}`,
+          swap ? away : home,
+          swap ? home : away,
+          "",
+          `Zona ${zoneId} - Fecha ${round + 1}`
+        ));
+      }
+    }
+    rotation.splice(1, 0, rotation.pop());
+  }
+  return fixtures;
+}
+
+function argentina2026Fixtures() {
+  const zonal = [
+    ...zonalRoundRobinFixtures("A", ARGENTINA_2026_ZONES.A),
+    ...zonalRoundRobinFixtures("B", ARGENTINA_2026_ZONES.B)
+  ];
+  const interzonal = ARGENTINA_2026_INTERZONAL.map(([home, away], index) => fixture(
+    `arg-interzonal-${index + 1}`,
+    home,
+    away,
+    "",
+    "Fecha Interzonal"
+  ));
+  const classics = ARGENTINA_2026_CLASSICS.map(([home, away], index) => fixture(
+    `arg-clasicos-${index + 1}`,
+    home,
+    away,
+    "",
+    "Fecha Clasicos"
+  ));
+  return [...zonal, ...classics, ...interzonal];
+}
+
 const TOURNAMENT_TEMPLATES = [
   { id: "worldcup-2026", name: "Mundial 2026", mode: "groups-knockout", teams: [] },
   { id: "champions", name: "Champions League", mode: "fixture", teams: ["Real Madrid", "Barcelona", "Manchester City", "Liverpool", "Bayern Munich", "PSG", "Inter", "Arsenal", "Atletico Madrid", "Borussia Dortmund", "Juventus", "Benfica", "Porto", "Napoli", "Bayer Leverkusen", "Chelsea"] },
   { id: "libertadores", name: "Copa Libertadores", mode: "groups-knockout", teams: ["River Plate", "Boca Juniors", "Flamengo", "Palmeiras", "Sao Paulo", "Fluminense", "Gremio", "Atletico Mineiro", "Nacional", "Penarol", "Colo-Colo", "Universidad de Chile", "Olimpia", "Cerro Porteno", "Liga de Quito", "Independiente del Valle"] },
   { id: "sudamericana", name: "Copa Sudamericana", mode: "groups-knockout", teams: ["Lanus", "Defensa y Justicia", "Racing", "Independiente", "Corinthians", "Cruzeiro", "Internacional", "Fortaleza", "Universidad Catolica", "Emelec", "Barcelona SC", "America de Cali", "Junior", "Sporting Cristal", "Bolivar", "The Strongest"] },
-  { id: "argentina", name: "Liga Argentina", mode: "league", teams: ["River Plate", "Boca Juniors", "Racing", "Independiente", "San Lorenzo", "Huracan", "Velez", "Estudiantes", "Gimnasia", "Lanus", "Banfield", "Rosario Central", "Newell's", "Talleres", "Belgrano", "Godoy Cruz"] },
+  {
+    id: "argentina",
+    name: "Liga Profesional Argentina 2026",
+    mode: "league",
+    teams: [...ARGENTINA_2026_ZONES.A, ...ARGENTINA_2026_ZONES.B],
+    fixtures: argentina2026Fixtures()
+  },
   { id: "premier", name: "Premier League", mode: "league", teams: ["Arsenal", "Aston Villa", "Chelsea", "Liverpool", "Manchester City", "Manchester United", "Newcastle", "Tottenham", "Everton", "West Ham", "Brighton", "Crystal Palace", "Fulham", "Brentford", "Wolves", "Nottingham Forest"] },
   {
     id: "laliga-2025-26",
@@ -406,22 +542,22 @@ const DEFAULT_SCORING = {
 };
 
 const DEFAULT_PHASES = [
-  { id: "all", name: "Prode completo", type: "all", description: "Permite cargar grupos y todos los cruces." },
-  { id: "group1", name: "Fecha 1 - Grupos", type: "groups", groupMatchday: 1, description: "Carga solo los primeros enfrentamientos de cada grupo." },
-  { id: "group2", name: "Fecha 2 - Grupos", type: "groups", groupMatchday: 2, description: "Carga solo la segunda fecha de la fase de grupos." },
-  { id: "group3", name: "Fecha 3 - Grupos", type: "groups", groupMatchday: 3, description: "Carga solo la tercera fecha de la fase de grupos." },
-  { id: "r32", name: "16avos", type: "matches", matchIds: ["m73", "m74", "m75", "m76", "m77", "m78", "m79", "m80", "m81", "m82", "m83", "m84", "m85", "m86", "m87", "m88"], description: "Cruces de 16avos usando los clasificados reales si ya fueron cargados." },
-  { id: "r16", name: "8avos", type: "matches", matchIds: ["m89", "m90", "m91", "m92", "m93", "m94", "m95", "m96"], description: "Cruces de octavos." },
-  { id: "qf", name: "4tos", type: "matches", matchIds: ["m97", "m98", "m99", "m100"], description: "Cruces de cuartos." },
-  { id: "sf", name: "Semis", type: "matches", matchIds: ["m101", "m102"], description: "Semifinales." },
-  { id: "third", name: "3er puesto", type: "matches", matchIds: ["m103"], description: "Partido por el tercer puesto." },
-  { id: "final", name: "Final", type: "matches", matchIds: ["m104"], description: "Final y campeon." }
+  { id: "all", name: "Prode completo", type: "all" },
+  { id: "group1", name: "Fecha 1 - Grupos", type: "groups", groupMatchday: 1 },
+  { id: "group2", name: "Fecha 2 - Grupos", type: "groups", groupMatchday: 2 },
+  { id: "group3", name: "Fecha 3 - Grupos", type: "groups", groupMatchday: 3 },
+  { id: "r32", name: "16avos", type: "matches", matchIds: ["m73", "m74", "m75", "m76", "m77", "m78", "m79", "m80", "m81", "m82", "m83", "m84", "m85", "m86", "m87", "m88"] },
+  { id: "r16", name: "8avos", type: "matches", matchIds: ["m89", "m90", "m91", "m92", "m93", "m94", "m95", "m96"] },
+  { id: "qf", name: "4tos", type: "matches", matchIds: ["m97", "m98", "m99", "m100"] },
+  { id: "sf", name: "Semis", type: "matches", matchIds: ["m101", "m102"] },
+  { id: "third", name: "3er puesto", type: "matches", matchIds: ["m103"] },
+  { id: "final", name: "Final", type: "matches", matchIds: ["m104"] }
 ];
 
 const GROUP_MATCHDAY_FIXTURES = {
-  group1: [[0, 1], [2, 3]],
-  group2: [[0, 2], [1, 3]],
-  group3: [[0, 3], [1, 2]]
+  group1: ["A-0-2", "A-1-3", "B-0-3", "D-0-1", "B-2-1", "C-0-1", "C-3-2", "D-2-3", "E-0-3", "F-0-1", "E-2-1", "F-3-2", "H-0-3", "G-0-2", "H-2-1", "G-1-3", "I-0-1", "I-3-2", "J-0-2", "J-1-3", "K-0-3", "L-0-1", "L-2-3", "K-2-1"],
+  group2: ["A-3-2", "B-1-3", "B-0-2", "A-0-1", "D-0-2", "C-2-1", "C-0-3", "D-3-1", "F-0-3", "E-0-2", "E-1-3", "F-2-1", "H-0-2", "G-0-1", "H-1-3", "G-3-2", "J-0-1", "I-0-3", "I-2-1", "J-3-2", "K-0-2", "L-0-2", "L-3-1", "K-1-3"],
+  group3: ["B-1-0", "B-3-2", "C-2-0", "C-1-3", "A-3-0", "A-2-1", "E-3-2", "E-1-0", "F-1-3", "F-2-0", "D-3-0", "D-1-2", "I-2-0", "I-1-3", "H-3-2", "H-1-0", "G-2-1", "G-3-0", "L-3-0", "L-1-2", "K-1-0", "K-3-2", "J-2-1", "J-3-0"]
 };
 
 const WORLD_CUP_GROUP_KEYS = "ABCDEFGHIJKL".split("");
@@ -431,13 +567,17 @@ function groupMatchId(group, firstIndex, secondIndex) {
 }
 
 function groupMatchIdsForPhase(phaseId) {
-  const pairs = GROUP_MATCHDAY_FIXTURES[phaseId];
-  if (!pairs) return [];
-  return WORLD_CUP_GROUP_KEYS.flatMap(group => pairs.map(([firstIndex, secondIndex]) => groupMatchId(group, firstIndex, secondIndex)));
+  const list = GROUP_MATCHDAY_FIXTURES[phaseId];
+  return Array.isArray(list) ? list : [];
 }
 
 function send(res, status, body, type = "application/json; charset=utf-8") {
-  res.writeHead(status, { "Content-Type": type });
+  res.writeHead(status, {
+    "Content-Type": type,
+    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0"
+  });
   res.end(body);
 }
 
@@ -544,6 +684,9 @@ function paymentAllowsFirstSubmission(tournament, email) {
 
 function ensureTenantTournaments(store) {
   if (!store.tenants || typeof store.tenants !== "object") store.tenants = {};
+  const globalTournament = store.tournaments.find(t => t.id === "global");
+  const globalReal = globalTournament?.realResults || null;
+  const globalRealUpdatedAt = globalTournament?.realResultsUpdatedAt || null;
   Object.values(TENANTS).forEach(tenant => {
     const previous = store.tenants[tenant.id] && typeof store.tenants[tenant.id] === "object" ? store.tenants[tenant.id] : {};
     const existingAreas = Array.isArray(previous.areas) ? previous.areas : [];
@@ -562,7 +705,7 @@ function ensureTenantTournaments(store) {
     const existing = store.tournaments.find(tournament => tournament.id === tenantTournamentId(tenant.id));
     if (existing) {
       existing.name = tenant.name;
-      existing.code = `EMPRESA-${tenant.id.toUpperCase()}`;
+      existing.code = normalizeCode(existing.code) || `EMPRESA-${tenant.id.toUpperCase()}`;
       existing.tenantId = tenant.id;
       existing.isGlobal = false;
       existing.templateId = existing.templateId || "worldcup-2026";
@@ -571,6 +714,8 @@ function ensureTenantTournaments(store) {
       if (!Array.isArray(existing.submissions)) existing.submissions = [];
       if (tenant.payment && !existing.payment) existing.payment = tenant.payment;
       if (!existing.payments || typeof existing.payments !== "object") existing.payments = {};
+      existing.realResults = globalReal;
+      existing.realResultsUpdatedAt = globalRealUpdatedAt;
     } else {
       store.tournaments.push({
         id: tenantTournamentId(tenant.id),
@@ -579,7 +724,8 @@ function ensureTenantTournaments(store) {
         tenantId: tenant.id,
         isGlobal: false,
         createdAt: new Date().toISOString(),
-        realResults: null,
+        realResults: globalReal,
+        realResultsUpdatedAt: globalRealUpdatedAt,
         templateId: "worldcup-2026",
         mode: "groups-knockout",
         scoring: DEFAULT_SCORING,
@@ -804,6 +950,7 @@ function readStore() {
     if (!Array.isArray(store.tournaments)) return emptyStore();
     if (!store.users || typeof store.users !== "object") store.users = {};
     if (!store.globalSessions || typeof store.globalSessions !== "object") store.globalSessions = {};
+    if (!store.passwordResets || typeof store.passwordResets !== "object") store.passwordResets = {};
     if (!store.tournamentAccess || typeof store.tournamentAccess !== "object") store.tournamentAccess = {};
     if (!store.globalGames || typeof store.globalGames !== "object") store.globalGames = JSON.parse(JSON.stringify(DEFAULT_DAILY_GAMES));
     if (!store.globalGamePlays || typeof store.globalGamePlays !== "object") store.globalGamePlays = {};
@@ -824,15 +971,17 @@ function readStore() {
 
 function writeStore(store) {
   ensureDataDir();
-  fs.writeFileSync(STORE_FILE, JSON.stringify(store, null, 2)); 
+  fs.writeFileSync(STORE_FILE, JSON.stringify(store, null, 2));
   syncStoreToMysql(store).catch((err) => {
-  console.error("Error sincronizando store a MySQL:", err);
-});
+    console.error("Error sincronizando store a MySQL:", err);
+  });
 }
 
 function publicTournament(tournament, options = {}) {
   const template = TOURNAMENT_TEMPLATES.find(item => item.id === tournament.templateId) || TOURNAMENT_TEMPLATES[0];
   const payment = paymentSettings(tournament);
+  const compact = Boolean(options.compact);
+  const fixtures = compact ? [] : tournamentFixtures(tournament);
   const data = {
     id: tournament.id,
     name: tournament.name,
@@ -841,13 +990,13 @@ function publicTournament(tournament, options = {}) {
     templateId: tournament.templateId || template.id,
     templateName: template.name,
     mode: tournament.mode || template.mode,
-    teams: tournament.customTemplate?.teams || template.teams || [],
-    fixtures: tournament.customTemplate?.fixtures || template.fixtures || [],
-    timing: tournament.customTemplate?.timing || template.timing || { predictionLockMinutesBefore: 0, scoringDelayMinutesAfterResult: 0 },
-    customTemplate: tournament.customTemplate || null,
+    teams: compact ? [] : (tournament.customTemplate?.teams || template.teams || []),
+    fixtures,
+    timing: compact ? null : (tournament.customTemplate?.timing || template.timing || { predictionLockMinutesBefore: 0, scoringDelayMinutesAfterResult: 0 }),
+    customTemplate: compact ? null : (tournament.customTemplate || null),
     scoring: tournament.scoring || DEFAULT_SCORING,
     createdAt: tournament.createdAt,
-    realResults: tournament.realResults || null,
+    realResults: compact ? null : (tournament.realResults || null),
     payment: payment.required ? payment : { required: false },
     players: Array.isArray(tournament.submissions) ? tournament.submissions.length : 0
   };
@@ -912,9 +1061,9 @@ function safeColor(value) {
 function safeImage(value) {
   const image = String(value || "").trim();
   if (!image) return "";
-  if (image.startsWith("/") && !image.includes("..")) return image.slice(0, 120000);
-  if (/^https?:\/\//i.test(image)) return image.slice(0, 120000);
-  if (/^data:image\/(png|jpe?g|webp);base64,/i.test(image) && image.length < 120000) return image;
+  if (image.startsWith("/") && !image.includes("..")) return image.slice(0, 5000000);
+  if (/^https?:\/\//i.test(image)) return image.slice(0, 5000000);
+  if (/^data:image\/(png|jpe?g|webp|gif);base64,/i.test(image) && image.length < 5000000) return image;
   return "";
 }
 
@@ -940,6 +1089,44 @@ function mergeGameList(customItems, defaultItems) {
     merged.push(item);
   });
   return merged;
+}
+
+async function handleRequestVerification(req, res) {
+  try {
+    // En el servidor nativo, leemos el body con tu propia función readBody
+    const body = JSON.parse(await readBody(req));
+    const email = body.email;
+    // Genera un número aleatorio de 6 dígitos
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    verificationCodes[email] = code;
+    // Enviamos el correo
+    await transporter.sendMail({
+      from: '"Prode Bait" <ba.itsoft26@gmail.com>',
+      to: email,
+      subject: 'Tu código de verificación - Prode Bait',
+      text: `¡Hola!\n\nTu código de acceso de 6 dígitos para registrarte en el Prode es: ${code}\n\nSi no solicitaste esto, ignora este correo.`
+    });
+    send(res, 200, JSON.stringify({ ok: true }));
+  } catch (err) {
+    console.error("Error enviando email:", err);
+    send(res, 500, JSON.stringify({ error: "Error al enviar el email" }));
+  }
+}
+
+async function handleVerifyCode(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const { email, code } = body;
+    
+    if (verificationCodes[email] && verificationCodes[email] === code) {
+      delete verificationCodes[email]; // Lo borramos para que no se use 2 veces
+      send(res, 200, JSON.stringify({ ok: true }));
+    } else {
+      send(res, 400, JSON.stringify({ error: "Código incorrecto" }));
+    }
+  } catch (err) {
+    send(res, 500, JSON.stringify({ error: "Error al verificar código" }));
+  }
 }
 
 function publicGames(tenantData = {}) {
@@ -1016,12 +1203,13 @@ function globalSessionUser(store, token) {
   const email = store.globalSessions?.[rawToken];
   const user = email ? store.users?.[email] : null;
   if (!user || user.active === false) return null;
+  const role = userRole(null, { ...user, email: user.email || email });
   return {
     name: user.name || "",
     email: user.email || email,
-    role: user.role || "player",
-    isAdmin: Boolean(user.isAdmin || user.role === "admin" || user.role === "superadmin"),
-    isSuperAdmin: user.role === "superadmin",
+    role,
+    isAdmin: role === "admin" || role === "superadmin",
+    isSuperAdmin: role === "superadmin",
     createdAt: user.createdAt || ""
   };
 }
@@ -1053,7 +1241,7 @@ function publicLobbyTournament(store, tournament, user = null) {
   const tenant = tournament.tenantId ? tenantFromValue(tournament.tenantId) : null;
   const access = hasTournamentAccess(store, user, tournament);
   return {
-    ...publicTournament(tournament, { includePrivateCode: tournament.isGlobal || access }),
+    ...publicTournament(tournament, { includePrivateCode: tournament.isGlobal || access, compact: true }),
     isPrivate: !tournament.isGlobal,
     hasAccess: access,
     tenantPath: tenant ? `/prode/empresa/${encodeURIComponent(tenant.id)}` : "/prode",
@@ -1070,6 +1258,14 @@ function publicTenantTemplate(id) {
     name: tenant.name,
     title: tenant.title,
     description: tenant.description
+  };
+}
+
+function publicCompetitionTemplate(template) {
+  return {
+    id: template.id,
+    name: template.name,
+    mode: template.mode
   };
 }
 
@@ -1097,6 +1293,7 @@ function isSuperAdminEmail(tenantId, email) {
 
 function userRole(tenantId, user = {}) {
   if (isSuperAdminEmail(tenantId, user.email)) return "superadmin";
+  if (user.role === "superadmin" || user.isSuperAdmin) return "superadmin";
   if (user.role === "admin" || user.isAdmin || isAdminEmail(tenantId, user.email)) return "admin";
   return "player";
 }
@@ -1173,11 +1370,13 @@ function normalizeFixtures(value) {
       id: safeText(match?.id, 30) || `c${index + 1}`,
       home: safeText(match?.home, 80),
       away: safeText(match?.away, 80),
+      homeCrest: safeText(match?.homeCrest || match?.homeLogo || match?.homeBadge, 240),
+      awayCrest: safeText(match?.awayCrest || match?.awayLogo || match?.awayBadge, 240),
       startsAt: safeText(match?.startsAt, 40),
       round: safeText(match?.round, 60)
     }))
     .filter(match => match.home && match.away)
-    .slice(0, 380);
+    .slice(0, 520);
 }
 
 function normalizeCustomTemplate(value, fallbackTemplate) {
@@ -1192,6 +1391,34 @@ function normalizeCustomTemplate(value, fallbackTemplate) {
   };
 }
 
+function generatedFixturesForTemplate(template = {}) {
+  const teams = normalizeTeams(template.teams || []);
+  if (!teams.length || template.mode === "groups-knockout") return [];
+  const schedule = [];
+  const maxMatches = template.mode === "league" ? 24 : 16;
+  const rotation = teams.length % 2 === 0 ? [...teams] : [...teams, ""];
+  const rounds = rotation.length - 1;
+  const half = rotation.length / 2;
+  for (let round = 0; round < rounds; round += 1) {
+    for (let i = 0; i < half; i += 1) {
+      const home = rotation[i];
+      const away = rotation[rotation.length - 1 - i];
+      if (home && away) {
+        const swap = round % 2 === 1;
+        schedule.push({
+          id: `c${schedule.length + 1}`,
+          home: swap ? away : home,
+          away: swap ? home : away,
+          round: `Fecha ${round + 1}`
+        });
+        if (schedule.length >= maxMatches) return schedule;
+      }
+    }
+    rotation.splice(1, 0, rotation.pop());
+  }
+  return schedule;
+}
+
 function tournamentTemplate(tournament = {}) {
   return TOURNAMENT_TEMPLATES.find(item => item.id === tournament.templateId) || TOURNAMENT_TEMPLATES[0];
 }
@@ -1203,7 +1430,276 @@ function tournamentTiming(tournament = {}) {
 
 function tournamentFixtures(tournament = {}) {
   const template = tournamentTemplate(tournament);
-  return normalizeFixtures(tournament.customTemplate?.fixtures || template.fixtures || []);
+  const explicit = normalizeFixtures(tournament.customTemplate?.fixtures || template.fixtures || []);
+  return explicit.length ? explicit : generatedFixturesForTemplate(tournament.customTemplate || template);
+}
+
+function footballDataCompetitionCode(templateId) {
+  return {
+    champions: "CL",
+    premier: "PL",
+    "laliga-2025-26": "PD",
+    laliga: "PD",
+    "laliga-timing-lab": "PD",
+    "serie-a": "SA",
+    bundesliga: "BL1",
+    "ligue-1": "FL1",
+    worldcup: "WC",
+    "worldcup-2026": "WC"
+  }[templateId] || "";
+}
+
+function espnArgentinaRound(event, regularIndex = 0) {
+  const slug = String(event?.season?.slug || "");
+  if (slug.includes("round-of-16")) return "Apertura - Octavos";
+  if (slug.includes("quarterfinal")) return "Apertura - Cuartos";
+  if (slug.includes("semifinal")) return "Apertura - Semifinales";
+  if (slug.includes("final")) return "Apertura - Final";
+  if (slug === "torneo-clausura") return `Clausura - Fecha ${Math.floor(regularIndex / 15) + 1}`;
+  return `Apertura - Fecha ${Math.floor(regularIndex / 15) + 1}`;
+}
+
+function espnTeam(competition, homeAway) {
+  return competition?.competitors?.find(item => item.homeAway === homeAway) || null;
+}
+
+function espnTeamName(competitor) {
+  return competitor?.team?.displayName || competitor?.team?.shortDisplayName || competitor?.team?.name || "";
+}
+
+function espnTeamLogo(competitor) {
+  return competitor?.team?.logo || competitor?.team?.logos?.[0]?.href || "";
+}
+
+function espnArgentinaFixtures(events = []) {
+  const sorted = [...events].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const regularIndexes = { "torneo-apertura": 0, "torneo-clausura": 0 };
+  return sorted
+    .map(event => {
+      const competition = event.competitions?.[0] || {};
+      const home = espnTeam(competition, "home");
+      const away = espnTeam(competition, "away");
+      const slug = String(event?.season?.slug || "");
+      const round = espnArgentinaRound(event, regularIndexes[slug] || 0);
+      if (Object.prototype.hasOwnProperty.call(regularIndexes, slug)) regularIndexes[slug] += 1;
+      return {
+        id: `espn-${event.id}`,
+        home: espnTeamName(home),
+        away: espnTeamName(away),
+        homeCrest: espnTeamLogo(home),
+        awayCrest: espnTeamLogo(away),
+        startsAt: event.date || "",
+        round
+      };
+    })
+    .filter(match => match.home && match.away);
+}
+
+function espnArgentinaTeamsFromFixtures(fixtures = []) {
+  return [...new Set(fixtures.flatMap(match => [match.home, match.away]).filter(Boolean))].slice(0, 64);
+}
+
+async function fetchEspnArgentinaEvents() {
+  const url = "https://site.api.espn.com/apis/site/v2/sports/soccer/arg.1/scoreboard?dates=20260101-20261231&limit=500";
+  const response = await fetch(url);
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`ESPN Argentina ${response.status}: ${text.slice(0, 180)}`);
+  }
+  const data = await response.json();
+  return Array.isArray(data.events) ? data.events : [];
+}
+
+async function syncArgentinaApiResults(store, tournament) {
+  const events = await fetchEspnArgentinaEvents();
+  const apiFixtures = espnArgentinaFixtures(events);
+  if (apiFixtures.length) {
+    const template = tournamentTemplate(tournament);
+    tournament.customTemplate = {
+      ...(tournament.customTemplate || {}),
+      name: template.name,
+      mode: "fixture",
+      teams: espnArgentinaTeamsFromFixtures(apiFixtures),
+      fixtures: apiFixtures,
+      timing: tournamentTiming(tournament)
+    };
+    tournament.mode = "fixture";
+  }
+  const updatedAt = new Date().toISOString();
+  const now = Date.now();
+  const previous = tournament.realResults?.custom?.matches || {};
+  const matches = withoutFutureApiResults(previous, apiFixtures, now);
+  let imported = 0;
+  events.forEach(event => {
+    const status = event.status?.type || {};
+    if (!status.completed || !dateIsNotInFuture(event.date, now)) return;
+    const competition = event.competitions?.[0] || {};
+    const home = espnTeam(competition, "home");
+    const away = espnTeam(competition, "away");
+    const homeScore = Number(home?.score);
+    const awayScore = Number(away?.score);
+    if (!Number.isFinite(homeScore) || !Number.isFinite(awayScore)) return;
+    const homeName = espnTeamName(home);
+    const awayName = espnTeamName(away);
+    const winner = home?.winner ? homeName : away?.winner ? awayName : homeScore === awayScore ? "draw" : homeScore > awayScore ? homeName : awayName;
+    imported += 1;
+    const matchId = `espn-${event.id}`;
+    const nextMatch = {
+      homeScore,
+      awayScore,
+      winner,
+      source: "ESPN",
+      apiMatchId: event.id,
+      status: status.description || status.name || "",
+      updatedAt,
+      finishedAt: ""
+    };
+    nextMatch.finishedAt = status.completed ? apiResultFinishedAt(previous[matchId], nextMatch, estimatedFinishedAt(event.date, updatedAt)) : "";
+    matches[matchId] = nextMatch;
+  });
+  tournament.realResults = {
+    ...(tournament.realResults || {}),
+    custom: {
+      ...(tournament.realResults?.custom || {}),
+      matches,
+      champion: tournament.realResults?.custom?.champion || ""
+    },
+    apiSource: {
+      provider: "ESPN",
+      competitionCode: "arg.1",
+      season: "2026",
+      syncedAt: updatedAt,
+      fixtures: apiFixtures.length,
+      matched: imported,
+      imported
+    },
+    updatedAt
+  };
+  tournament.realResultsUpdatedAt = updatedAt;
+  return { provider: "ESPN", competitionCode: "arg.1", season: "2026", fixtures: apiFixtures.length, matched: imported, imported };
+}
+
+function normalizeTeamKey(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\b(fc|cf|afc|sc|club|de|the)\b/g, "")
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function teamLooksLike(source, target) {
+  const left = normalizeTeamKey(source);
+  const right = normalizeTeamKey(target);
+  return Boolean(left && right && (left === right || left.includes(right) || right.includes(left)));
+}
+
+function footballDataMatchTeams(match) {
+  return {
+    home: match?.homeTeam?.name || match?.homeTeam?.shortName || match?.homeTeam?.tla || "",
+    away: match?.awayTeam?.name || match?.awayTeam?.shortName || match?.awayTeam?.tla || ""
+  };
+}
+
+function footballDataMatchRound(match) {
+  const stage = safeText(match?.stage, 40);
+  const knockoutStageNames = {
+    PLAYOFFS: "Playoff knockout",
+    PLAY_OFFS: "Playoff knockout",
+    KNOCKOUT_ROUND_PLAY_OFFS: "Playoff knockout",
+    LAST_16: "Octavos de final",
+    QUARTER_FINALS: "Cuartos de final",
+    SEMI_FINALS: "Semifinales",
+    THIRD_PLACE: "Tercer puesto",
+    FINAL: "Final"
+  };
+  if (knockoutStageNames[stage]) {
+    if (stage === "FINAL" || stage === "THIRD_PLACE") return knockoutStageNames[stage];
+    if (Number(match?.matchday) === 1) return `${knockoutStageNames[stage]} - Ida`;
+    if (Number(match?.matchday) === 2) return `${knockoutStageNames[stage]} - Vuelta`;
+    return knockoutStageNames[stage];
+  }
+  if (match?.matchday) return `Fecha ${match.matchday}`;
+  return stage || safeText(match?.group, 40) || "Partidos";
+}
+
+function footballDataFixtures(apiMatches = []) {
+  return apiMatches
+    .map(match => {
+      const teams = footballDataMatchTeams(match);
+      return {
+        id: `fd-${match.id}`,
+        home: teams.home,
+        away: teams.away,
+        homeCrest: match?.homeTeam?.crest || "",
+        awayCrest: match?.awayTeam?.crest || "",
+        startsAt: match.utcDate || "",
+        round: footballDataMatchRound(match)
+      };
+    })
+    .filter(match => match.home && match.away)
+    .slice(0, 380);
+}
+
+function footballDataTeamsFromFixtures(fixtures = []) {
+  return [...new Set(fixtures.flatMap(match => [match.home, match.away]).filter(Boolean))].slice(0, 64);
+}
+
+function matchFixtureToApiResult(fixtureItem, apiMatches) {
+  const directId = String(fixtureItem.id || "").replace(/^fd-/, "");
+  return (apiMatches || []).find(match => String(match.id) === directId) || (apiMatches || []).find(match => {
+    const teams = footballDataMatchTeams(match);
+    return teamLooksLike(teams.home, fixtureItem.home) && teamLooksLike(teams.away, fixtureItem.away);
+  }) || null;
+}
+
+function dateIsNotInFuture(value, now = Date.now()) {
+  if (!value) return false;
+  const timestamp = new Date(value).getTime();
+  return Number.isFinite(timestamp) && timestamp <= now;
+}
+
+function withoutFutureApiResults(previousMatches = {}, fixtures = [], now = Date.now()) {
+  const matches = { ...(previousMatches || {}) };
+  fixtures.forEach(fixture => {
+    if (dateIsNotInFuture(fixture.startsAt, now)) return;
+    const match = matches[fixture.id];
+    if (match?.source === "football-data.org" || match?.source === "ESPN") delete matches[fixture.id];
+  });
+  return matches;
+}
+
+function apiResultFinishedAt(previousMatch, nextMatch, fallback) {
+  const previousFinishedAt = previousMatch?.finishedAt || "";
+  const sameScore = previousMatch &&
+    Number(previousMatch.homeScore) === Number(nextMatch.homeScore) &&
+    Number(previousMatch.awayScore) === Number(nextMatch.awayScore) &&
+    String(previousMatch.winner || "") === String(nextMatch.winner || "");
+  const previousIsSyncTime = previousFinishedAt && previousMatch?.updatedAt && previousFinishedAt === previousMatch.updatedAt;
+  return sameScore && previousFinishedAt && !previousIsSyncTime ? previousFinishedAt : fallback;
+}
+
+function estimatedFinishedAt(startsAt, fallback, matchMinutes = 120) {
+  const start = new Date(startsAt || "").getTime();
+  const fallbackTime = new Date(fallback || "").getTime();
+  if (!Number.isFinite(start)) return fallback;
+  const estimated = new Date(start + Number(matchMinutes || 120) * 60000).toISOString();
+  if (Number.isFinite(fallbackTime) && new Date(estimated).getTime() > fallbackTime) return fallback;
+  return estimated;
+}
+
+async function fetchFootballDataMatches({ code, season }) {
+  const token = process.env.FOOTBALL_DATA_TOKEN || process.env.FOOTBALLDATA_TOKEN || "";
+  if (!token) throw new Error("FOOTBALL_DATA_TOKEN is not configured");
+  const url = new URL(`https://api.football-data.org/v4/competitions/${encodeURIComponent(code)}/matches`);
+  if (season) url.searchParams.set("season", season);
+  const response = await fetch(url, { headers: { "X-Auth-Token": token } });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Football-Data ${response.status}: ${text.slice(0, 180)}`);
+  }
+  const data = await response.json();
+  return Array.isArray(data.matches) ? data.matches : [];
 }
 
 function customMatchLocked(match, timing = tournamentTiming()) {
@@ -1220,8 +1716,20 @@ function mergeLockedCustomMatches(previousPrediction, incomingPrediction, tourna
   const timing = tournamentTiming(tournament);
   const previousMatches = previousPrediction?.custom?.matches || {};
   const incomingMatches = incomingPrediction.custom.matches;
+  // Collect official results already loaded for this tournament (from the global store)
+  const officialMatches = tournament?.realResults?.custom?.matches || {};
+  // DEBUG
+  console.log("[DEBUG lock] officialMatches keys:", Object.keys(officialMatches));
+  console.log("[DEBUG lock] incomingMatches keys:", Object.keys(incomingMatches));
   fixtures.forEach(match => {
-    if (customMatchLocked(match, timing)) {
+    const official = officialMatches[match.id];
+    const hasOfficialResult =
+      official &&
+      official.homeScore !== undefined && official.homeScore !== "" &&
+      official.awayScore !== undefined && official.awayScore !== "";
+    const timeLocked = customMatchLocked(match, timing);
+    console.log(`[DEBUG lock] match=${match.id} hasOfficialResult=${hasOfficialResult} timeLocked=${timeLocked} official=`, official);
+    if (hasOfficialResult || timeLocked) {
       if (previousMatches[match.id]) incomingMatches[match.id] = previousMatches[match.id];
       else delete incomingMatches[match.id];
     }
@@ -1240,6 +1748,14 @@ function passwordHash(password, salt) {
 function createPasswordRecord(password) {
   const salt = crypto.randomBytes(16).toString("hex");
   return { salt, hash: passwordHash(password, salt) };
+}
+
+function passwordResetToken() {
+  return crypto.randomBytes(32).toString("base64url");
+}
+
+function resetExpiryDate() {
+  return new Date(Date.now() + 60 * 60 * 1000).toISOString();
 }
 
 function verifyPassword(password, user) {
@@ -1306,27 +1822,96 @@ function copyMatchFields(target, source, matchIds) {
   });
 }
 
-function mergePredictionByPhase(previousPrediction, incomingPrediction, phaseId) {
+const WORLD_CUP_MONTH_MAP = { "Jun": "06", "Jul": "07" };
+function isWorldCupMatchTimeLocked(id) {
+  const KNOCKOUT_SCHEDULE = {
+    m73: { date: "28 de Jun", time: "16:00" }, m74: { date: "29 de Jun", time: "16:00" }, m75: { date: "29 de Jun", time: "16:00" }, m76: { date: "29 de Jun", time: "16:00" },
+    m77: { date: "30 de Jun", time: "13:00" }, m78: { date: "30 de Jun", time: "16:00" }, m79: { date: "30 de Jun", time: "19:00" }, m80: { date: "1 de Jul", time: "14:00" },
+    m81: { date: "1 de Jul", time: "17:00" }, m82: { date: "1 de Jul", time: "20:00" }, m83: { date: "2 de Jul", time: "14:00" }, m84: { date: "2 de Jul", time: "17:00" },
+    m85: { date: "2 de Jul", time: "20:00" }, m86: { date: "3 de Jul", time: "16:00" }, m87: { date: "3 de Jul", time: "19:00" }, m88: { date: "3 de Jul", time: "22:00" },
+    m89: { date: "4 de Jul", time: "16:00" }, m90: { date: "4 de Jul", time: "16:00" }, m91: { date: "5 de Jul", time: "16:00" }, m92: { date: "5 de Jul", time: "16:00" },
+    m93: { date: "6 de Jul", time: "14:00" }, m94: { date: "6 de Jul", time: "17:00" }, m95: { date: "7 de Jul", time: "14:00" }, m96: { date: "7 de Jul", time: "17:00" },
+    m97: { date: "9 de Jul", time: "16:00" }, m98: { date: "10 de Jul", time: "16:00" }, m99: { date: "11 de Jul", time: "14:00" }, m100: { date: "11 de Jul", time: "17:00" },
+    m101: { date: "14 de Jul", time: "15:00" }, m102: { date: "15 de Jul", time: "15:00" }, m103: { date: "18 de Jul", time: "15:00" }, m104: { date: "19 de Jul", time: "15:00" }
+  };
+  const GROUP_SCHEDULE = {
+    "A-0-2": { date: "11 de Jun", time: "16:00" }, "A-1-3": { date: "11 de Jun", time: "23:00" }, "B-0-3": { date: "12 de Jun", time: "16:00" }, "D-0-1": { date: "12 de Jun", time: "22:00" },
+    "B-2-1": { date: "13 de Jun", time: "16:00" }, "C-0-1": { date: "13 de Jun", time: "19:00" }, "C-3-2": { date: "13 de Jun", time: "22:00" }, "D-2-3": { date: "14 de Jun", time: "01:00" },
+    "E-0-3": { date: "14 de Jun", time: "14:00" }, "F-0-1": { date: "14 de Jun", time: "17:00" }, "E-2-1": { date: "14 de Jun", time: "20:00" }, "F-3-2": { date: "14 de Jun", time: "23:00" },
+    "H-0-3": { date: "15 de Jun", time: "13:00" }, "G-0-2": { date: "15 de Jun", time: "16:00" }, "H-2-1": { date: "15 de Jun", time: "19:00" }, "G-1-3": { date: "15 de Jun", time: "22:00" },
+    "I-0-1": { date: "16 de Jun", time: "16:00" }, "I-3-2": { date: "16 de Jun", time: "19:00" }, "J-0-2": { date: "16 de Jun", time: "22:00" }, "J-1-3": { date: "17 de Jun", time: "01:00" },
+    "K-0-3": { date: "17 de Jun", time: "14:00" }, "L-0-1": { date: "17 de Jun", time: "17:00" }, "L-2-3": { date: "17 de Jun", time: "20:00" }, "K-2-1": { date: "17 de Jun", time: "23:00" },
+    "A-3-2": { date: "18 de Jun", time: "13:00" }, "B-1-3": { date: "18 de Jun", time: "16:00" }, "B-0-2": { date: "18 de Jun", time: "19:00" }, "A-0-1": { date: "18 de Jun", time: "22:00" },
+    "D-0-2": { date: "19 de Jun", time: "16:00" }, "C-2-1": { date: "19 de Jun", time: "19:00" }, "C-0-3": { date: "19 de Jun", time: "22:00" }, "D-3-1": { date: "20 de Jun", time: "01:00" },
+    "F-0-3": { date: "20 de Jun", time: "14:00" }, "E-0-2": { date: "20 de Jun", time: "17:00" }, "E-1-3": { date: "20 de Jun", time: "23:00" }, "F-2-1": { date: "21 de Jun", time: "01:00" },
+    "H-0-2": { date: "21 de Jun", time: "13:00" }, "G-0-1": { date: "21 de Jun", time: "16:00" }, "H-1-3": { date: "21 de Jun", time: "19:00" }, "G-3-2": { date: "21 de Jun", time: "22:00" },
+    "J-0-1": { date: "22 de Jun", time: "14:00" }, "I-0-3": { date: "22 de Jun", time: "18:00" }, "I-2-1": { date: "22 de Jun", time: "21:00" }, "J-3-2": { date: "23 de Jun", time: "00:00" },
+    "K-0-2": { date: "23 de Jun", time: "14:00" }, "L-0-2": { date: "23 de Jun", time: "17:00" }, "L-3-1": { date: "23 de Jun", time: "20:00" }, "K-1-3": { date: "23 de Jun", time: "23:00" },
+    "B-1-0": { date: "24 de Jun", time: "16:00" }, "B-3-2": { date: "24 de Jun", time: "16:00" }, "C-2-0": { date: "24 de Jun", time: "19:00" }, "C-1-3": { date: "24 de Jun", time: "19:00" },
+    "A-3-0": { date: "24 de Jun", time: "22:00" }, "A-2-1": { date: "24 de Jun", time: "22:00" }, "E-3-2": { date: "25 de Jun", time: "17:00" }, "E-1-0": { date: "25 de Jun", time: "17:00" },
+    "F-1-3": { date: "25 de Jun", time: "20:00" }, "F-2-0": { date: "25 de Jun", time: "20:00" }, "D-1-2": { date: "25 de Jun", time: "23:00" }, "D-3-0": { date: "25 de Jun", time: "23:00" },
+    "I-2-0": { date: "26 de Jun", time: "16:00" }, "I-1-3": { date: "26 de Jun", time: "16:00" }, "H-3-2": { date: "26 de Jun", time: "21:00" }, "H-1-0": { date: "26 de Jun", time: "21:00" },
+    "G-2-1": { date: "27 de Jun", time: "00:00" }, "G-3-0": { date: "27 de Jun", time: "00:00" }, "L-3-0": { date: "27 de Jun", time: "18:00" }, "L-1-2": { date: "27 de Jun", time: "18:00" },
+    "K-1-0": { date: "27 de Jun", time: "20:30" }, "K-3-2": { date: "27 de Jun", time: "20:30" }, "J-2-1": { date: "27 de Jun", time: "23:00" }, "J-3-0": { date: "27 de Jun", time: "23:00" }
+  };
+  const match = KNOCKOUT_SCHEDULE[id] || GROUP_SCHEDULE[id];
+  if (!match || !match.date || !match.time) return false;
+  const parts = match.date.split(" de ");
+  const day = parts[0].padStart(2, "0");
+  const month = WORLD_CUP_MONTH_MAP[parts[1]];
+  if (!month) return false;
+  const startsAt = new Date(`2026-${month}-${day}T${match.time}:00-03:00`);
+  if (Number.isNaN(startsAt.getTime())) return false;
+  return Date.now() >= startsAt.getTime() - 30 * 60000;
+}
+
+function mergePredictionByPhase(previousPrediction, incomingPrediction, phaseId, tournament = null) {
   const phase = phaseById(phaseId);
-  if (!previousPrediction || phase.id === "all" || incomingPrediction?.custom) return incomingPrediction;
-  const merged = JSON.parse(JSON.stringify(previousPrediction));
+  // CORRECCIÓN: Validar que realmente sea una plantilla personalizada con partidos configurados
+  if (!previousPrediction || phase.id === "all" || (incomingPrediction?.custom && Object.keys(incomingPrediction.custom.matches || {}).length > 0)) return incomingPrediction;
+
+  const merged = previousPrediction ? JSON.parse(JSON.stringify(previousPrediction)) : {
+    groups: {}, groupMatches: {}, thirdAssignments: {}, winners: {}, scores: {}, custom: {}
+  };
+  const realResults = tournament?.realResults || {};
+
   if (phase.type === "groups") {
     if (!merged.groupMatches) merged.groupMatches = {};
     const groupMatchIds = groupMatchIdsForPhase(phase.id);
     if (groupMatchIds.length) {
       groupMatchIds.forEach(id => {
-        if (incomingPrediction.groupMatches?.[id]) merged.groupMatches[id] = incomingPrediction.groupMatches[id];
+        const isPlayed = realResults.groupMatches?.[id]?.home !== "" && realResults.groupMatches?.[id]?.home !== undefined &&
+          realResults.groupMatches?.[id]?.away !== "" && realResults.groupMatches?.[id]?.away !== undefined;
+        const timeLocked = isWorldCupMatchTimeLocked(id);
+        if (!isPlayed && !timeLocked && incomingPrediction.groupMatches?.[id]) {
+          merged.groupMatches[id] = incomingPrediction.groupMatches[id];
+        }
       });
-    } else {
-      merged.groups = incomingPrediction.groups || merged.groups || {};
-      merged.groupMatches = incomingPrediction.groupMatches || merged.groupMatches || {};
-      merged.thirdAssignments = incomingPrediction.thirdAssignments || merged.thirdAssignments || {};
     }
     return merged;
   }
   if (phase.type === "matches") {
     if (phase.id === "r32") merged.thirdAssignments = incomingPrediction.thirdAssignments || merged.thirdAssignments || {};
+
     copyMatchFields(merged, incomingPrediction, phase.matchIds);
+
+    (phase.matchIds || []).forEach(id => {
+      const isPlayed = (realResults.scores?.[id]?.left !== "" && realResults.scores?.[id]?.left !== undefined &&
+        realResults.scores?.[id]?.right !== "" && realResults.scores?.[id]?.right !== undefined) ||
+        (realResults.winners?.[id] && realResults.winners?.[id] !== "");
+      const timeLocked = isWorldCupMatchTimeLocked(id);
+      if (isPlayed || timeLocked) {
+        if (previousPrediction.scores?.[id]) {
+          if (!merged.scores) merged.scores = {};
+          merged.scores[id] = previousPrediction.scores[id];
+        }
+        if (previousPrediction.winners?.[id]) {
+          if (!merged.winners) merged.winners = {};
+          merged.winners[id] = previousPrediction.winners[id];
+        }
+      }
+    });
+
     return merged;
   }
   return incomingPrediction;
@@ -1357,7 +1942,8 @@ function scoreSubmission(prediction, real, scoring = DEFAULT_SCORING, tournament
     return { points: 0, groupHits: 0, winnerHits: 0, exactScoreHits: 0, championHit: false };
   }
   const rules = normalizeScoring(scoring);
-  if (real.custom) {
+  // CORRECCIÓN: Verificar que tenga partidos personalizados cargados
+  if (real.custom && Object.keys(real.custom.matches || {}).length > 0) {
     const realMatches = real.custom.matches || {};
     const predictedMatches = prediction.custom?.matches || {};
     const timing = tournament ? tournamentTiming(tournament) : { scoringDelayMinutesAfterResult: 0 };
@@ -1730,7 +2316,7 @@ function handleTournamentLobby(req, res) {
   send(res, 200, JSON.stringify({
     user,
     isAdmin: Boolean(user?.isAdmin || user?.isSuperAdmin),
-    templates: ["acme", "norte", "sur"].map(publicTenantTemplate).filter(Boolean),
+    templates: TOURNAMENT_TEMPLATES.map(publicCompetitionTemplate),
     tournaments
   }));
 }
@@ -1762,11 +2348,15 @@ async function handleGlobalLogin(req, res) {
     }
     const finalName = previousUser?.name || name;
     const token = randomSecret();
+    const role = userRole(null, { ...(previousUser || {}), email });
+    const isAdmin = role === "admin" || role === "superadmin";
     store.users[email] = {
       ...(previousUser || {}),
       name: finalName,
       email,
       active: previousUser?.active !== false,
+      role,
+      isAdmin,
       password: previousUser?.password || createPasswordRecord(password),
       updatedAt: new Date().toISOString(),
       createdAt: previousUser?.createdAt || new Date().toISOString()
@@ -1776,7 +2366,58 @@ async function handleGlobalLogin(req, res) {
     send(res, 200, JSON.stringify({
       ok: true,
       token,
-      user: { name: finalName, email, role: store.users[email].role || "player", isAdmin: Boolean(store.users[email].isAdmin), isSuperAdmin: store.users[email].role === "superadmin" },
+      user: { name: finalName, email, role, isAdmin, isSuperAdmin: role === "superadmin" },
+      templates: TOURNAMENT_TEMPLATES.map(publicCompetitionTemplate),
+      tournaments: ["global", ...Object.keys(TENANTS).map(tenantTournamentId)]
+        .map(id => store.tournaments.find(tournament => tournament.id === id))
+        .filter(Boolean)
+        .map(tournament => publicLobbyTournament(store, tournament, { email }))
+    }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleRegistrarGlobal(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const name = safeText(body.name, 100);
+    const email = normalizeEmail(body.email);
+    const password = String(body.password || "");
+    if (!email || !password || !name) {
+      send(res, 400, JSON.stringify({ error: "Nombre, email/DNI y contraseña son obligatorios." }));
+      return;
+    }
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      send(res, 400, JSON.stringify({ error: "La contraseña no cumple con los requisitos de seguridad." }));
+      return;
+    }
+    const store = readStore();
+    if (store.users[email]) {
+      send(res, 409, JSON.stringify({ error: "El usuario ya existe. Intenta iniciar sesión." }));
+      return;
+    }
+    const token = randomSecret();
+    const role = userRole(null, { email });
+    const isAdmin = role === "admin" || role === "superadmin";
+    store.users[email] = {
+      name,
+      email,
+      active: true,
+      role,
+      isAdmin,
+      password: createPasswordRecord(password),
+      updatedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString()
+    };
+    store.globalSessions[token] = email;
+    writeStore(store);
+    send(res, 200, JSON.stringify({
+      ok: true,
+      token,
+      user: { name, email, role, isAdmin, isSuperAdmin: role === "superadmin" },
+      templates: TOURNAMENT_TEMPLATES.map(publicCompetitionTemplate),
       tournaments: ["global", ...Object.keys(TENANTS).map(tenantTournamentId)]
         .map(id => store.tournaments.find(tournament => tournament.id === id))
         .filter(Boolean)
@@ -1805,8 +2446,9 @@ async function handleCreateLobbyTenant(req, res) {
     const admin = requireGlobalAdmin(req, res, store, body.sessionToken);
     if (!admin) return;
     const name = safeText(body.name, 80);
-    const templateId = slug(body.templateId || "acme");
-    const template = tenantFromValue(templateId) || TENANTS.acme;
+    const templateId = slug(body.templateId || "worldcup-2026");
+    const competitionTemplate = TOURNAMENT_TEMPLATES.find(item => item.id === templateId) || TOURNAMENT_TEMPLATES[0];
+    const baseTenant = TENANTS.acme;
     let id = slug(body.id || name);
     if (!name) {
       send(res, 400, JSON.stringify({ error: "Company name is required" }));
@@ -1831,17 +2473,18 @@ async function handleCreateLobbyTenant(req, res) {
     store.tenants[id] = {
       id,
       dynamic: true,
-      templateId,
+      templateId: "acme-private-shell",
+      competitionTemplateId: competitionTemplate.id,
       name,
       displayName: name,
-      eyebrow: template.eyebrow,
+      eyebrow: baseTenant.eyebrow,
       title: `Prode ${name}`,
       description: `Predicciones y ranking exclusivo para ${name}.`,
-      areas: [...(template.areas || [])],
+      areas: [...(baseTenant.areas || [])],
       users: {},
       sessions: {},
-      theme: { ...(template.theme || {}) },
-      baseTheme: { ...(template.theme || {}) },
+      theme: { ...(baseTenant.theme || {}) },
+      baseTheme: { ...(baseTenant.theme || {}) },
       games: JSON.parse(JSON.stringify(DEFAULT_DAILY_GAMES)),
       gamePlays: {},
       createdAt: now,
@@ -1856,8 +2499,8 @@ async function handleCreateLobbyTenant(req, res) {
       isGlobal: false,
       createdAt: now,
       realResults: null,
-      templateId: "worldcup-2026",
-      mode: "groups-knockout",
+      templateId: competitionTemplate.id,
+      mode: competitionTemplate.mode,
       scoring: DEFAULT_SCORING,
       payment: null,
       payments: {},
@@ -1909,8 +2552,35 @@ async function handleGrantTournamentAccess(req, res) {
       grantedAt: new Date().toISOString(),
       grantedByPassword: true
     };
+    // Si el torneo pertenece a una empresa, creamos una sesión de empresa
+    // para que el usuario global pueda operar directamente desde la página de la empresa.
+    let tenantSession = null;
+    if (tournament.tenantId) {
+      const tenant = tenantFromValue(tournament.tenantId);
+      const tenantData = tenantStore(store, tenant.id);
+      const token = randomSecret();
+      // Aseguramos que exista el usuario en el tenant (registro ligero sin contraseña)
+      const email = normalizeEmail(user.email);
+      const globalUserRecord = store.users?.[email] || null;
+      if (!tenantData.users[email]) {
+        tenantData.users[email] = {
+          name: user.name || "",
+          email,
+          area: "",
+          active: true,
+          role: userRole(tenant.id, { email }),
+          isAdmin: false,
+          password: globalUserRecord?.password || createPasswordRecord(""),
+          updatedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString()
+        };
+      }
+      tenantData.sessions[token] = email;
+      tenantSession = { token, user: { name: tenantData.users[email].name || user.name || "", email, area: tenantData.users[email].area || "" } };
+    }
+    syncGlobalSubmissionToTournament(store, user.email, tournament);
     writeStore(store);
-    send(res, 200, JSON.stringify({ ok: true, tournament: publicLobbyTournament(store, tournament, user) }));
+    send(res, 200, JSON.stringify({ ok: true, tournament: publicLobbyTournament(store, tournament, user), tenantSession }));
   } catch (error) {
     send(res, 500, JSON.stringify({ error: error.message }));
   }
@@ -1930,7 +2600,7 @@ async function handleCompanyLogin(req, res) {
     const tenant = tenantFromValue(body.tenantId);
     const name = String(body.name || "").trim().slice(0, 100);
     const email = normalizeEmail(body.email);
-    const area = normalizeAreaName(body.area);
+    const area = normalizeAreaName(body.area) || "General";
     const password = String(body.password || "");
     if (!tenant) {
       send(res, 404, JSON.stringify({ error: "Company not found" }));
@@ -1943,6 +2613,8 @@ async function handleCompanyLogin(req, res) {
     const store = readStore();
     const tenantData = tenantStore(store, tenant.id);
     const previousUser = tenantData.users[email];
+    const globalUser = store.users?.[email] || null;
+    const loginFromGlobal = !previousUser && globalUser && verifyPassword(password, globalUser);
     if (previousUser) {
       if (previousUser.active === false) {
         send(res, 403, JSON.stringify({ error: "User is disabled" }));
@@ -1952,15 +2624,15 @@ async function handleCompanyLogin(req, res) {
         send(res, 401, JSON.stringify({ error: "Invalid email or password" }));
         return;
       }
-    } else if (!name || !area) {
-      send(res, 400, JSON.stringify({ error: "Name and area are required for first login" }));
+    } else if (!loginFromGlobal && (!name)) {
+      send(res, 400, JSON.stringify({ error: "Se requiere el nombre para el primer login" }));
       return;
     }
-    const finalName = previousUser?.name || name;
-    const finalArea = previousUser?.area || area;
+    const finalName = previousUser?.name || (loginFromGlobal ? globalUser.name : name);
+    const finalArea = previousUser?.area || area || "";
     const role = userRole(tenant.id, { ...(previousUser || {}), email });
     const isAdmin = role === "admin" || role === "superadmin";
-    if (!tenantData.areas.some(item => areaId(item) === areaId(finalArea))) tenantData.areas.push(finalArea);
+    if (finalArea && !tenantData.areas.some(item => areaId(item) === areaId(finalArea))) tenantData.areas.push(finalArea);
     const token = randomSecret();
     tenantData.users[email] = {
       ...(previousUser || {}),
@@ -1970,11 +2642,26 @@ async function handleCompanyLogin(req, res) {
       active: previousUser?.active !== false,
       role,
       isAdmin,
-      password: previousUser?.password || createPasswordRecord(password),
+      password: previousUser?.password || (loginFromGlobal ? globalUser.password : createPasswordRecord(password)),
       updatedAt: new Date().toISOString(),
       createdAt: previousUser?.createdAt || new Date().toISOString()
     };
     tenantData.sessions[token] = email;
+    const globalToken = randomSecret();
+    if (!store.users[email]) {
+      const globalRole = userRole(null, { email });
+      store.users[email] = {
+        name: finalName,
+        email,
+        active: true,
+        role: globalRole,
+        isAdmin: globalRole === "admin" || globalRole === "superadmin",
+        password: tenantData.users[email].password,
+        updatedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      };
+    }
+    store.globalSessions[globalToken] = email;
     writeStore(store);
     send(res, 200, JSON.stringify({
       ok: true,
@@ -1983,6 +2670,208 @@ async function handleCompanyLogin(req, res) {
       dailyGamePlays: currentDailyGamePlays(tenantData, email),
       tenant: publicTenant(tenant, tenantData)
     }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleRegistrarCompany(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const tenant = tenantFromValue(body.tenantId);
+    const name = String(body.name || "").trim().slice(0, 100);
+    const email = normalizeEmail(body.email);
+    const area = normalizeAreaName(body.area) || "General";
+    const password = String(body.password || "");
+    if (!tenant) {
+      send(res, 404, JSON.stringify({ error: "Empresa no encontrada." }));
+      return;
+    }
+    if (!email || !password || !name) {
+      send(res, 400, JSON.stringify({ error: "Todos los campos son obligatorios para registrarse." }));
+      return;
+    }
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      send(res, 400, JSON.stringify({ error: "La contraseña no cumple con los requisitos de seguridad." }));
+      return;
+    }
+    const store = readStore();
+    const tenantData = tenantStore(store, tenant.id);
+    if (tenantData.users[email]) {
+      send(res, 409, JSON.stringify({ error: "El usuario ya existe en esta empresa." }));
+      return;
+    }
+    const role = userRole(tenant.id, { email });
+    const isAdmin = role === "admin" || role === "superadmin";
+    if (!tenantData.areas.some(item => areaId(item) === areaId(area))) tenantData.areas.push(area);
+    const token = randomSecret();
+    tenantData.users[email] = {
+      name,
+      email,
+      area,
+      active: true,
+      role,
+      isAdmin,
+      password: createPasswordRecord(password),
+      updatedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString()
+    };
+    tenantData.sessions[token] = email;
+    const globalToken = randomSecret();
+    if (!store.users[email]) {
+      const globalRole = userRole(null, { email });
+      store.users[email] = {
+        name,
+        email,
+        active: true,
+        role: globalRole,
+        isAdmin: globalRole === "admin" || globalRole === "superadmin",
+        password: createPasswordRecord(password), // Usa la misma clave
+        updatedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      };
+    }
+    store.globalSessions[globalToken] = email;
+    writeStore(store);
+    send(res, 200, JSON.stringify({
+      ok: true,
+      token,
+      globalToken, // <--- AGREGAR ESTA LÍNEA
+      user: { name, email, area, role, isAdmin, isSuperAdmin: role === "superadmin" },
+      dailyGamePlays: currentDailyGamePlays(tenantData, email),
+      tenant: publicTenant(tenant, tenantData)
+    }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleChangePassword(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const { scope, sessionToken, currentPassword, newPassword } = body;
+    const store = readStore();
+
+    let email = null;
+    let user = null;
+
+    if (scope === "company") {
+      for (const tId of Object.keys(store.tenants || {})) {
+        if (store.tenants[tId].sessions && store.tenants[tId].sessions[sessionToken]) {
+          email = store.tenants[tId].sessions[sessionToken];
+          user = store.tenants[tId].users[email];
+          break;
+        }
+      }
+    } else {
+      email = store.globalSessions?.[sessionToken];
+      user = store.users?.[email];
+    }
+
+    if (!user) {
+      send(res, 401, JSON.stringify({ error: "Sesión inválida o expirada." }));
+      return;
+    }
+
+    if (!verifyPassword(currentPassword, user)) {
+      send(res, 401, JSON.stringify({ error: "La contraseña actual es incorrecta." }));
+      return;
+    }
+
+    user.password = createPasswordRecord(newPassword);
+    user.updatedAt = new Date().toISOString();
+
+    writeStore(store);
+    send(res, 200, JSON.stringify({ success: true }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function sendPasswordResetMail({ to, resetUrl }) {
+  await transporter.sendMail({
+    from: '"Prode Bait" <ba.itsoft26@gmail.com>',
+    to,
+    subject: "Recuperar contrasena - Prode Bait",
+    text: [
+      "Recibimos un pedido para cambiar la contrasena de tu usuario.",
+      "",
+      "Abri este link para crear una contrasena nueva:",
+      resetUrl,
+      "",
+      "El link vence en 1 hora. Si no pediste este cambio, podes ignorar este correo."
+    ].join("\n")
+  });
+  return { sent: true };
+}
+
+async function handleRequestPasswordReset(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const email = normalizeEmail(body.email);
+    if (!email || !email.includes("@")) {
+      send(res, 400, JSON.stringify({ error: "A valid email is required" }));
+      return;
+    }
+    const store = readStore();
+    const user = store.users[email];
+    let mail = null;
+    if (user && user.active !== false) {
+      const token = passwordResetToken();
+      store.passwordResets[token] = {
+        email,
+        expiresAt: resetExpiryDate(),
+        createdAt: new Date().toISOString()
+      };
+      Object.entries(store.passwordResets).forEach(([resetToken, reset]) => {
+        if (!reset?.expiresAt || new Date(reset.expiresAt).getTime() < Date.now()) delete store.passwordResets[resetToken];
+      });
+      writeStore(store);
+      const resetUrl = `${siteBaseUrl(req)}/reset-password/${encodeURIComponent(token)}`;
+      mail = await sendPasswordResetMail({ to: email, resetUrl });
+    }
+    send(res, 200, JSON.stringify({ ok: true, mail }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleResetPassword(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const token = String(body.token || "").trim();
+    const password = String(body.password || "");
+    if (!token || password.length < 8 || !/[a-z]/.test(password) || !/[A-Z]/.test(password)) {
+      send(res, 400, JSON.stringify({ error: "Token and a valid password are required" }));
+      return;
+    }
+    const store = readStore();
+    const reset = store.passwordResets?.[token];
+    if (!reset || new Date(reset.expiresAt).getTime() < Date.now()) {
+      if (reset) {
+        delete store.passwordResets[token];
+        writeStore(store);
+      }
+      send(res, 410, JSON.stringify({ error: "Password reset link expired" }));
+      return;
+    }
+    const email = normalizeEmail(reset.email);
+    const user = store.users[email];
+    if (!user || user.active === false) {
+      delete store.passwordResets[token];
+      writeStore(store);
+      send(res, 404, JSON.stringify({ error: "User not found" }));
+      return;
+    }
+    user.password = createPasswordRecord(password);
+    user.updatedAt = new Date().toISOString();
+    delete store.passwordResets[token];
+    Object.entries(store.globalSessions || {}).forEach(([sessionToken, sessionEmail]) => {
+      if (normalizeEmail(sessionEmail) === email) delete store.globalSessions[sessionToken];
+    });
+    writeStore(store);
+    send(res, 200, JSON.stringify({ ok: true }));
   } catch (error) {
     send(res, 500, JSON.stringify({ error: error.message }));
   }
@@ -2017,7 +2906,46 @@ async function handleAdminUpdateUser(req, res) {
     const tenant = tenantFromValue(body.tenantId);
     const email = normalizeEmail(body.email);
     if (!tenant) {
-      send(res, 404, JSON.stringify({ error: "Company not found" }));
+      const store = readStore();
+      const admin = requireGlobalAdmin(req, res, store, body.globalSessionToken);
+      if (!admin) return;
+      if (!admin.isSuperAdmin && admin.role !== "superadmin") {
+        send(res, 403, JSON.stringify({ error: "Superadmin required" }));
+        return;
+      }
+      if (!email) {
+        send(res, 400, JSON.stringify({ error: "User email is required" }));
+        return;
+      }
+      const user = store.users[email];
+      if (!user) {
+        send(res, 404, JSON.stringify({ error: "User not found" }));
+        return;
+      }
+      const name = String(body.name || "").trim().slice(0, 100);
+      if (!name) {
+        send(res, 400, JSON.stringify({ error: "Name is required" }));
+        return;
+      }
+      user.name = name;
+      user.active = body.active !== false;
+      user.role = body.isAdmin ? "admin" : "player";
+      if (email === normalizeEmail(admin.email)) {
+        user.role = "superadmin";
+        user.active = true;
+      }
+      user.isAdmin = user.role === "admin" || user.role === "superadmin";
+      user.updatedAt = new Date().toISOString();
+      if (!user.active) {
+        Object.entries(store.globalSessions || {}).forEach(([token, sessionEmail]) => {
+          if (normalizeEmail(sessionEmail) === email) delete store.globalSessions[token];
+        });
+      }
+      writeStore(store);
+      send(res, 200, JSON.stringify({
+        ok: true,
+        user: { name: user.name, email: user.email || email, active: user.active !== false, role: user.role, isAdmin: user.isAdmin, isSuperAdmin: user.role === "superadmin" }
+      }));
       return;
     }
     if (!requireAdmin(req, res, tenant, body.adminKey, body.sessionToken, body.globalSessionToken)) return;
@@ -2033,9 +2961,9 @@ async function handleAdminUpdateUser(req, res) {
       return;
     }
     const name = String(body.name || "").trim().slice(0, 100);
-    const area = normalizeAreaName(body.area);
-    if (!name || !area) {
-      send(res, 400, JSON.stringify({ error: "Name and area are required" }));
+    const area = normalizeAreaName(body.area) || "General";
+    if (!name) {
+      send(res, 400, JSON.stringify({ error: "Name required" }));
       return;
     }
     const active = body.active !== false;
@@ -2060,6 +2988,82 @@ async function handleAdminUpdateUser(req, res) {
       ok: true,
       user: { name: user.name, email: user.email || email, area: user.area, active: user.active !== false, role: user.role, isAdmin: user.isAdmin, isSuperAdmin: user.role === "superadmin" }
     }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleAdminDeleteUser(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const tenant = tenantFromValue(body.tenantId);
+    const email = normalizeEmail(body.email);
+    if (!email) {
+      send(res, 400, JSON.stringify({ error: "User email is required" }));
+      return;
+    }
+    const store = readStore();
+
+    if (!tenant) {
+      const admin = requireGlobalAdmin(req, res, store, body.globalSessionToken);
+      if (!admin) return;
+      if (!admin.isSuperAdmin && admin.role !== "superadmin") {
+        send(res, 403, JSON.stringify({ error: "Superadmin required" }));
+        return;
+      }
+      const user = store.users[email];
+      if (!user) {
+        send(res, 404, JSON.stringify({ error: "User not found" }));
+        return;
+      }
+      if (email === normalizeEmail(admin.email)) {
+        send(res, 403, JSON.stringify({ error: "Cannot delete yourself" }));
+        return;
+      }
+
+      delete store.users[email];
+      Object.entries(store.globalSessions || {}).forEach(([token, sessionEmail]) => {
+        if (normalizeEmail(sessionEmail) === email) delete store.globalSessions[token];
+      });
+      delete store.tournamentAccess?.[email];
+      delete store.globalGamePlays?.[email];
+
+      store.tournaments.forEach(tournament => {
+        if (tournament.submissions) {
+          tournament.submissions = tournament.submissions.filter(s => normalizeEmail(s.player?.email) !== email);
+        }
+      });
+
+      writeStore(store);
+      send(res, 200, JSON.stringify({ ok: true, deleted: email }));
+      return;
+    }
+
+    if (!requireAdmin(req, res, tenant, body.adminKey, body.sessionToken, body.globalSessionToken)) return;
+    const tenantData = tenantStore(store, tenant.id);
+    const user = tenantData.users[email];
+
+    const adminUser = sessionUser(store, tenant, body.sessionToken) || globalSessionUser(store, body.globalSessionToken);
+    if (adminUser && normalizeEmail(adminUser.email) === email) {
+      send(res, 403, JSON.stringify({ error: "Cannot delete yourself" }));
+      return;
+    }
+
+    if (user) {
+      delete tenantData.users[email];
+      Object.entries(tenantData.sessions).forEach(([token, sessionEmail]) => {
+        if (normalizeEmail(sessionEmail) === email) delete tenantData.sessions[token];
+      });
+      delete tenantData.gamePlays?.[email];
+    }
+
+    const tournament = store.tournaments.find(item => item.id === tenantTournamentId(tenant.id));
+    if (tournament && tournament.submissions) {
+      tournament.submissions = tournament.submissions.filter(s => normalizeEmail(s.player?.email) !== email);
+    }
+
+    writeStore(store);
+    send(res, 200, JSON.stringify({ ok: true, deleted: email }));
   } catch (error) {
     send(res, 500, JSON.stringify({ error: error.message }));
   }
@@ -2095,6 +3099,61 @@ async function handleCreateCompanyArea(req, res) {
     if (!tenantData.areas.some(item => areaId(item) === areaId(name))) tenantData.areas.push(name);
     writeStore(store);
     send(res, 201, JSON.stringify({ ok: true, tenant: publicTenant(tenant, tenantData) }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleUpdateCompanyArea(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const tenant = tenantFromValue(body.tenantId);
+    const oldName = normalizeAreaName(body.oldName);
+    const newName = normalizeAreaName(body.newName);
+    if (!tenant) {
+      send(res, 404, JSON.stringify({ error: "Company not found" }));
+      return;
+    }
+    const store = readStore();
+    let user = sessionUser(store, tenant, body.sessionToken);
+    if (!user) {
+      const globalUser = globalSessionUser(store, body.globalSessionToken);
+      const tournament = store.tournaments.find(item => item.id === tenantTournamentId(tenant.id));
+      if (hasTournamentAccess(store, globalUser, tournament)) {
+        user = { name: globalUser.name, email: globalUser.email, area: "" };
+      }
+    }
+    if (!user) {
+      send(res, 401, JSON.stringify({ error: "Login is required" }));
+      return;
+    }
+    if (!oldName || !newName) {
+      send(res, 400, JSON.stringify({ error: "Area names are required" }));
+      return;
+    }
+    const tenantData = tenantStore(store, tenant.id);
+    const oldId = areaId(oldName);
+    if (!tenantData.areas.some(item => areaId(item) === oldId)) {
+      send(res, 404, JSON.stringify({ error: "Area not found" }));
+      return;
+    }
+    if (tenantData.areas.some(item => areaId(item) === areaId(newName) && areaId(item) !== oldId)) {
+      send(res, 409, JSON.stringify({ error: "Area already exists" }));
+      return;
+    }
+    tenantData.areas = tenantData.areas.map(area => areaId(area) === oldId ? newName : area);
+    Object.values(tenantData.users || {}).forEach(item => {
+      if (areaId(item.area) === oldId) {
+        item.area = newName;
+        item.updatedAt = new Date().toISOString();
+      }
+    });
+    const tournament = store.tournaments.find(item => item.id === tenantTournamentId(tenant.id));
+    (tournament?.submissions || []).forEach(submission => {
+      if (areaId(submission.player?.area) === oldId) submission.player.area = newName;
+    });
+    writeStore(store);
+    send(res, 200, JSON.stringify({ ok: true, tenant: publicTenant(tenant, tenantData) }));
   } catch (error) {
     send(res, 500, JSON.stringify({ error: error.message }));
   }
@@ -2281,7 +3340,7 @@ async function handleDailyGamePlay(req, res) {
 function findTournament(store, identifier) {
   const value = String(identifier || "").trim();
   const code = normalizeCode(value);
-  return store.tournaments.find(item => item.id === value || item.code === code);
+  return store.tournaments.find(item => item.id === value || normalizeCode(item.code) === code);
 }
 
 async function handleCreateTournament(req, res) {
@@ -2311,7 +3370,7 @@ async function handleCreateTournament(req, res) {
     }
 
     const store = readStore();
-    if (store.tournaments.some(tournament => tournament.code === requestedCode)) {
+    if (store.tournaments.some(tournament => normalizeCode(tournament.code) === requestedCode)) {
       send(res, 409, JSON.stringify({ error: "Tournament key already exists" }));
       return;
     }
@@ -2363,7 +3422,7 @@ async function handleJoinTournament(req, res) {
     const tournament = store.tournaments.find(item =>
       !item.isGlobal &&
       (!tenant || item.tenantId === tenant.id) &&
-      item.code === code &&
+      normalizeCode(item.code) === code &&
       item.name.toLowerCase() === name.toLowerCase()
     );
     if (!tournament) {
@@ -2375,6 +3434,79 @@ async function handleJoinTournament(req, res) {
     }));
   } catch (error) {
     send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+function syncGlobalSubmissionToTournament(store, email, tournament) {
+  const userEmail = normalizeEmail(email);
+  if (!userEmail || !tournament || tournament.isGlobal) return;
+  if (tournament.templateId && tournament.templateId !== "worldcup-2026") return;
+
+  const globalTournament = store.tournaments.find(item => item.id === "global");
+  const globalSubmission = (globalTournament?.submissions || []).find(item => normalizeEmail(item.player?.email) === userEmail);
+  if (!globalSubmission?.prediction) return;
+
+  if (!Array.isArray(tournament.submissions)) tournament.submissions = [];
+  const existingIndex = tournament.submissions.findIndex(item => normalizeEmail(item.player?.email) === userEmail);
+  const previous = existingIndex >= 0 ? tournament.submissions[existingIndex] : null;
+  const phaseId = normalizePhaseId(globalSubmission.phaseId || "all");
+  const prediction = mergePredictionByPhase(previous?.prediction, globalSubmission.prediction, phaseId, tournament);
+  const completedPhases = [...new Set([...(previous?.completedPhases || []), ...(globalSubmission.completedPhases || []), phaseId])];
+  const syncedSubmission = {
+    id: previous?.id || `${Date.now()}-${slug(userEmail)}`,
+    createdAt: previous?.createdAt || globalSubmission.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    phaseId,
+    completedPhases,
+    continuationToken: previous?.continuationToken || globalSubmission.continuationToken || randomSecret(),
+    player: {
+      ...(globalSubmission.player || {}),
+      email: userEmail
+    },
+    prediction
+  };
+
+  if (existingIndex >= 0) tournament.submissions[existingIndex] = syncedSubmission;
+  else tournament.submissions.push(syncedSubmission);
+}
+
+function syncSubmissionAcrossTournaments(store, sourceTournamentId, player, incomingPrediction, phaseId) {
+  const userEmail = normalizeEmail(player.email);
+  if (!userEmail) return;
+
+  const userForAccessCheck = { email: userEmail, ...(store.users[userEmail] || {}) };
+
+  for (const otherTournament of store.tournaments) {
+    if (otherTournament.id === sourceTournamentId) continue;
+    if (otherTournament.templateId !== "worldcup-2026") continue;
+
+    if (hasTournamentAccess(store, userForAccessCheck, otherTournament)) {
+      if (!otherTournament.submissions) {
+        otherTournament.submissions = [];
+      }
+      const otherExistingIndex = otherTournament.submissions.findIndex(s => normalizeEmail(s.player?.email) === userEmail);
+      const otherPrevious = otherExistingIndex >= 0 ? otherTournament.submissions[otherExistingIndex] : null;
+
+      const predictionForOther = mergePredictionByPhase(otherPrevious?.prediction, incomingPrediction, phaseId, otherTournament);
+      const completedPhases = [...new Set([...(otherPrevious?.completedPhases || []), phaseId])];
+
+      const newOtherSubmission = {
+        id: otherPrevious?.id || `${Date.now()}-${slug(userEmail)}`,
+        createdAt: otherPrevious?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        phaseId,
+        completedPhases,
+        continuationToken: otherPrevious?.continuationToken || randomSecret(),
+        player: player,
+        prediction: predictionForOther
+      };
+
+      if (otherExistingIndex >= 0) {
+        otherTournament.submissions[otherExistingIndex] = newOtherSubmission;
+      } else {
+        otherTournament.submissions.push(newOtherSubmission);
+      }
+    }
   }
 }
 
@@ -2434,7 +3566,7 @@ async function handleSubmitProde(req, res) {
     }
     const continuationToken = previous?.continuationToken || randomSecret();
     const filteredPayload = mergeLockedCustomMatches(previous?.prediction, payload.tournament, tournament);
-    const prediction = mergePredictionByPhase(previous?.prediction, filteredPayload, phaseId);
+    const prediction = mergePredictionByPhase(previous?.prediction, filteredPayload, phaseId, tournament);
     const submission = {
       id: `${Date.now()}-${slug(payload.player.email)}`,
       createdAt: previous?.createdAt || new Date().toISOString(),
@@ -2447,6 +3579,10 @@ async function handleSubmitProde(req, res) {
     };
     if (existingIndex >= 0) tournament.submissions[existingIndex] = submission;
     else tournament.submissions.push(submission);
+
+    if (tournament.templateId === "worldcup-2026") {
+      syncSubmissionAcrossTournaments(store, tournament.id, payload.player, payload.tournament, phaseId);
+    }
 
     writeStore(store);
     const continuationUrl = `${siteBaseUrl(req)}/continuar/${encodeURIComponent(continuationToken)}`;
@@ -2491,7 +3627,7 @@ function materializeApprovedPaymentDraft(req, tournament, payment) {
   const previous = existingIndex >= 0 ? tournament.submissions[existingIndex] : null;
   const continuationToken = previous?.continuationToken || randomSecret();
   const filteredPayload = mergeLockedCustomMatches(previous?.prediction, payload.tournament, tournament);
-  const prediction = mergePredictionByPhase(previous?.prediction, filteredPayload, phaseId);
+  const prediction = mergePredictionByPhase(previous?.prediction, filteredPayload, phaseId, tournament);
   const submission = {
     id: `${Date.now()}-${slug(payload.player.email)}`,
     createdAt: previous?.createdAt || new Date().toISOString(),
@@ -2614,45 +3750,420 @@ async function handlePhaseReminders(req, res) {
 
 async function handleSaveRealResults(req, res) {
   try {
-    const body = JSON.parse(await readBody(req));
-    const tournamentId = body.tournamentId || "global";
-    const tenant = tenantFromValue(body.tenantId);
+    const bodyText = await readBody(req);
+    console.log("[DEBUG save-results] Incoming body length:", bodyText.length);
+    const body = JSON.parse(bodyText);
     const realResults = body.realResults;
+    console.log("[DEBUG save-results] Incoming realResults.groupMatches:", JSON.stringify(realResults?.groupMatches || {}).substring(0, 500));
     if ((!realResults?.groups || !realResults?.winners) && !realResults?.custom) {
       send(res, 400, JSON.stringify({ error: "Invalid real results" }));
       return;
     }
     const store = readStore();
+    const globalUser = globalSessionUser(store, body.globalSessionToken);
+    if (!globalUser?.isSuperAdmin && !globalUser?.isAdmin) {
+      send(res, 403, JSON.stringify({ error: "Se requieren privilegios de administrador global para guardar resultados oficiales." }));
+      return;
+    }
+    const tournament = store.tournaments.find(item => item.id === "global");
+    if (!tournament) {
+      send(res, 404, JSON.stringify({ error: "Global tournament not found" }));
+      return;
+    }
+    const updatedAt = new Date().toISOString();
+    if (realResults.custom?.matches) {
+      const timing = tournamentTiming(tournament);
+      const delayMs = Number(timing.scoringDelayMinutesAfterResult || 0) * 60000;
+      const manualFinishedAt = new Date(Date.now() - delayMs - 60000).toISOString();
+      Object.values(realResults.custom.matches).forEach(match => {
+        if (!match || typeof match !== "object") return;
+        const homeScore = match.homeScore;
+        const awayScore = match.awayScore;
+        const hasScore =
+          homeScore !== "" && homeScore !== undefined &&
+          awayScore !== "" && awayScore !== undefined;
+        if (hasScore) {
+          match.finishedAt = manualFinishedAt;
+          // Derive and store the winner so scoreSubmission can count winnerHits correctly
+          const h = Number(homeScore);
+          const a = Number(awayScore);
+          if (Number.isFinite(h) && Number.isFinite(a)) {
+            match.winner = h === a ? "draw" : h > a ? (match.home || "home") : (match.away || "away");
+          }
+        }
+      });
+      realResults.updatedAt = updatedAt;
+    }
+    store.tournaments.forEach(t => {
+      t.realResults = realResults;
+      t.realResultsUpdatedAt = updatedAt;
+    });
+    writeStore(store);
+    // DEBUG: log what was saved
+    const savedMatches = Object.entries(realResults.custom?.matches || {});
+    console.log("[DEBUG save-results] Partidos con resultado guardado:",
+      savedMatches.filter(([, m]) => m.homeScore !== "" && m.homeScore !== undefined).map(([id, m]) => `${id}: ${m.homeScore}-${m.awayScore} winner=${m.winner}`)
+    );
+    send(res, 200, JSON.stringify({ ok: true }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function syncTournamentApiResults(store, tournament, options = {}) {
+  const code = safeText(options.competitionCode, 12) || footballDataCompetitionCode(tournament.templateId);
+  if (!code) {
+    throw new Error("No API competition code is configured for this template");
+  }
+  const season = safeText(options.season, 8) || process.env.FOOTBALL_DATA_SEASON || "";
+  const allApiMatches = await fetchFootballDataMatches({ code, season });
+  const apiFixtures = footballDataFixtures(allApiMatches);
+  if (apiFixtures.length && options.rebuildFixtures !== false) {
+    const template = tournamentTemplate(tournament);
+    tournament.customTemplate = {
+      ...(tournament.customTemplate || {}),
+      name: template.name,
+      mode: tournament.mode || template.mode,
+      teams: footballDataTeamsFromFixtures(apiFixtures),
+      fixtures: apiFixtures,
+      timing: tournamentTiming(tournament)
+    };
+  }
+  const fixtures = tournamentFixtures(tournament);
+  if (!fixtures.length) {
+    throw new Error("This tournament template has no fixture list to sync");
+  }
+  const now = Date.now();
+  const apiMatches = allApiMatches
+    .filter(match => match.status === "FINISHED" && dateIsNotInFuture(match.utcDate, now));
+  const updatedAt = new Date().toISOString();
+  const previous = tournament.realResults?.custom?.matches || {};
+  const matches = withoutFutureApiResults(previous, fixtures, now);
+  let imported = 0;
+  let matched = 0;
+  fixtures.forEach(fixtureItem => {
+    if (!dateIsNotInFuture(fixtureItem.startsAt, now)) return;
+    const apiMatch = matchFixtureToApiResult(fixtureItem, apiMatches);
+    if (!apiMatch) return;
+    matched += 1;
+    const fullTime = apiMatch.score?.fullTime || {};
+    const homeScore = Number(fullTime.home);
+    const awayScore = Number(fullTime.away);
+    if (!Number.isFinite(homeScore) || !Number.isFinite(awayScore)) return;
+    imported += 1;
+    const nextMatch = {
+      homeScore,
+      awayScore,
+      winner: homeScore === awayScore ? "draw" : homeScore > awayScore ? fixtureItem.home : fixtureItem.away,
+      source: "football-data.org",
+      apiMatchId: apiMatch.id,
+      status: apiMatch.status,
+      updatedAt,
+      finishedAt: ""
+    };
+    nextMatch.finishedAt = apiMatch.status === "FINISHED" ? apiResultFinishedAt(previous[fixtureItem.id], nextMatch, estimatedFinishedAt(apiMatch.utcDate || fixtureItem.startsAt, updatedAt)) : "";
+    matches[fixtureItem.id] = nextMatch;
+  });
+  tournament.realResults = {
+    ...(tournament.realResults || {}),
+    custom: {
+      ...(tournament.realResults?.custom || {}),
+      matches,
+      champion: tournament.realResults?.custom?.champion || ""
+    },
+    apiSource: {
+      provider: "football-data.org",
+      competitionCode: code,
+      season,
+      syncedAt: updatedAt,
+      fixtures: apiFixtures.length,
+      matched,
+      imported
+    },
+    updatedAt
+  };
+  tournament.realResultsUpdatedAt = updatedAt;
+  return { provider: "football-data.org", competitionCode: code, season, fixtures: apiFixtures.length, matched, imported };
+}
+
+async function handleImportApiResults(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const tournamentId = body.tournamentId || "global";
+    const tenant = tenantFromValue(body.tenantId);
+    const store = readStore();
+    if (tournamentId !== "global" || tenant) {
+      send(res, 403, JSON.stringify({ error: "Solo se pueden importar resultados en el torneo global." }));
+      return;
+    }
+    const tournament = store.tournaments.find(item => item.id === "global");
+    if (!tournament) {
+      send(res, 404, JSON.stringify({ error: "Global tournament not found" }));
+      return;
+    }
+    const globalUser = globalSessionUser(store, body.globalSessionToken);
+    if (!globalUser?.isAdmin && !globalUser?.isSuperAdmin) {
+      send(res, 403, JSON.stringify({ error: "Global admin required" }));
+      return;
+    }
+    const result = tournament.templateId === "argentina"
+      ? await syncArgentinaApiResults(store, tournament)
+      : await syncTournamentApiResults(store, tournament, body);
+    store.tournaments.forEach(t => {
+      t.realResults = tournament.realResults;
+      t.realResultsUpdatedAt = tournament.realResultsUpdatedAt;
+    });
+    writeStore(store);
+    send(res, 200, JSON.stringify({
+      ok: true,
+      ...result,
+      tournament: publicTournament(tournament)
+    }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleDeletePrivateTournament(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const store = readStore();
+    const admin = globalSessionUser(store, body.globalSessionToken || body.sessionToken);
+    if (!admin?.isSuperAdmin) {
+      send(res, 403, JSON.stringify({ error: "Superadmin required" }));
+      return;
+    }
+    const tournamentId = String(body.tournamentId || "").trim();
     const tournament = store.tournaments.find(item => item.id === tournamentId);
     if (!tournament) {
       send(res, 404, JSON.stringify({ error: "Tournament not found" }));
       return;
     }
-    if ((tenant && tournament.tenantId !== tenant.id) || (!tenant && tournament.tenantId)) {
+    if (tournament.isGlobal || tournament.id === "global") {
+      send(res, 400, JSON.stringify({ error: "Global tournament cannot be deleted" }));
+      return;
+    }
+    store.tournaments = store.tournaments.filter(item => item.id !== tournamentId);
+    Object.values(store.tournamentAccess || {}).forEach(access => {
+      if (access && typeof access === "object") delete access[tournamentId];
+    });
+    if (tournament.tenantId && store.tenants?.[tournament.tenantId]?.dynamic === true) {
+      delete store.tenants[tournament.tenantId];
+      delete TENANTS[tournament.tenantId];
+    }
+    writeStore(store);
+    send(res, 200, JSON.stringify({ ok: true, deleted: tournamentId }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleGetMiniTournaments(req, res) {
+  const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+  const match = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/minitournaments$/);
+  if (!match) {
+    send(res, 404, JSON.stringify({ error: "Invalid path" }));
+    return;
+  }
+  const tournamentId = match[1];
+  const store = readStore();
+  const tournament = findTournament(store, tournamentId);
+  if (!tournament) {
+    send(res, 404, JSON.stringify({ error: "Tournament not found" }));
+    return;
+  }
+  const globalSessionToken = url.searchParams.get("globalSessionToken");
+  const sessionToken = url.searchParams.get("sessionToken");
+  const tenantId = url.searchParams.get("tenantId");
+
+  let user = globalSessionToken ? globalSessionUser(store, globalSessionToken) : null;
+  if (!user && sessionToken && tenantId) {
+    const tenant = tenantFromValue(tenantId);
+    if (tenant) user = sessionUser(store, tenant, sessionToken);
+  }
+  const userEmail = user ? normalizeEmail(user.email) : null;
+
+  const minitournaments = tournament.minitournaments || [];
+
+  let userMiniTournaments = [];
+  let visibleMinitournaments = [];
+  if (userEmail) {
+    visibleMinitournaments = minitournaments.filter(mt => (mt.participants || []).includes(userEmail) || user.isAdmin || user.isSuperAdmin);
+    userMiniTournaments = minitournaments.filter(mt => (mt.participants || []).includes(userEmail)).map(mt => mt.id);
+  }
+
+  send(res, 200, JSON.stringify({
+    minitournaments: visibleMinitournaments,
+    userMiniTournaments,
+    currentMiniTournament: userMiniTournaments[0] || null
+  }));
+}
+
+async function handleCreateMiniTournament(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const store = readStore();
+    const tournament = findTournament(store, body.tournamentId);
+    if (!tournament) {
       send(res, 404, JSON.stringify({ error: "Tournament not found" }));
       return;
     }
-    if (tenant && !requireAdmin(req, res, tenant, body.adminKey, body.sessionToken, body.globalSessionToken)) return;
-    if (!tournament.isGlobal && tournament.creatorKey && body.creatorKey !== tournament.creatorKey) {
-      send(res, 403, JSON.stringify({ error: "Creator key is required to edit results" }));
+    const tenant = tenantFromValue(body.tenantId);
+    let user = globalSessionUser(store, body.globalSessionToken);
+    if (!user && tenant) {
+      user = sessionUser(store, tenant, body.sessionToken);
+    }
+    if (!user) {
+      send(res, 401, JSON.stringify({ error: "Login required" }));
       return;
     }
-    const updatedAt = new Date().toISOString();
-    if (realResults.custom?.matches) {
-      Object.values(realResults.custom.matches).forEach(match => {
-        if (!match || typeof match !== "object") return;
-        const hasScore = match.homeScore !== "" && match.awayScore !== "" && match.homeScore !== undefined && match.awayScore !== undefined;
-        if (hasScore && !match.finishedAt) match.finishedAt = updatedAt;
-      });
-      realResults.updatedAt = updatedAt;
-    }
-    tournament.realResults = realResults;
-    tournament.realResultsUpdatedAt = updatedAt;
+
+    if (!tournament.minitournaments) tournament.minitournaments = [];
+
+    const minitournament = {
+      id: `mini-${Date.now()}-${randomCode()}`,
+      name: safeText(body.name, 100),
+      description: safeText(body.description, 200),
+      code: normalizeCode(body.code),
+      createdAt: new Date().toISOString(),
+      creatorEmail: normalizeEmail(user.email),
+      participants: [normalizeEmail(user.email)]
+    };
+
+    tournament.minitournaments.push(minitournament);
     writeStore(store);
+
+    send(res, 200, JSON.stringify({ ok: true, minitournament }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleJoinMiniTournament(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const store = readStore();
+    const tournament = findTournament(store, body.tournamentId);
+    if (!tournament) {
+      send(res, 404, JSON.stringify({ error: "Tournament not found" }));
+      return;
+    }
+    const tenant = tenantFromValue(body.tenantId);
+    let user = globalSessionUser(store, body.globalSessionToken);
+    if (!user && tenant) {
+      user = sessionUser(store, tenant, body.sessionToken);
+    }
+    if (!user) {
+      send(res, 401, JSON.stringify({ error: "Login required" }));
+      return;
+    }
+
+    const name = safeText(body.name, 100).toLowerCase();
+    const code = normalizeCode(body.code);
+
+    const mt = (tournament.minitournaments || []).find(m => m.name.toLowerCase() === name && m.code === code);
+    if (!mt) {
+      send(res, 404, JSON.stringify({ error: "Nombre o contraseña incorrectos" }));
+      return;
+    }
+
+    if (!mt.participants) mt.participants = [];
+    const email = normalizeEmail(user.email);
+    if (!mt.participants.includes(email)) {
+      mt.participants.push(email);
+      writeStore(store);
+    }
+
+    send(res, 200, JSON.stringify({ ok: true, minitournamentId: mt.id }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleDeleteMiniTournament(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const store = readStore();
+    const tournament = findTournament(store, body.tournamentId);
+    if (!tournament) {
+      send(res, 404, JSON.stringify({ error: "Tournament not found" }));
+      return;
+    }
+    const tenant = tenantFromValue(body.tenantId);
+    let user = globalSessionUser(store, body.globalSessionToken);
+    if (!user && tenant) {
+      user = sessionUser(store, tenant, body.sessionToken);
+    }
+    if (!user) {
+      send(res, 401, JSON.stringify({ error: "Login required" }));
+      return;
+    }
+
+    const mtIndex = (tournament.minitournaments || []).findIndex(m => m.id === body.minitournamentId);
+    if (mtIndex === -1) {
+      send(res, 404, JSON.stringify({ error: "Minitournament not found" }));
+      return;
+    }
+
+    const mt = tournament.minitournaments[mtIndex];
+    if (mt.creatorEmail !== normalizeEmail(user.email) && !user.isAdmin && !user.isSuperAdmin) {
+      send(res, 403, JSON.stringify({ error: "Solo el creador o un administrador puede eliminar el minitorneo" }));
+      return;
+    }
+
+    tournament.minitournaments.splice(mtIndex, 1);
+    writeStore(store);
+
     send(res, 200, JSON.stringify({ ok: true }));
   } catch (error) {
     send(res, 500, JSON.stringify({ error: error.message }));
   }
+}
+
+async function handleRemoveMiniTournamentUser(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const store = readStore();
+    const tournament = findTournament(store, body.tournamentId);
+    if (!tournament) {
+      send(res, 404, JSON.stringify({ error: "Tournament not found" }));
+      return;
+    }
+    const tenant = tenantFromValue(body.tenantId);
+    let user = globalSessionUser(store, body.globalSessionToken);
+    if (!user && tenant) {
+      user = sessionUser(store, tenant, body.sessionToken);
+    }
+    if (!user) {
+      send(res, 401, JSON.stringify({ error: "Login required" }));
+      return;
+    }
+
+    const mt = (tournament.minitournaments || []).find(m => m.id === body.minitournamentId);
+    if (!mt) {
+      send(res, 404, JSON.stringify({ error: "Minitournament not found" }));
+      return;
+    }
+
+    if (mt.creatorEmail !== normalizeEmail(user.email) && !user.isAdmin && !user.isSuperAdmin) {
+      send(res, 403, JSON.stringify({ error: "Solo el creador o un administrador puede eliminar usuarios" }));
+      return;
+    }
+
+    const userToRemove = normalizeEmail(body.userEmailToRemove);
+    if (!mt.participants) mt.participants = [];
+    mt.participants = mt.participants.filter(email => email !== userToRemove);
+
+    writeStore(store);
+
+    send(res, 200, JSON.stringify({ ok: true }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+function handleSelectMiniTournament(req, res) {
+  send(res, 200, JSON.stringify({ ok: true }));
 }
 
 function handleLeaderboard(req, res) {
@@ -2660,6 +4171,7 @@ function handleLeaderboard(req, res) {
   const tournamentId = url.searchParams.get("tournamentId") || "global";
   const tenant = tenantFromValue(url.searchParams.get("tenant"));
   const area = normalizeAreaName(url.searchParams.get("area"));
+  const minitournamentId = url.searchParams.get("minitournamentId");
   const store = readStore();
   const tournament = store.tournaments.find(item => item.id === tournamentId);
   if (!tournament) {
@@ -2678,23 +4190,101 @@ function handleLeaderboard(req, res) {
       return;
     }
   }
-  const leaderboard = (tournament.submissions || [])
-    .filter(submission => !area || areaId(submission.player?.area) === areaId(area))
+  let mtParticipants = null;
+  let minitournamentName = null;
+  if (minitournamentId && tournament.minitournaments) {
+    const mt = tournament.minitournaments.find(m => m.id === minitournamentId);
+    if (mt) {
+      mtParticipants = mt.participants || [];
+      minitournamentName = mt.name;
+    }
+  }
+  let leaderboard = (tournament.submissions || [])
+    .filter(submission => {
+      if (!mtParticipants) return true;
+      return mtParticipants.includes(normalizeEmail(submission.player?.email));
+    })
     .map(submission => ({
       player: {
         name: submission.player?.name || "",
-        area: submission.player?.area || ""
+        area: submission.player?.area || "",
+        email: submission.player?.email || ""
       },
       createdAt: submission.createdAt,
       champion: submission.prediction?.custom?.champion || submission.prediction?.winners?.m104 || "",
-      score: scoreSubmission(submission.prediction, tournament.realResults, tournament.scoring, tournament)
-    }))
-    .sort((a, b) => b.score.points - a.score.points || new Date(a.createdAt) - new Date(b.createdAt));
+      score: scoreSubmission(submission.prediction, tournament.realResults, tournament.scoring, tournament),
+      prediction: submission.prediction
+    }));
+
+  if (mtParticipants) {
+    const existingEmails = leaderboard.map(row => normalizeEmail(row.player.email));
+    mtParticipants.forEach(email => {
+      if (!existingEmails.includes(email)) {
+        let name = "Jugador sin prode";
+        let area = "";
+        if (tenant && store.tenants?.[tenant.id]?.users?.[email]) {
+          name = store.tenants[tenant.id].users[email].name || name;
+          area = store.tenants[tenant.id].users[email].area || area;
+        } else if (store.users?.[email]) {
+          name = store.users[email].name || name;
+        }
+        leaderboard.push({
+          player: { name, area, email },
+          createdAt: new Date().toISOString(),
+          champion: "",
+          score: { points: 0, groupHits: 0, winnerHits: 0, exactScoreHits: 0, championHit: false },
+          prediction: null
+        });
+      }
+    });
+  } else {
+    const existingEmails = leaderboard.map(row => normalizeEmail(row.player.email));
+    if (tenant) {
+      const tenantData = store.tenants?.[tenant.id];
+      if (tenantData && tenantData.users) {
+        Object.values(tenantData.users).forEach(user => {
+          const email = normalizeEmail(user.email);
+          if (!existingEmails.includes(email) && user.active !== false) {
+            leaderboard.push({
+              player: { name: user.name, area: user.area || "", email },
+              createdAt: user.createdAt || new Date().toISOString(),
+              champion: "",
+              score: { points: 0, groupHits: 0, winnerHits: 0, exactScoreHits: 0, championHit: false },
+              prediction: null
+            });
+          }
+        });
+      }
+    } else if (tournament.isGlobal) {
+      Object.values(store.users || {}).forEach(user => {
+        const email = normalizeEmail(user.email);
+        if (!existingEmails.includes(email) && user.active !== false) {
+          leaderboard.push({
+            player: { name: user.name, area: "Global", email },
+            createdAt: user.createdAt || new Date().toISOString(),
+            champion: "",
+            score: { points: 0, groupHits: 0, winnerHits: 0, exactScoreHits: 0, championHit: false },
+            prediction: null
+          });
+        }
+      });
+    }
+  }
+
+  leaderboard.sort((a, b) => {
+    const aHas = a.prediction !== null;
+    const bHas = b.prediction !== null;
+    if (aHas && !bHas) return -1;
+    if (!aHas && bHas) return 1;
+    return b.score.points - a.score.points || new Date(a.createdAt) - new Date(b.createdAt);
+  });
+
   send(res, 200, JSON.stringify({
     tournament: publicTournament(tournament),
     area,
     hasRealResults: Boolean(tournament.realResults),
-    leaderboard
+    leaderboard,
+    minitournamentName
   }));
 }
 
@@ -2704,17 +4294,48 @@ function handleAdminSummary(req, res) {
   const adminKey = url.searchParams.get("adminKey");
   const sessionToken = url.searchParams.get("sessionToken");
   const globalSessionToken = url.searchParams.get("globalSessionToken");
+  const store = readStore();
   if (!tenant) {
-    send(res, 404, JSON.stringify({ error: "Company not found" }));
+    const admin = requireGlobalAdmin(req, res, store, globalSessionToken);
+    if (!admin) return;
+    const users = Object.values(store.users || {})
+      .map(user => {
+        const role = userRole(null, user);
+        return {
+          name: user.name || "",
+          email: user.email || "",
+          area: "Global",
+          active: user.active !== false,
+          role,
+          isAdmin: role === "admin" || role === "superadmin",
+          isSuperAdmin: role === "superadmin",
+          registered: true,
+          registeredAt: user.createdAt || "",
+          updatedAt: user.updatedAt || "",
+          hasPrediction: false,
+          predictionUpdatedAt: "",
+          completedPhases: []
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name) || a.email.localeCompare(b.email));
+    send(res, 200, JSON.stringify({
+      scope: "global",
+      stats: {
+        users: users.length,
+        predictions: store.tournaments.reduce((total, tournament) => total + (tournament.submissions?.length || 0), 0),
+        areas: store.tournaments.length
+      },
+      tournaments: (store.tournaments || []).map(tournament => publicLobbyTournament(store, tournament, admin)),
+      users
+    }));
     return;
   }
   if (!requireAdmin(req, res, tenant, adminKey, sessionToken, globalSessionToken)) return;
-  const store = readStore();
   const tenantData = tenantStore(store, tenant.id);
   const tournament = store.tournaments.find(item => item.id === tenantTournamentId(tenant.id));
   const submissions = tournament?.submissions || [];
   const byEmail = new Map(submissions.map(submission => [normalizeEmail(submission.player?.email), submission]));
-    const users = Object.values(tenantData.users || {})
+  const users = Object.values(tenantData.users || {})
     .map(user => {
       const submission = byEmail.get(normalizeEmail(user.email));
       const role = userRole(tenant.id, user);
@@ -2767,12 +4388,68 @@ function handleAdminSummary(req, res) {
   }));
 }
 
+let apiResultSyncRunning = false;
+
+async function syncApiResultsForAllTournaments() {
+  if (apiResultSyncRunning) return;
+  apiResultSyncRunning = true;
+  try {
+    const store = readStore();
+    let imported = 0;
+    let fixtures = 0;
+    const globalTournament = store.tournaments.find(t => t.id === "global");
+    if (globalTournament && globalTournament.templateId !== "worldcup-2026") {
+      try {
+        let result = null;
+        if (globalTournament.templateId === "argentina") {
+          result = await syncArgentinaApiResults(store, globalTournament);
+        } else if (footballDataCompetitionCode(globalTournament.templateId) && (process.env.FOOTBALL_DATA_TOKEN || process.env.FOOTBALLDATA_TOKEN)) {
+          result = await syncTournamentApiResults(store, globalTournament);
+        }
+        if (result) {
+          imported += result.imported || 0;
+          fixtures += result.fixtures || 0;
+          store.tournaments.forEach(t => {
+            t.realResults = globalTournament.realResults;
+            t.realResultsUpdatedAt = globalTournament.realResultsUpdatedAt;
+          });
+        }
+      } catch (error) {
+        console.warn(`No se pudo sincronizar global: ${error.message}`);
+      }
+    }
+    for (const tournament of store.tournaments || []) {
+      if (tournament.id === "global") continue;
+      if (tournament.templateId === "worldcup-2026") continue;
+      try {
+        let result = null;
+        if (tournament.templateId === "argentina") {
+          result = await syncArgentinaApiResults(store, tournament);
+        } else {
+          if (!footballDataCompetitionCode(tournament.templateId)) continue;
+          if (!process.env.FOOTBALL_DATA_TOKEN && !process.env.FOOTBALLDATA_TOKEN) continue;
+          result = await syncTournamentApiResults(store, tournament);
+        }
+        imported += result.imported || 0;
+        fixtures += result.fixtures || 0;
+      } catch (error) {
+        console.warn(`No se pudo sincronizar ${tournament.id}: ${error.message}`);
+      }
+    }
+    if (imported > 0 || fixtures > 0) writeStore(store);
+    console.log(`Sync API resultados: ${imported} resultados importados, ${fixtures} fixtures sincronizados`);
+  } finally {
+    apiResultSyncRunning = false;
+  }
+}
+
 function serveStatic(req, res) {
   const cleanUrl = decodeURIComponent(req.url.split("?")[0]);
   const isCompanyView = /^\/(?:prode\/)?empresa\/[^/.]+\/?$/.test(cleanUrl);
   const isProdeView = cleanUrl === "/prode" || cleanUrl === "/prode/" || cleanUrl === "/prode/global" || cleanUrl === "/prode/global/";
-  const staticMatch = cleanUrl.match(/^\/prode-static\/(.+)$/);
-  const requested = req.url === "/" || isProdeView || cleanUrl.startsWith("/join/") || cleanUrl.startsWith("/continuar/") || isCompanyView
+  const staticMatch = cleanUrl.match(/^\/(?:prode-static|prode-global-static)\/(.+)$/);
+  const isResetPasswordView = cleanUrl.startsWith("/reset-password/") || cleanUrl.startsWith("/prode/reset-password/") || cleanUrl.startsWith("/prode/global/reset-password/");
+  const requested = req.url === "/" || isProdeView || cleanUrl.startsWith("/join/") || cleanUrl.startsWith("/continuar/") || isResetPasswordView || isCompanyView
     ? "/index.html"
     : staticMatch
       ? `/${staticMatch[1]}`
@@ -2787,11 +4464,19 @@ function serveStatic(req, res) {
       send(res, 404, "Not found", "text/plain; charset=utf-8");
       return;
     }
-    send(res, 200, data, MIME[path.extname(filePath)] || "application/octet-stream");
+    res.writeHead(200, {
+      "Content-Type": MIME[path.extname(filePath)] || "application/octet-stream",
+      "Cache-Control": "no-cache"
+    });
+    res.end(data);
   });
 }
 
 const server = http.createServer((req, res) => {
+  if (req.url.startsWith("/prode/api/")) {
+    req.url = req.url.replace(/^\/prode\/api\//, "/api/");
+  }
+
   if (req.method === "GET" && req.url === "/healthz") {
     send(res, 200, JSON.stringify({ ok: true }));
     return;
@@ -2843,6 +4528,22 @@ const server = http.createServer((req, res) => {
     handleGlobalLogin(req, res);
     return;
   }
+  if (req.method === "POST" && req.url === "/api/request-password-reset") {
+    handleRequestPasswordReset(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/reset-password") {
+    handleResetPassword(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/registrar-global") {
+    handleRegistrarGlobal(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/registrar-company") {
+    handleRegistrarCompany(req, res);
+    return;
+  }
   if (req.method === "GET" && req.url.startsWith("/api/global-session")) {
     handleGlobalSession(req, res);
     return;
@@ -2859,12 +4560,20 @@ const server = http.createServer((req, res) => {
     handleCreateLobbyTenant(req, res);
     return;
   }
+  if (req.method === "POST" && req.url === "/api/change-password") {
+    handleChangePassword(req, res);
+    return;
+  }
   if (req.method === "GET" && req.url.startsWith("/api/company-session")) {
     handleCompanySession(req, res);
     return;
   }
   if (req.method === "POST" && req.url === "/api/admin-users") {
     handleAdminUpdateUser(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/admin-users/delete") {
+    handleAdminDeleteUser(req, res);
     return;
   }
   if (req.method === "POST" && req.url === "/api/admin-theme") {
@@ -2883,12 +4592,20 @@ const server = http.createServer((req, res) => {
     handleDailyGamePlay(req, res);
     return;
   }
+  if (req.method === "POST" && req.url === "/api/company-areas/update") {
+    handleUpdateCompanyArea(req, res);
+    return;
+  }
   if (req.method === "POST" && req.url === "/api/company-areas") {
     handleCreateCompanyArea(req, res);
     return;
   }
   if (req.method === "GET" && req.url.startsWith("/api/admin-summary")) {
     handleAdminSummary(req, res);
+    return;
+  }
+  if (req.method === "GET" && /^\/api\/tournaments\/[^/]+\/minitournaments/.test(req.url)) {
+    handleGetMiniTournaments(req, res);
     return;
   }
   if (req.method === "GET" && req.url.startsWith("/api/tournaments")) {
@@ -2911,10 +4628,40 @@ const server = http.createServer((req, res) => {
     handleSaveRealResults(req, res);
     return;
   }
+  if (req.method === "POST" && req.url === "/api/import-api-results") {
+    handleImportApiResults(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/minitournaments") {
+    handleCreateMiniTournament(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/minitournaments/join") {
+    handleJoinMiniTournament(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/minitournaments/delete") {
+    handleDeleteMiniTournament(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/minitournaments/remove-user") {
+    handleRemoveMiniTournamentUser(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/minitournaments/select") {
+    handleSelectMiniTournament(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/delete-private-tournament") {
+    handleDeletePrivateTournament(req, res);
+    return;
+  }
   if (req.method === "GET" && req.url.startsWith("/api/leaderboard")) {
     handleLeaderboard(req, res);
     return;
   }
+  if (req.method === "POST" && req.url === "/api/request-verification") { handleRequestVerification(req, res); return; }
+  if (req.method === "POST" && req.url === "/api/verify-code") { handleVerifyCode(req, res); return; }
   serveStatic(req, res);
 
 });
@@ -2926,6 +4673,8 @@ async function startServer() {
     console.log(`MySQL conectado en ${DB_CONFIG.host}:${DB_CONFIG.port}/${DB_CONFIG.database} con usuario ${DB_CONFIG.user}`);
     server.listen(PORT, () => {
       console.log(`Prode Mundial listo en http://localhost:${PORT}`);
+      setTimeout(() => syncApiResultsForAllTournaments().catch(error => console.warn(`Sync API resultados fallo: ${error.message}`)), 5000);
+      setInterval(() => syncApiResultsForAllTournaments().catch(error => console.warn(`Sync API resultados fallo: ${error.message}`)), Number(process.env.API_RESULTS_SYNC_INTERVAL_MS || 1800000));
     });
   } catch (error) {
     console.error("No se pudo iniciar porque MySQL es obligatorio:");

@@ -1,575 +1,786 @@
 <!doctype html>
 <html lang="es">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Prode Mundial 2026</title>
-    <link rel="stylesheet" href="/prode-static/styles.css">
-  </head>
-  <body>
-    <a class="brand-watermark" href="/" aria-label="NBF Soft">
-      <img src="/prode-static/NBFSOFT.png" alt="NBF Soft">
-    </a>
-    <header class="topbar">
-      <div>
-        <p class="eyebrow" id="brandEyebrow">Mundial 2026</p>
-        <h1 id="brandTitle">Prode de cruces</h1>
-        <p class="brand-description" id="brandDescription" hidden></p>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prode Mundial 2026</title>
+  <link rel="manifest" href="/prode-global-static/manifest.json?v=20260522">
+  <meta name="theme-color" content="#0b0f0d">
+  <link rel="icon" type="image/png" href="/prode-global-static/BAIT.png?v=20260522">
+  <link rel="apple-touch-icon" href="/prode-global-static/BAIT.png?v=20260522">
+  <meta name="apple-mobile-web-app-title" content="Prode BAIT">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="stylesheet" href="/prode-global-static/styles.css?v=20260521-2">
+</head>
+
+<body>
+  <a class="brand-watermark" href="/" aria-label="NBF Soft">
+    <img src="/prode-global-static/BAIT.png" alt="Bait Soft">
+  </a>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow" id="brandEyebrow">Mundial 2026</p>
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <img id="brandLogo" alt="Logo" style="max-height: 85px; border-radius: 6px;" hidden>
+        <h1 id="brandTitle" style="margin: 0;">Prode de cruces</h1>
       </div>
+      <p class="brand-description" id="brandDescription" hidden></p>
+    </div>
+    <div style="display: flex; align-items: center; gap: 1rem;">
       <nav class="tabs" aria-label="Secciones">
         <button class="tab is-active" data-view="inicio">Inicio</button>
         <button class="tab" data-view="lobby">Lobby</button>
         <button class="tab" data-view="predictor">Pronosticar</button>
         <button class="tab" data-view="games">Minijuegos</button>
-        <button class="tab" data-view="tournaments">Torneos</button>
+        <button class="tab" data-view="minitournaments">Minitorneos</button>
+        <button class="tab" data-view="tournaments" hidden>Torneos</button>
         <button class="tab" data-view="admin" data-admin-tab hidden>Administracion</button>
         <button class="tab" data-view="live">Resultados en vivo</button>
-        <button class="tab" id="topbarSessionAction" type="button" hidden>Ingresar</button>
       </nav>
-    </header>
-
-    <main>
-      <section class="summary-band">
-        <div>
-          <img class="summary-image" src="/prode-static/th.webp" alt="">
-          <span>48 selecciones</span>
-          <strong>12 grupos</strong>
-        </div>
-        <div>
-          <img class="summary-image" src="/prode-static/OIP.webp" alt="">
-          <span>Clasifican</span>
-          <strong>1ro, 2do y 8 mejores 3ros</strong>
-        </div>
-        <div>
-          <img class="summary-image" src="/prode-static/descargar.webp" alt="">
-          <span>Final</span>
-          <strong>19 de julio de 2026</strong>
-        </div>
-        <div>
-          <span>Bonus</span>
-          <strong>+2 por resultado exacto</strong>
-        </div>
-      </section>
-
-      <section class="view is-visible" id="inicio">
-        <div class="home-matches-grid">
-          <article class="matchday-card home-status-card" id="homeLastMatchCard">
-            <div class="matchday-title">
-              <span>Aun no comenzo</span>
-              <strong>Ultimo partido</strong>
-            </div>
-            <p class="empty home-empty">Ningun partido finalizado</p>
-          </article>
-          <article class="matchday-card home-status-card" id="homeNextMatchCard">
-            <div class="matchday-title">
-              <span>Partido 1 - 11 de Jun</span>
-              <strong>Proximo partido</strong>
-            </div>
-            <div class="home-fixture-line">
-              <span class="team-badge"><span class="flag-placeholder" style="background-image:url('https://flagcdn.com/w40/mx.png')"></span><span>Mexico</span></span>
-              <b>vs</b>
-              <span class="team-badge"><span class="flag-placeholder" style="background-image:url('https://flagcdn.com/w40/za.png')"></span><span>Sudafrica</span></span>
-            </div>
-            <small class="match-schedule">16:00 hs - Estadio Ciudad de Mexico</small>
-          </article>
-        </div>
-
-        <section class="home-rules-panel">
-          <div>
-            <h2>Reglas del Prode</h2>
-            <p>Asi sumas puntos en tus torneos globales o de empresa:</p>
-            <ul class="home-rules-list">
-              <li><strong>Ganador de partido (3 Puntos):</strong> Por adivinar que equipo gana un partido o si termina en empate.</li>
-              <li><strong>Resultado exacto (2 Puntos extra):</strong> Si ademas del ganador acertas los goles exactos de ambos equipos (sumando 5 puntos en total).</li>
-              <li><strong>Campeon (10 Puntos):</strong> Bonus especial si adivinas correctamente al campeon del torneo.</li>
-            </ul>
-          </div>
-          <button id="btnGoToPredictor" type="button">Empezar</button>
-        </section>
-      </section>
-
-      <section class="view" id="games">
-        <section class="home-games game-center">
-          <div class="section-head compact">
-            <div>
-              <h2 id="dailyGamesTitle">Centro de minijuegos</h2>
-              <p id="dailyGamesIntro">Desafios rapidos para sumar ritmo al prode diario.</p>
-            </div>
-          </div>
-          <div class="game-center-meta" id="dailyGamesMeta"></div>
-          <div class="daily-games" id="dailyGames"></div>
-        </section>
-      </section>
-
-      <section class="view" id="lobby">
-        <div class="section-head">
-          <div>
-            <h2>Lobby global</h2>
-            <p>Ingresa una vez y desbloquea los torneos privados con su clave.</p>
-          </div>
-        </div>
-        <section class="global-login" id="globalLogin">
-          <div class="company-login-card">
-            <img class="login-brand-logo" src="/prode-static/NBFSOFT.png" alt="NBF Soft">
-            <p class="login-kicker">Prode Mundial 2026</p>
-            <h2>Iniciar Sesion</h2>
-            <p>Ingresa con tu usuario global para ver y desbloquear tus torneos.</p>
-            <form class="company-login-form" id="globalLoginForm">
-              <label>
-                Correo Electronico / DNI
-                <input id="globalLoginEmail" autocomplete="username" placeholder="nombre@email.com o DNI">
-              </label>
-              <label>
-                Contrasena
-                <input id="globalLoginPassword" type="password" autocomplete="current-password" placeholder="********">
-              </label>
-              <button type="submit">Ingresar</button>
-              <button class="secondary login-create-toggle" type="button" id="openCreateGlobalUser">Crear usuario</button>
-            </form>
-            <div class="form-status" id="globalLoginStatus" hidden></div>
-          </div>
-        </section>
-        <div class="modal-backdrop" id="createGlobalUserModal" hidden>
-          <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="createGlobalUserTitle">
-            <div class="section-head compact">
-              <div>
-                <h2 id="createGlobalUserTitle">Crear usuario global</h2>
-                <p>Este usuario queda guardado para acceder al lobby y a tus torneos habilitados.</p>
+      <div class="session-tab" id="topbarSessionAction" style="position: relative;" hidden>
+        <button class="avatar-button" type="button" id="topbarAvatar" aria-label="Abrir menú de usuario">
+          <img src="/prode-global-static/BAIT.png" alt="BAIT">
+        </button>
+        <div id="sessionDropdown" class="session-dropdown" style="z-index: 9999;" hidden>
+          <div class="session-dropdown-actions">
+            <button id="dropdownInfoBtn" class="secondary">Información</button>
+            <button id="dropdownLobbyBtn" class="secondary">Torneos y Lobby</button>
+            <div class="user-rewards-section" style="margin-top: 15px; border-top: 1px solid var(--line); padding-top: 15px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <strong>Tus Fan Points:</strong>
+                <span id="dpUserFanPoints" style="color: var(--accent); font-weight: 900; font-size: 1.2rem;">0</span>
               </div>
-              <button class="secondary icon-close" type="button" id="closeCreateGlobalUser">Cerrar</button>
-            </div>
-            <form class="company-login-form" id="createGlobalUserForm">
-              <label>
-                Mail / DNI
-                <input id="createGlobalUserEmail" autocomplete="username" placeholder="mail@email.com o DNI">
-              </label>
-              <label>
-                Contrasena
-                <input id="createGlobalUserPassword" type="password" autocomplete="new-password" placeholder="********">
-              </label>
-              <label>
-                Nombre
-                <input id="createGlobalUserName" autocomplete="name" placeholder="Nombre y apellido">
-              </label>
-              <button type="submit">Crear e ingresar</button>
-            </form>
-            <div class="form-status" id="createGlobalUserStatus" hidden></div>
-          </section>
-        </div>
-        <div class="modal-backdrop" id="unlockTournamentModal" hidden>
-          <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="unlockTournamentTitle">
-            <div class="section-head compact">
-              <div>
-                <h2 id="unlockTournamentTitle">Desbloquear torneo</h2>
-                <p id="unlockTournamentIntro">Ingresa la clave para habilitar el acceso permanente.</p>
+              
+              <p style="font-size: 0.8rem; margin: 10px 0 5px;">Tienda de Bordes</p>
+              <div class="rewards-store">
+                <div class="reward-card">
+                  <div class="preview-border border-gold"></div>
+                  <small>Oro</small>
+                  <button class="mini-button" onclick="buyBorder('gold', 100)" type="button">100 FP</button>
+                </div>
+                <div class="reward-card">
+                  <div class="preview-border border-neon"></div>
+                  <small>Neón</small>
+                  <button class="mini-button" onclick="buyBorder('neon', 300)" type="button">300 FP</button>
+                </div>
+                <div class="reward-card">
+                  <div class="preview-border border-fire"></div>
+                  <small>Fuego</small>
+                  <button class="mini-button" onclick="buyBorder('fire', 500)" type="button">500 FP</button>
+                </div>
               </div>
-              <button class="secondary icon-close" type="button" id="closeUnlockTournament">Cerrar</button>
             </div>
-            <form class="company-login-form" id="unlockTournamentForm">
-              <label>
-                Clave del torneo
-                <input id="unlockTournamentPassword" type="password" autocomplete="off" placeholder="EMPRESA-ACME">
-              </label>
-              <button type="submit">Desbloquear</button>
-            </form>
-            <div class="form-status" id="unlockTournamentStatus" hidden></div>
-          </section>
-        </div>
-        <div class="company-session" id="globalSession" hidden>
-          <span id="globalSessionText"></span>
-          <button class="secondary" type="button" id="logoutGlobalUser">Cerrar sesion global</button>
-        </div>
-        <div class="lobby-admin-actions" id="lobbyAdminActions" hidden>
-          <button type="button" id="openCreateLobbyTenant">Crear torneo por plantilla</button>
-        </div>
-        <div class="modal-backdrop" id="createLobbyTenantModal" hidden>
-          <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="createLobbyTenantTitle">
-            <div class="section-head compact">
-              <div>
-                <h2 id="createLobbyTenantTitle">Crear torneo</h2>
-                <p>Usa una plantilla existente para crear una nueva empresa con prode, juegos y ranking.</p>
-              </div>
-              <button class="secondary icon-close" type="button" id="closeCreateLobbyTenant">Cerrar</button>
+            <button id="dropdownGlobalBtn" class="secondary" hidden>Prode global</button>
+            <button id="dropdownLogoutBtn" class="secondary danger">Cerrar sesión</button>
+          </div>
+          <div id="dropdownInfoPanel" class="dropdown-info-panel" hidden>
+            <div class="user-info-display" style="margin-bottom: 1rem; font-size: 0.9em; text-align: left;">
+              <p style="margin: 0.25rem 0;"><strong>Nombre:</strong> <span id="dpUserName"></span></p>
+              <p style="margin: 0.25rem 0;"><strong>Email:</strong> <span id="dpUserEmail"></span></p>
+              <p style="margin: 0.25rem 0;" id="dpUserAreaContainer"><strong>Área:</strong> <span id="dpUserArea"></span></p>
             </div>
-            <form class="company-login-form" id="createLobbyTenantForm">
-              <label>
-                Nombre de empresa
-                <input id="createLobbyTenantName" placeholder="Ej: Cliente Nuevo">
-              </label>
-              <label>
-                ID de URL
-                <input id="createLobbyTenantId" placeholder="cliente-nuevo">
-              </label>
-              <label>
-                Plantilla
-                <select id="createLobbyTenantTemplate">
-                  <option value="acme">ACME</option>
-                  <option value="norte">Setup Soluciones IT</option>
-                  <option value="sur">Setup SRL</option>
-                </select>
-              </label>
-              <label>
-                Clave del torneo
-                <input id="createLobbyTenantCode" placeholder="EMPRESA-CLIENTE">
-              </label>
-              <button type="submit">Crear torneo</button>
+            <form id="dropdownChangePasswordForm" class="company-login-form">
+              <table class="info-table">
+                <tr>
+                  <td>Contraseña actual</td>
+                  <td><input id="dpCurrentPassword" type="password" autocomplete="current-password"></td>
+                </tr>
+                <tr>
+                  <td>Nueva contraseña</td>
+                  <td><input id="dpNewPassword" type="password" autocomplete="new-password"></td>
+                </tr>
+                <tr>
+                  <td>Confirmar nueva</td>
+                  <td><input id="dpConfirmNewPassword" type="password" autocomplete="new-password"></td>
+                </tr>
+              </table>
+              <div class="form-actions"><button type="submit">Guardar</button></div>
+              <div class="form-status" id="dpChangePasswordStatus" hidden></div>
             </form>
-            <div class="form-status" id="createLobbyTenantStatus" hidden></div>
-          </section>
+          </div>
         </div>
-        <div class="tournament-list lobby-list" id="globalTournamentLobby"></div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="summary-band">
+      <div>
+        <img class="summary-image" src="/prode-global-static/th.webp" alt="">
+        <span>48 selecciones</span>
+        <strong>12 grupos</strong>
+      </div>
+      <div>
+        <img class="summary-image" src="/prode-global-static/OIP.webp" alt="">
+        <span>Clasifican</span>
+        <strong>1ro, 2do y 8 mejores 3ros</strong>
+      </div>
+      <div>
+        <img class="summary-image" src="/prode-global-static/descargar.webp" alt="">
+        <span>Final</span>
+        <strong>19 de julio de 2026</strong>
+      </div>
+      <div>
+        <span>Bonus</span>
+        <strong>+2 por resultado exacto</strong>
+      </div>
+    </section>
+
+    <section class="view is-visible" id="inicio">
+      <div class="home-matches-grid">
+        <article class="matchday-card home-status-card" id="homeLastMatchCard">
+          <div class="matchday-title">
+            <span>Aun no comenzo</span>
+            <strong>Ultimo partido</strong>
+          </div>
+          <p class="empty home-empty">Ningun partido finalizado</p>
+        </article>
+        <article class="matchday-card home-status-card" id="homeNextMatchCard">
+          <div class="matchday-title">
+            <span>Partido 1 - 11 de Jun</span>
+            <strong>Proximo partido</strong>
+          </div>
+          <div class="home-fixture-line">
+            <span class="team-badge"><span class="flag-placeholder"
+                style="background-image:url('https://flagcdn.com/w40/mx.png')"></span><span>Mexico</span></span>
+            <b>vs</b>
+            <span class="team-badge"><span class="flag-placeholder"
+                style="background-image:url('https://flagcdn.com/w40/za.png')"></span><span>Sudafrica</span></span>
+          </div>
+          <small class="match-schedule">16:00 hs - Estadio Ciudad de Mexico</small>
+        </article>
+      </div>
+
+      <section class="home-rules-panel">
+        <div>
+          <h2>Reglas del Prode</h2>
+          <p>Asi sumas puntos en tus torneos globales o de empresa:</p>
+          <ul class="home-rules-list">
+            <li><strong>Ganador de partido (3 Puntos):</strong> Por adivinar que equipo gana un partido o si termina en
+              empate.</li>
+            <li><strong>Resultado exacto (2 Puntos extra):</strong> Si ademas del ganador acertas los goles exactos de
+              ambos equipos (sumando 5 puntos en total).</li>
+            <li><strong>Campeon (10 Puntos):</strong> Bonus especial si adivinas correctamente al campeon del torneo.
+            </li>
+            <li><strong>Por Ejemplo:</strong> En un partido en el que Argentina <strong>Gana 2 a 0</strong> a Jordania,
+              <ul>
+                <li>Si tu pronostico fue que el partido empataba o que ganaba Jordania, <strong>no sumas puntos.</strong></li>
+                <li>Si tu pronostico fue de 2-1 que gana Argentina, <strong>sumas 3 puntos.</strong></li>
+                <li>Si tu pronostico fue 2-0 que gana Argentina, <strong>sumas 5 puntos</strong> (3 por el ganador + 2 por el resultado exacto).</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+        <button id="btnGoToPredictor" type="button">Empezar</button>
       </section>
+    </section>
 
-      <section class="view" id="predictor">
-        <div class="lock-banner" id="lockBanner" hidden></div>
-        <section class="company-login" id="companyLogin" hidden>
-          <div class="company-login-card">
-            <img class="login-brand-logo" src="/prode-static/NBFSOFT.png" alt="NBF Soft">
-            <p class="login-kicker">Prode Mundial 2026</p>
-            <h2>Iniciar Sesion</h2>
-            <p>Ingresa con tu usuario de empresa para cargar y seguir tu prode.</p>
-            <form class="company-login-form" id="companyLoginForm">
-              <label>
-                Correo Electronico / DNI
-                <input id="loginEmail" autocomplete="username" placeholder="nombre@empresa.com o DNI" autofocus>
-              </label>
-              <label>
-                Contrasena
-                <input id="loginPassword" type="password" autocomplete="current-password" placeholder="********">
-              </label>
-              <button type="submit">Ingresar</button>
-              <button class="secondary login-create-toggle" type="button" id="openCreateUser">Crear usuario</button>
-            </form>
-            <datalist id="companyAreaOptions"></datalist>
-            <div class="form-status" id="companyLoginStatus" hidden></div>
-          </div>
-        </section>
-        <div class="modal-backdrop" id="createUserModal" hidden>
-          <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="createUserTitle">
-            <div class="section-head compact">
-              <div>
-                <h2 id="createUserTitle">Crear usuario</h2>
-                <p>Completa tus datos para ingresar al prode de la empresa.</p>
-              </div>
-              <button class="secondary icon-close" type="button" id="closeCreateUser">Cerrar</button>
-            </div>
-            <form class="company-login-form" id="createUserForm">
-              <label>
-                Mail / DNI
-                <input id="createUserEmail" autocomplete="username" placeholder="mail@empresa.com o DNI">
-              </label>
-              <label>
-                Contrasena
-                <input id="createUserPassword" type="password" autocomplete="new-password" placeholder="********">
-              </label>
-              <label>
-                Nombre
-                <input id="createUserName" autocomplete="name" placeholder="Nombre y apellido">
-              </label>
-              <label>
-                Area
-                <input id="createUserArea" list="companyAreaOptions" placeholder="Sistemas">
-              </label>
-              <button type="submit">Crear e ingresar</button>
-            </form>
-            <div class="form-status" id="createUserStatus" hidden></div>
-          </section>
-        </div>
-        <div class="company-session" id="companySession" hidden>
-          <span id="companySessionText"></span>
-          <button class="secondary" type="button" id="logoutCompanyUser">Cerrar sesion</button>
-        </div>
-        <div class="section-head">
+    <section class="view" id="games">
+      <section class="home-games game-center">
+        <div class="section-head compact">
           <div>
-            <h2>Prediccion del jugador</h2>
-            <p>Ordena cada grupo, completa los cruces y guarda el prode en el torneo elegido.</p>
-          </div>
-          <div class="actions">
-            <button class="secondary" id="autoFill">Autocompletar</button>
-            <button class="secondary" id="clearPredictions">Limpiar</button>
+            <h2 id="dailyGamesTitle">Centro de minijuegos</h2>
+            <p id="dailyGamesIntro">Desafios rapidos para sumar ritmo al prode diario.</p>
           </div>
         </div>
-
-        <form class="player-form" id="playerForm">
-          <label data-user-context-field data-session-field="tournament" hidden>
-            Torneo
-            <select id="tournamentSelect" name="tournament"></select>
-          </label>
-          <label data-user-context-field data-session-field="player" hidden>
-            Jugador
-            <input id="playerName" name="playerName" autocomplete="name" placeholder="Nombre y apellido">
-          </label>
-          <label data-user-context-field data-session-field="player" hidden>
-            Email
-            <input id="playerEmail" name="playerEmail" type="email" autocomplete="email" placeholder="nombre@email.com">
-          </label>
-          <label>
-            Modo
-            <select id="predictionMode" name="predictionMode">
-              <option value="date">Fecha por fecha</option>
-              <option value="full">Todo junto</option>
-            </select>
-          </label>
-          <label>
-            Fecha
-            <select id="predictionPhase" name="predictionPhase"></select>
-          </label>
-        </form>
-        <div class="phase-status" id="phaseStatus"></div>
-
-        <div class="groups-grid" id="groupsGrid" data-worldcup-editor></div>
-        <div class="matchday-grid" id="matchdayGrid" data-worldcup-editor hidden></div>
-        <div class="custom-sheet" id="customSheet" data-custom-editor hidden></div>
-
-        <div class="section-head compact" data-worldcup-editor data-worldcup-stage="thirds">
-          <div>
-            <h2>Cruces eliminatorios</h2>
-            <p>Antes de elegir ganadores, asigna manualmente los mejores terceros a cada cruce.</p>
-          </div>
-        </div>
-        <div class="thirds-panel" id="thirdsPanel" data-worldcup-editor></div>
-        <div class="bracket" id="bracket" data-worldcup-editor></div>
-
-        <div class="submit-panel">
-          <div>
-            <h2>Guardar jugada</h2>
-            <p>El prode queda guardado en el leaderboard del torneo y se vincula al email para continuar por fecha.</p>
-          </div>
-          <div class="actions">
-            <button id="savePrediction">Guardar prode</button>
-          </div>
-        </div>
+        <div class="game-center-meta" id="dailyGamesMeta"></div>
+        <div class="daily-games" id="dailyGames"></div>
       </section>
+    </section>
 
-      <section class="view" id="tournaments">
-        <div class="section-head">
-          <div>
-            <h2 id="tournamentsHeading">Torneos privados</h2>
-            <p id="tournamentsIntro">Crea torneos, entra a sus leaderboards y carga resultados sin mezclar rankings.</p>
-          </div>
+    <section class="view" id="lobby">
+      <div class="section-head">
+        <div>
+          <h2>Lobby global</h2>
+          <p>Ingresa una vez y desbloquea los torneos privados con su clave.</p>
         </div>
-        <section class="company-areas" id="companyAreas" hidden>
-          <div class="section-head compact">
-            <div>
-              <h2>Minitorneos por area</h2>
-              <p>Crea areas como Sistemas o RRHH. Cada una usa las mismas predicciones del torneo de empresa.</p>
-            </div>
-          </div>
-          <form class="tournament-form" id="companyAreaForm">
-            <label>
-              Nueva area
-              <input id="companyAreaName" placeholder="Ej: Sistemas">
+      </div>
+      <section class="global-login" id="globalLogin">
+        <div class="company-login-card">
+          <img class="login-brand-logo" src="/prode-global-static/BAIT.png" alt="Bait Soft">
+          <p class="login-kicker">Prode Mundial 2026</p>
+          <h2>Iniciar Sesion</h2>
+          <p>Ingresa con tu usuario global para ver y desbloquear tus torneos.</p>
+          <form class="company-login-form" id="globalLoginForm">
+            <label id="globalLoginNameLabel" hidden>
+              Nombre
+              <input id="globalLoginName" autocomplete="name" placeholder="Nombre y apellido">
             </label>
-            <button>Crear minitorneo</button>
+            <label>
+              Correo Electronico
+              <input id="globalLoginEmail" autocomplete="username" placeholder="nombre@email.com o DNI">
+            </label>
+            <label>
+              contraseña
+              <span class="password-control">
+                <input id="globalLoginPassword" type="password" autocomplete="current-password" placeholder="********">
+                <button class="password-toggle" type="button" data-password-toggle="globalLoginPassword" aria-label="Mostrar contraseña">
+                  <span aria-hidden="true">&#128065;</span>
+                </button>
+              </span>
+            </label>
+            <div class="login-actions">
+              <button type="submit" id="globalLoginBtn">Ingresar</button>
+              <button type="button" id="globalRegistrarBtn" class="secondary">Registrar</button>
+            </div>
+            <button class="secondary login-forgot-toggle" type="button" id="openForgotPassword">Olvide mi contraseña</button>
+            <div class="login-home-link">
+              <a href="#"
+                onclick="event.preventDefault(); document.querySelector('.tab[data-view=\'inicio\']').click();"
+                >Volver al inicio</a>
+            </div>
           </form>
-          <div class="form-status" id="companyAreaStatus" hidden></div>
-          <div class="tournament-list" id="companyAreaList"></div>
-        </section>
-        <form class="tournament-form tournament-admin-only" id="tournamentForm">
-          <label>
-            Nombre del torneo
-            <input id="tournamentName" placeholder="Ej: Prode con amigos">
-          </label>
-          <label>
-            Clave del torneo
-            <input id="tournamentCode" placeholder="Ej: AMIGOS2026">
-          </label>
-          <label>
-            Email del creador
-            <input id="creatorEmail" type="email" placeholder="creador@email.com">
-          </label>
-          <label>
-            Plantilla
-            <select id="templateSelect"></select>
-          </label>
-          <label class="custom-template-field" id="customTeamsField" hidden>
-            Equipos / jugadores custom
-            <textarea id="customTeams" rows="5" placeholder="Equipo 1&#10;Equipo 2&#10;Equipo 3&#10;Equipo 4"></textarea>
-          </label>
-          <label>
-            Modo
-            <select id="modeSelect">
-              <option value="groups-knockout">Grupos + eliminatorias</option>
-              <option value="league">Liga / tabla</option>
-              <option value="fixture">Fixture completo</option>
-              <option value="extras">Campeon / extras</option>
-            </select>
-          </label>
-          <label>
-            Pts posicion grupo
-            <input id="scoreGroup" type="number" min="0" value="1">
-          </label>
-          <label>
-            Pts ganador cruce
-            <input id="scoreWinner" type="number" min="0" value="3">
-          </label>
-          <label>
-            Pts resultado exacto
-            <input id="scoreExact" type="number" min="0" value="2">
-          </label>
-          <label>
-            Bonus campeon
-            <input id="scoreChampion" type="number" min="0" value="10">
-          </label>
-          <button>Crear torneo</button>
-        </form>
-        <div class="form-status tournament-admin-only">
-          Las plantillas de ligas/copas generan una planilla de partidos. La plantilla Custom sirve para torneos de f5, padel, amigos o cualquier lista propia.
+          <div class="form-status" id="globalLoginStatus" hidden></div>
         </div>
-        <form class="tournament-form tournament-admin-only" id="joinTournamentForm">
-          <label>
-            Buscar por nombre
-            <input id="joinTournamentName" placeholder="Nombre exacto del torneo">
-          </label>
-          <label>
-            Clave del torneo
-            <input id="joinTournamentCode" placeholder="Misma clave creada">
-          </label>
-          <button class="secondary">Unirme</button>
-        </form>
-        <div class="form-status" id="tournamentStatus" hidden></div>
-        <div class="tournament-list" id="tournamentList"></div>
-        <div class="tournament-results" id="tournamentResults" hidden>
+      </section>
+      <div class="modal-backdrop" id="forgotPasswordModal" hidden>
+        <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="forgotPasswordTitle">
           <div class="section-head compact">
             <div>
-              <h2 id="selectedTournamentTitle">Leaderboard</h2>
-              <p>Podio, usuarios y puntos del torneo seleccionado.</p>
+              <h2 id="forgotPasswordTitle">Recuperar contraseña</h2>
+              <p>Ingresa tu mail y te enviaremos un link para crear una nueva contraseña.</p>
+            </div>
+            <button class="secondary icon-close" type="button" id="closeForgotPassword">Cerrar</button>
+          </div>
+          <form class="company-login-form" id="forgotPasswordForm">
+            <label>
+              Mail
+              <input id="forgotPasswordEmail" type="email" autocomplete="email" placeholder="mail@empresa.com">
+            </label>
+            <button type="submit">Enviar link</button>
+          </form>
+          <div class="form-status" id="forgotPasswordStatus" hidden></div>
+        </section>
+      </div>
+      <div class="modal-backdrop" id="resetPasswordModal" hidden>
+        <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="resetPasswordTitle">
+          <div class="section-head compact">
+            <div>
+              <h2 id="resetPasswordTitle">Nueva contraseña</h2>
+              <p>Escribe una contraseña nueva para volver a ingresar.</p>
+            </div>
+          </div>
+          <form class="company-login-form" id="resetPasswordForm">
+            <label>
+              Nueva contraseña
+              <span class="password-control">
+                <input id="resetPasswordNew" type="password" autocomplete="new-password" placeholder="********">
+                <button class="password-toggle" type="button" data-password-toggle="resetPasswordNew" aria-label="Mostrar contraseña">
+                  <span aria-hidden="true">&#128065;</span>
+                </button>
+              </span>
+            </label>
+            <label>
+              Repetir contraseña
+              <span class="password-control">
+                <input id="resetPasswordConfirm" type="password" autocomplete="new-password" placeholder="********">
+                <button class="password-toggle" type="button" data-password-toggle="resetPasswordConfirm" aria-label="Mostrar contraseña">
+                  <span aria-hidden="true">&#128065;</span>
+                </button>
+              </span>
+            </label>
+            <button type="submit">Guardar contraseña</button>
+          </form>
+          <div class="form-status" id="resetPasswordStatus" hidden></div>
+        </section>
+      </div>
+      <div class="modal-backdrop" id="unlockTournamentModal" hidden>
+        <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="unlockTournamentTitle">
+          <div class="section-head compact">
+            <div>
+              <h2 id="unlockTournamentTitle">Desbloquear torneo</h2>
+              <p id="unlockTournamentIntro">Ingresa la clave para habilitar el acceso permanente.</p>
+            </div>
+            <button class="secondary icon-close" type="button" id="closeUnlockTournament">Cerrar</button>
+          </div>
+          <form class="company-login-form" id="unlockTournamentForm">
+            <label>
+              Clave del torneo
+              <input id="unlockTournamentPassword" type="password" autocomplete="off" placeholder="EMPRESA-ACME">
+            </label>
+            <button type="submit">Desbloquear</button>
+          </form>
+          <div class="form-status" id="unlockTournamentStatus" hidden></div>
+        </section>
+      </div>
+      <div class="lobby-admin-actions" id="lobbyAdminActions" hidden>
+        <button type="button" id="openCreateLobbyTenant">Crear torneo privado</button>
+      </div>
+      <div class="modal-backdrop" id="createLobbyTenantModal" hidden>
+        <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="createLobbyTenantTitle">
+          <div class="section-head compact">
+            <div>
+              <h2 id="createLobbyTenantTitle">Crear torneo</h2>
+              <p>La web privada mantiene el formato ACME; aca solo elegis que competicion se pronostica.</p>
+            </div>
+            <button class="secondary icon-close" type="button" id="closeCreateLobbyTenant">Cerrar</button>
+          </div>
+          <form class="company-login-form" id="createLobbyTenantForm">
+            <label>
+              Nombre de empresa
+              <input id="createLobbyTenantName" placeholder="Ej: Cliente Nuevo">
+            </label>
+            <label>
+              ID de URL
+              <input id="createLobbyTenantId" placeholder="cliente-nuevo">
+            </label>
+            <label>
+              Competicion
+              <select id="createLobbyTenantTemplate">
+                <option value="worldcup-2026">Mundial 2026</option>
+                <option value="champions">Champions League</option>
+                <option value="premier">Premier League</option>
+                <option value="laliga-2025-26">LaLiga EA Sports 2025/26</option>
+              </select>
+            </label>
+            <label>
+              Clave del torneo
+              <input id="createLobbyTenantCode" placeholder="EMPRESA-CLIENTE">
+            </label>
+            <button type="submit">Crear torneo</button>
+          </form>
+          <div class="form-status" id="createLobbyTenantStatus" hidden></div>
+        </section>
+      </div>
+      <div class="tournament-list lobby-list" id="globalTournamentLobby"></div>
+    </section>
+
+    <section class="view" id="predictor">
+      <div class="lock-banner" id="lockBanner" hidden></div>
+      <section class="company-login" id="companyLogin" hidden>
+        <div class="company-login-card">
+          <div class="login-logos-container">
+            <img class="login-brand-logo" src="/prode-global-static/BAIT.png" alt="Bait Soft">
+            <img class="login-brand-logo" id="loginCompanyLogo" alt="Empresa" hidden>
+          </div>
+          <p class="login-kicker">Prode Mundial 2026</p>
+          <h2>Iniciar Sesion</h2>
+          <p>Ingresa con tu usuario de empresa para cargar y seguir tu prode.</p>
+          <form class="company-login-form" id="companyLoginForm">
+            <label id="loginNameLabel" hidden>
+              Nombre
+              <input id="loginName" autocomplete="name" placeholder="Nombre y apellido">
+            </label>
+            <label>
+              Correo Electronico
+              <input id="loginEmail" autocomplete="username" placeholder="nombre@email.com" autofocus>
+            </label>
+            <label>
+              Contraseña
+              <input id="loginPassword" type="password" autocomplete="current-password" placeholder="********">
+            </label>
+            <div class="login-actions">
+              <button type="submit" id="companyLoginBtn">Ingresar</button>
+              <button type="button" id="companyRegistrarBtn" class="secondary">Registrar</button>
+            </div>
+            <div class="login-home-link">
+              <a href="#"
+                onclick="event.preventDefault(); document.querySelector('.tab[data-view=\'inicio\']').click();"
+                >Volver al inicio</a>
+            </div>
+          </form>
+          <datalist id="companyAreaOptions"></datalist>
+          <div class="form-status" id="companyLoginStatus" hidden></div>
+        </div>
+      </section>
+
+      <div class="section-head">
+        <div>
+          <h2>Prediccion del jugador</h2>
+          <p>Ordena cada grupo, completa los cruces y guarda el prode en el torneo elegido.</p>
+        </div>
+        <div class="actions">
+          <button class="secondary" id="autoFill">Autocompletar</button>
+          <button class="secondary" id="clearPredictions">Limpiar</button>
+        </div>
+      </div>
+
+      <form class="player-form" id="playerForm">
+        <label data-user-context-field data-session-field="tournament" hidden>
+          Torneo
+          <select id="tournamentSelect" name="tournament"></select>
+        </label>
+        <label data-user-context-field data-session-field="player" hidden>
+          Jugador
+          <input id="playerName" name="playerName" autocomplete="name" placeholder="Nombre y apellido">
+        </label>
+        <label data-user-context-field data-session-field="player" hidden>
+          Email
+          <input id="playerEmail" name="playerEmail" type="email" autocomplete="email" placeholder="nombre@email.com">
+        </label>
+        <label>
+          Fecha
+          <select id="predictionPhase" name="predictionPhase"></select>
+        </label>
+      </form>
+      <div class="phase-status" id="phaseStatus"></div>
+
+      <div class="groups-grid" id="groupsGrid" data-worldcup-editor></div>
+      <div class="matchday-grid" id="matchdayGrid" data-worldcup-editor hidden></div>
+      <div class="custom-sheet" id="customSheet" data-custom-editor hidden></div>
+      <div class="standings-panel" id="standingsPanel" data-worldcup-editor hidden></div>
+
+      <div class="section-head compact" data-worldcup-editor data-worldcup-stage="thirds">
+        <div>
+          <h2>Cruces eliminatorios</h2>
+          <p>Si queres poner que un equipo gana en penales a partir de esta instancia, debes poner un empate y luego debajo elegir el ganador. NO ES NECESARIO PONER EL RESULTADO DE LOS PENALES.</p>
+        </div>
+      </div>
+      <div class="thirds-panel" id="thirdsPanel" data-worldcup-editor></div>
+      <div class="bracket" id="bracket" data-worldcup-editor></div>
+      <div class="submit-panel">
+        <div>
+          <h2>Guardar jugada</h2>
+          <p>El prode queda guardado en el leaderboard del torneo y se vincula al email para continuar por fecha.</p>
+        </div>
+        <div class="actions">
+          <button id="savePrediction">Guardar prode</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" id="minitournaments">
+      <div class="section-head">
+        <div>
+          <h2>Minitorneos</h2>
+          <p id="minitournamentsIntro">Crea o únete a minitorneos dentro del torneo seleccionado.</p>
+        </div>
+        <div class="actions">
+          <button type="button" id="createMiniTournamentBtn">Crear Minitorneo</button>
+        </div>
+      </div>
+
+      <div class="minitournaments-grid" id="minitournamentsGrid"></div>
+
+      <div class="modal-backdrop" id="createMiniTournamentModal" hidden>
+        <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="createMiniTournamentTitle">
+          <div class="section-head compact">
+            <div>
+              <h2 id="createMiniTournamentTitle">Crear nuevo minitorneo</h2>
+            </div>
+            <button class="secondary icon-close" type="button" id="closeMiniTournamentModal">Cerrar</button>
+          </div>
+          <form class="company-login-form" id="createMiniTournamentForm">
+            <label>
+              Nombre del minitorneo
+              <input id="miniTournamentName" placeholder="Ej: Familia" required>
+            </label>
+            <label>
+              Descripción
+              <input id="miniTournamentDescription" placeholder="Ej: Prode entre familia">
+            </label>
+            <label class="inline-check"><input type="checkbox" id="miniTournamentPrivate"> Privado
+              (invitaciones)</label>
+            <button type="submit">Crear</button>
+          </form>
+          <div class="form-status" id="miniTournamentStatus" hidden></div>
+        </section>
+      </div>
+    </section>
+
+    <section class="view" id="tournaments">
+      <div class="section-head">
+        <div>
+          <h2 id="tournamentsHeading">Torneos privados</h2>
+          <p id="tournamentsIntro">Crea torneos, entra a sus leaderboards y carga resultados sin mezclar rankings.</p>
+        </div>
+      </div>
+      <section class="company-areas" id="companyAreas" hidden>
+        <div class="section-head compact">
+          <div>
+            <h2>Minitorneos por area</h2>
+            <p>Crea areas como Sistemas o RRHH. Cada una usa las mismas predicciones del torneo de empresa.</p>
+          </div>
+        </div>
+        <form class="tournament-form" id="companyAreaForm">
+          <label>
+            Nueva area
+            <input id="companyAreaName" placeholder="Ej: Sistemas">
+          </label>
+          <button>Crear Minitorneo</button>
+        </form>
+        <div class="form-status" id="companyAreaStatus" hidden></div>
+        <div class="tournament-list" id="companyAreaList"></div>
+      </section>
+      <form class="tournament-form tournament-admin-only" id="tournamentForm">
+        <label>
+          Nombre del torneo
+          <input id="tournamentName" placeholder="Ej: Prode con amigos">
+        </label>
+        <label>
+          Clave del torneo
+          <input id="tournamentCode" placeholder="Ej: AMIGOS2026">
+        </label>
+        <label>
+          Email del creador
+          <input id="creatorEmail" type="email" placeholder="creador@email.com">
+        </label>
+        <label>
+          Plantilla
+          <select id="templateSelect"></select>
+        </label>
+        <label class="custom-template-field" id="customTeamsField" hidden>
+          Equipos / jugadores custom
+          <textarea id="customTeams" rows="5" placeholder="Equipo 1&#10;Equipo 2&#10;Equipo 3&#10;Equipo 4"></textarea>
+        </label>
+        <label>
+          Modo
+          <select id="modeSelect">
+            <option value="groups-knockout">Grupos + eliminatorias</option>
+            <option value="league">Liga / tabla</option>
+            <option value="fixture">Fixture completo</option>
+            <option value="extras">Campeon / extras</option>
+          </select>
+        </label>
+        <label>
+          Pts posicion grupo
+          <input id="scoreGroup" type="number" min="0" value="1">
+        </label>
+        <label>
+          Pts ganador cruce
+          <input id="scoreWinner" type="number" min="0" value="3">
+        </label>
+        <label>
+          Pts resultado exacto
+          <input id="scoreExact" type="number" min="0" value="2">
+        </label>
+        <label>
+          Bonus campeon
+          <input id="scoreChampion" type="number" min="0" value="10">
+        </label>
+        <button>Crear torneo</button>
+      </form>
+      <div class="form-status tournament-admin-only">
+        Las plantillas de ligas/copas generan una planilla de partidos. La plantilla Custom sirve para torneos de f5,
+        padel, amigos o cualquier lista propia.
+      </div>
+      <form class="tournament-form tournament-admin-only" id="joinTournamentForm">
+        <label>
+          Buscar por nombre
+          <input id="joinTournamentName" placeholder="Nombre exacto del torneo">
+        </label>
+        <label>
+          Clave del torneo
+          <input id="joinTournamentCode" placeholder="Misma clave creada">
+        </label>
+        <button class="secondary">Unirme</button>
+      </form>
+      <div class="form-status" id="tournamentStatus" hidden></div>
+      <div class="tournament-list" id="tournamentList"></div>
+      <div class="tournament-results" id="tournamentResults" hidden>
+        <div class="section-head compact">
+          <div>
+            <h2 id="selectedTournamentTitle">Leaderboard</h2>
+            <p>Podio, usuarios y puntos del torneo seleccionado.</p>
+          </div>
+          <div class="actions">
+            <button class="secondary" id="refreshLeaderboard">Actualizar</button>
+            <button class="secondary" id="toggleResultsAdmin">Admin</button>
+          </div>
+        </div>
+        <div class="leaderboard-panel" id="leaderboardPanel"></div>
+      </div>
+    </section>
+
+    <section class="view" id="admin">
+      <div class="section-head">
+        <div>
+          <h2>Panel admin</h2>
+          <p>Gestiona resultados reales y revisa usuarios registrados en la empresa.</p>
+        </div>
+      </div>
+      <form class="tournament-form" id="adminLoginForm">
+        <label>
+          Clave admin
+          <input id="adminKey" type="password" placeholder="Clave del administrador">
+        </label>
+        <button>Entrar</button>
+      </form>
+      <div class="form-status" id="adminStatus" hidden></div>
+      <div class="admin-dashboard" id="adminDashboard" hidden>
+        <nav class="admin-subtabs" aria-label="Administracion">
+          <button class="admin-subtab is-active" type="button" data-admin-section="users">Usuarios</button>
+          <button class="admin-subtab" type="button" data-admin-section="customize">Personalizar</button>
+          <button class="admin-subtab" type="button" data-admin-section="games">Juegos</button>
+          <button class="admin-subtab" type="button" data-admin-section="results">Cargar resultados</button>
+        </nav>
+        <section class="admin-panel" id="adminUsersPanel">
+          <div class="section-head compact">
+            <div>
+              <h2>Usuarios</h2>
+              <p>Usuarios registrados, area y estado de prediccion.</p>
             </div>
             <div class="actions">
-              <button class="secondary" id="refreshLeaderboard">Actualizar</button>
-              <button class="secondary" id="toggleResultsAdmin">Admin</button>
+              <button class="secondary" id="refreshAdminUsers" type="button">Actualizar</button>
             </div>
           </div>
-          <div class="leaderboard-panel" id="leaderboardPanel"></div>
-        </div>
-      </section>
-
-      <section class="view" id="admin">
-        <div class="section-head">
-          <div>
-            <h2>Panel admin</h2>
-            <p>Gestiona resultados reales y revisa usuarios registrados en la empresa.</p>
+          <div class="admin-users" id="adminUsers"></div>
+        </section>
+        <section class="admin-panel" id="adminCustomizePanel" hidden>
+          <div class="section-head compact">
+            <div>
+              <h2>Personalizacion</h2>
+              <p>Colores, portada y textos de la pagina de empresa.</p>
+            </div>
           </div>
+          <form class="admin-theme-form" id="adminThemeForm">
+            <label>Titulo<input id="themeTitle" placeholder="Prode ACME"></label>
+            <label>Subtítulo superior (eyebrow)<input id="themeEyebrow" placeholder="Ej: Prode Corporativo"></label>
+            <label>Bajada<input id="themeDescription" placeholder="Predicciones y ranking exclusivo"></label>
+            <label>Color principal<input id="themeAccent" type="color"></label>
+            <label>Fondo<input id="themeBg" type="color"></label>
+            <label>Panel<input id="themePanel" type="color"></label>
+            <label>Texto<input id="themeInk" type="color"></label>
+            <label class="wide">Imagen por URL<input id="themeImage" placeholder="/th.webp o https://..."></label>
+            <label class="wide">Subir imagen<input id="themeImageFile" type="file"
+                accept="image/png,image/jpeg,image/webp"></label>
+            <button>Guardar personalizacion</button>
+          </form>
+        </section>
+        <section class="admin-panel" id="adminGamesPanel" hidden>
+          <div class="section-head compact">
+            <div>
+              <h2>Juegos diarios</h2>
+              <p>Carga camisetas y desafios diarios de jugadores, estadios u otros temas.</p>
+            </div>
+          </div>
+          <form class="admin-games-form" id="adminGamesForm">
+            <label class="inline-check"><input id="gamesEnabled" type="checkbox"> Juegos activos</label>
+            <label>Titulo<input id="gamesTitle" placeholder="Centro de minijuegos"></label>
+            <label>Recompensa<input id="gamesRewardName" placeholder="Fan Points"></label>
+            <label>Puntos por Camisetadle<input id="camisetadlePoints" type="number" min="0" step="1"></label>
+            <label>Puntos por desafio<input id="challengePoints" type="number" min="0" step="1"></label>
+            <label class="wide">Descripcion<input id="gamesIntro"
+                placeholder="Desafios rapidos para sumar ritmo al prode diario."></label>
+            <label class="wide">
+              Camisetadle
+              <textarea id="camisetadleItems" rows="7"
+                placeholder="Fecha opcional YYYY-MM-DD | Jugador | Numero | Seleccion | Mundial | Pista"></textarea>
+            </label>
+            <label class="wide">
+              Desafios diarios
+              <textarea id="challengeItems" rows="7"
+                placeholder="Fecha opcional YYYY-MM-DD | Tipo | Respuesta | Titulo | Subtitulo | Pista 1; Pista 2; Pista 3"></textarea>
+            </label>
+            <button>Guardar juegos</button>
+          </form>
+        </section>
+        <div class="results-admin" id="adminResultsPanel">
+          <div class="section-head compact">
+            <div>
+              <h2>Cargar resultados del torneo</h2>
+              <p>Solo se usa para recalcular este leaderboard.</p>
+            </div>
+            <div class="actions">
+              <button class="secondary" id="importApiResults" type="button">Importar desde API</button>
+              <button class="secondary" id="autoReal">Usar mismos pronosticos</button>
+              <button id="saveRealResults">Guardar resultados</button>
+              <button class="secondary" id="clearReal">Limpiar reales</button>
+            </div>
+          </div>
+          <div class="form-status" id="apiResultsStatus" hidden></div>
+          <div class="groups-grid" id="realGroupsGrid" data-worldcup-editor></div>
+          <div class="custom-sheet" id="realCustomSheet" data-custom-editor hidden></div>
+          <div class="thirds-panel" id="realThirdsPanel" data-worldcup-editor></div>
+          <div class="section-head compact" data-worldcup-editor>
+            <div>
+              <h2>Llave real</h2>
+              <p>Completa ganadores y marcadores reales de cada ronda.</p>
+            </div>
+          </div>
+          <div class="bracket" id="realBracket" data-worldcup-editor></div>
         </div>
-        <form class="tournament-form" id="adminLoginForm">
-          <label>
-            Clave admin
-            <input id="adminKey" type="password" placeholder="Clave del administrador">
+      </div>
+    </section>
+
+    <section class="view" id="live">
+      <div class="section-head">
+        <div>
+          <h2>Resultados en vivo</h2>
+          <p>Se actualiza desde el archivo de resultados diario del torneo.</p>
+        </div>
+        <div class="actions">
+          <button class="secondary" id="refreshLive">Actualizar</button>
+        </div>
+      </div>
+      <div class="live-status" id="liveStatus">Cargando resultados...</div>
+      <div class="live-grid" id="liveGrid"></div>
+    </section>
+  </main>
+
+  <div id="profileModal" class="modal-backdrop" hidden style="z-index: 10500;">
+    <div class="modal-content profile-card">
+      <div class="profile-header">
+        <h2>Mi Perfil</h2>
+        <button type="button" id="closeProfileModal" class="close-btn">&times;</button>
+      </div>
+      
+      <div class="profile-body">
+        <div class="profile-avatar-section">
+          <div class="avatar-container">
+            <img id="profileAvatarPreview" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ccc'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>" alt="Foto de perfil">
+          </div>
+          <label for="profileAvatarInput" class="btn-change-avatar">
+            <span>Cambiar Imagen</span>
+            <input type="file" id="profileAvatarInput" accept="image/*" style="display: none;">
           </label>
-          <button>Entrar</button>
-        </form>
-        <div class="form-status" id="adminStatus" hidden></div>
-        <div class="admin-dashboard" id="adminDashboard" hidden>
-          <nav class="admin-subtabs" aria-label="Administracion">
-            <button class="admin-subtab is-active" type="button" data-admin-section="users">Usuarios</button>
-            <button class="admin-subtab" type="button" data-admin-section="customize">Personalizar</button>
-            <button class="admin-subtab" type="button" data-admin-section="games">Juegos</button>
-            <button class="admin-subtab" type="button" data-admin-section="results">Cargar resultados</button>
-          </nav>
-          <section class="admin-panel" id="adminUsersPanel">
-            <div class="section-head compact">
-              <div>
-                <h2>Usuarios</h2>
-                <p>Usuarios registrados, area y estado de prediccion.</p>
-              </div>
-              <div class="actions">
-                <button class="secondary" id="refreshAdminUsers" type="button">Actualizar</button>
-              </div>
-            </div>
-            <div class="admin-users" id="adminUsers"></div>
-          </section>
-          <section class="admin-panel" id="adminCustomizePanel" hidden>
-            <div class="section-head compact">
-              <div>
-                <h2>Personalizacion</h2>
-                <p>Colores, portada y textos de la pagina de empresa.</p>
-              </div>
-            </div>
-            <form class="admin-theme-form" id="adminThemeForm">
-              <label>Titulo<input id="themeTitle" placeholder="Prode ACME"></label>
-              <label>Bajada<input id="themeDescription" placeholder="Predicciones y ranking exclusivo"></label>
-              <label>Color principal<input id="themeAccent" type="color"></label>
-              <label>Fondo<input id="themeBg" type="color"></label>
-              <label>Panel<input id="themePanel" type="color"></label>
-              <label>Texto<input id="themeInk" type="color"></label>
-              <label class="wide">Imagen por URL<input id="themeImage" placeholder="/th.webp o https://..."></label>
-              <label class="wide">Subir imagen<input id="themeImageFile" type="file" accept="image/png,image/jpeg,image/webp"></label>
-              <button>Guardar personalizacion</button>
-            </form>
-          </section>
-          <section class="admin-panel" id="adminGamesPanel" hidden>
-            <div class="section-head compact">
-              <div>
-                <h2>Juegos diarios</h2>
-                <p>Carga camisetas y desafios diarios de jugadores, estadios u otros temas.</p>
-              </div>
-            </div>
-            <form class="admin-games-form" id="adminGamesForm">
-              <label class="inline-check"><input id="gamesEnabled" type="checkbox"> Juegos activos</label>
-              <label>Titulo<input id="gamesTitle" placeholder="Centro de minijuegos"></label>
-              <label>Recompensa<input id="gamesRewardName" placeholder="Fan Points"></label>
-              <label>Puntos por Camisetadle<input id="camisetadlePoints" type="number" min="0" step="1"></label>
-              <label>Puntos por desafio<input id="challengePoints" type="number" min="0" step="1"></label>
-              <label class="wide">Descripcion<input id="gamesIntro" placeholder="Desafios rapidos para sumar ritmo al prode diario."></label>
-              <label class="wide">
-                Camisetadle
-                <textarea id="camisetadleItems" rows="7" placeholder="Fecha opcional YYYY-MM-DD | Jugador | Numero | Seleccion | Mundial | Pista"></textarea>
-              </label>
-              <label class="wide">
-                Desafios diarios
-                <textarea id="challengeItems" rows="7" placeholder="Fecha opcional YYYY-MM-DD | Tipo | Respuesta | Titulo | Subtitulo | Pista 1; Pista 2; Pista 3"></textarea>
-              </label>
-              <button>Guardar juegos</button>
-            </form>
-          </section>
-          <div class="results-admin" id="adminResultsPanel">
-            <div class="section-head compact">
-              <div>
-                <h2>Cargar resultados del torneo</h2>
-                <p>Solo se usa para recalcular este leaderboard.</p>
-              </div>
-              <div class="actions">
-                <button class="secondary" id="autoReal">Usar mismos pronosticos</button>
-                <button id="saveRealResults">Guardar resultados</button>
-                <button class="secondary" id="clearReal">Limpiar reales</button>
-              </div>
-            </div>
-            <div class="groups-grid" id="realGroupsGrid" data-worldcup-editor></div>
-            <div class="custom-sheet" id="realCustomSheet" data-custom-editor hidden></div>
-            <div class="thirds-panel" id="realThirdsPanel" data-worldcup-editor></div>
-            <div class="section-head compact" data-worldcup-editor>
-              <div>
-                <h2>Llave real</h2>
-                <p>Completa ganadores y marcadores reales de cada ronda.</p>
-              </div>
-            </div>
-            <div class="bracket" id="realBracket" data-worldcup-editor></div>
+        </div>
+
+        <div class="profile-info-group">
+          <div class="info-item">
+            <label>Nombre</label>
+            <input type="text" id="profileNameInput" readonly class="readonly-field">
+          </div>
+          <div class="info-item">
+            <label>Email</label>
+            <input type="email" id="profileEmailInput" readonly class="readonly-field">
           </div>
         </div>
-      </section>
 
-      <section class="view" id="live">
-        <div class="section-head">
-          <div>
-            <h2>Resultados en vivo</h2>
-            <p>Se actualiza desde el archivo de resultados diario del torneo.</p>
-          </div>
-          <div class="actions">
-            <button class="secondary" id="refreshLive">Actualizar</button>
-          </div>
+        <button type="button" id="btnChangePasswordAction" class="btn-secondary-profile">Cambiar Contraseña</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="changePasswordModal" class="modal-backdrop" hidden style="z-index: 10505;">
+  <div class="modal-content profile-card">
+    <div class="profile-header">
+      <h2>Cambiar Contraseña</h2>
+      <button type="button" id="closeChangePasswordModal" class="close-btn">&times;</button>
+    </div>
+    
+    <form id="changePasswordForm" class="profile-body">
+      <div class="profile-info-group">
+        <div class="info-item">
+          <label>Contraseña Actual</label>
+          <input type="password" id="currentPasswordInput" required class="pw-input" placeholder="Tu clave actual">
         </div>
-        <div class="live-status" id="liveStatus">Cargando resultados...</div>
-        <div class="live-grid" id="liveGrid"></div>
-      </section>
-    </main>
+        <div class="info-item">
+          <label>Contraseña Nueva</label>
+          <input type="password" id="newPasswordInput" required class="pw-input" minlength="8" placeholder="Mínimo 8 caracteres">
+        </div>
+        <div class="info-item">
+          <label>Confirmar Contraseña</label>
+          <input type="password" id="confirmPasswordInput" required class="pw-input" minlength="8" placeholder="Repetir clave nueva">
+        </div>
+      </div>
+      
+      <button type="submit" class="btn-primary" style="width: 100%; margin-top: 10px; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; border: none; background: var(--accent); color: white;">
+        Actualizar Contraseña
+      </button>
+    </form>
+  </div>
+</div>
 
-    <template id="groupTemplate">
-      <article class="group-card">
-        <div class="group-title"></div>
-        <div class="selectors"></div>
-      </article>
-    </template>
+  <template id="groupTemplate">
+    <article class="group-card">
+      <div class="group-title"></div>
+      <div class="selectors"></div>
+    </article>
+  </template>
 
-    <script src="/prode-static/app.js"></script>
-  </body>
+  <script src="/prode-global-static/app.js?v=20260521-2"></script>
+</body>
+
 </html>
