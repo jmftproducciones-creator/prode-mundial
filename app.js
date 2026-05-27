@@ -4085,6 +4085,17 @@ async function loadAdminSummary() {
     : (t.innerHTML =
         '<p class="empty">Todavia no hay usuarios registrados.</p>');
 }
+function showAdminLoadError(e) {
+  const t = document.getElementById("adminStatus"),
+    n = document.getElementById("adminLoginForm"),
+    a = document.getElementById("adminDashboard");
+  ((state.adminUnlocked = !1),
+    n && (n.hidden = !1),
+    a && (a.hidden = !0),
+    t &&
+      ((t.hidden = !1),
+      (t.textContent = `No se pudo cargar admin: ${e.message}`)));
+}
 async function loadLeaderboard() {
   const e = document.getElementById("leaderboardPanel"),
     t = document.getElementById("mainLeaderboardPanel");
@@ -5043,9 +5054,9 @@ function openView(e) {
       canUseAdminPanel()
         ? ((state.adminUnlocked = !0),
           (document.getElementById("adminLoginForm").hidden = !0),
-          loadAdminSummary())
+          loadAdminSummary().catch(showAdminLoadError))
         : state.adminUnlocked
-          ? loadAdminSummary()
+          ? loadAdminSummary().catch(showAdminLoadError)
           : ((document.getElementById("adminLoginForm").hidden = !1),
             (document.getElementById("adminDashboard").hidden = !0))),
     "main-leaderboard" === e && loadLeaderboard(),
