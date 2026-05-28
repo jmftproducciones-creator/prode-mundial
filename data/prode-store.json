@@ -10,7 +10,6 @@
       "templateId": "worldcup-2026",
       "mode": "groups-knockout",
       "scoring": {
-        "groupPosition": 1,
         "knockoutWinner": 3,
         "exactScore": 2,
         "champion": 10

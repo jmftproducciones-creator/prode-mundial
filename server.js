@@ -1988,15 +1988,77 @@ function reminderKey(phaseId) {
   return new Date().toISOString().slice(0, 10) + `:${phaseId}`;
 }
 
+function dateKeyInTimezone(date = new Date(), timeZone = process.env.REMINDER_TIMEZONE || "America/Argentina/Buenos_Aires") {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(date);
+}
+
+function reminderKey(phaseId, now = new Date()) {
+  return `${dateKeyInTimezone(now)}:${phaseId}`;
+}
+
 function dueReminderPhases(now = new Date()) {
-  const nowTime = now.getTime();
-  const day = 24 * 60 * 60 * 1000;
+  const today = dateKeyInTimezone(now);
   return configuredPhaseSchedule()
-    .map(item => ({ ...item, id: normalizePhaseId(item.id) }))
+    .map(item => ({
+      ...item,
+      id: normalizePhaseId(item.id)
+    }))
     .filter(item => {
-      const start = new Date(item.startAt).getTime();
-      return Number.isFinite(start) && start - nowTime > 0 && start - nowTime <= day;
+      if (!item.id || item.id === "all") return false;
+      if (item.date) {
+        return String(item.date).slice(0, 10) === today;
+      }
+      if (item.startAt) {
+        return dateKeyInTimezone(new Date(item.startAt)) === today;
+      }
+      return false;
     });
+}
+
+function tournamentReminderRecipients(store, tournament) {
+  const recipients = new Map();
+  function add(user, extra = {}) {
+    const email = normalizeEmail(user?.email || extra.email);
+    if (!email) return;
+    if (user?.active === false) return;
+    const previous = recipients.get(email) || {};
+    recipients.set(email, {
+      email,
+      name: user?.name || previous.name || "",
+      continuationToken: extra.continuationToken || previous.continuationToken || ""
+    });
+  }
+  // Usuarios que ya guardaron predicción
+  for (const submission of tournament.submissions || []) {
+    add(submission.player, {
+      continuationToken: submission.continuationToken
+    });
+  }
+  // Torneo global: todos los usuarios globales registrados
+  if (tournament.isGlobal) {
+    for (const [email, user] of Object.entries(store.users || {})) {
+      add({ ...user, email });
+    }
+  }
+  // Torneo de empresa: todos los usuarios registrados en esa empresa
+  if (tournament.tenantId) {
+    const tenantData = store.tenants?.[tournament.tenantId];
+    for (const [email, user] of Object.entries(tenantData?.users || {})) {
+      add({ ...user, email });
+    }
+  }
+  // Torneos privados desbloqueados desde el lobby
+  for (const [email, accessByTournament] of Object.entries(store.tournamentAccess || {})) {
+    if (accessByTournament?.[tournament.id]?.grantedAt) {
+      add(store.users?.[email] || { email });
+    }
+  }
+  return [...recipients.values()];
 }
 
 function copyMatchFields(target, source, matchIds) {
@@ -3904,35 +3966,67 @@ async function handlePhaseReminders(req, res) {
       send(res, 200, JSON.stringify({ ok: true, sent: 0, phases: [] }));
       return;
     }
+    if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      send(res, 500, JSON.stringify({ error: "SMTP not configured" }));
+      return;
+    }
     const store = readStore();
+    if (!store.remindersSent || typeof store.remindersSent !== "object") {
+      store.remindersSent = {};
+    }
     let sent = 0;
-    for (const tournament of store.tournaments) {
-      for (const submission of tournament.submissions || []) {
-        if (!submission.continuationToken || !submission.player?.email) continue;
-        if (!submission.remindersSent || typeof submission.remindersSent !== "object") submission.remindersSent = {};
-        for (const phase of phases) {
-          const key = reminderKey(phase.id);
-          if (submission.remindersSent[key]) continue;
-          const link = `${siteBaseUrl(req)}/continuar/${encodeURIComponent(submission.continuationToken)}?fase=${encodeURIComponent(phase.id)}`;
-          await sendMail({
-            to: submission.player.email,
-            subject: `${tournament.name}: continua tu prode`,
-            text: [
-              `Hola ${submission.player.name || ""},`,
-              "",
-              `Manana empieza ${phaseById(phase.id).name}. Ya podes entrar y continuar tu pronostico con los cruces actualizados:`,
-              link,
-              "",
-              "Si ya lo cargaste, podes ignorar este aviso."
-            ].join("\n")
-          });
-          submission.remindersSent[key] = new Date().toISOString();
-          sent += 1;
+    const failed = [];
+    for (const tournament of store.tournaments || []) {
+      const recipients = tournamentReminderRecipients(store, tournament);
+      for (const phase of phases) {
+        const phaseName = phaseById(phase.id).name;
+        for (const recipient of recipients) {
+          const email = normalizeEmail(recipient.email);
+          if (!email) continue;
+          const sentKey = `${tournament.id}:${email}:${reminderKey(phase.id)}`;
+          if (store.remindersSent[sentKey]) continue;
+          const link = recipient.continuationToken
+            ? `${siteBaseUrl(req)}/continuar/${encodeURIComponent(recipient.continuationToken)}?fase=${encodeURIComponent(phase.id)}`
+            : tournament.tenantId
+              ? `${siteBaseUrl(req)}/empresa/${encodeURIComponent(tournament.tenantId)}`
+              : `${siteBaseUrl(req)}/prode/global`;
+          try {
+            await sendMail({
+              to: email,
+              subject: `${tournament.name}: hoy comienza ${phaseName}`,
+              text: [
+                `Hola ${recipient.name || ""},`,
+                "",
+                `Te recordamos que hoy comienza ${phaseName}.`,
+                "",
+                "Entrá al Prode y cargá o revisá tus predicciones antes del inicio de los partidos:",
+                link,
+                "",
+                "Si ya lo cargaste, podés ignorar este aviso.",
+                "",
+                "¡Gracias por participar!"
+              ].join("\n")
+            });
+            store.remindersSent[sentKey] = new Date().toISOString();
+            sent += 1;
+          } catch (error) {
+            failed.push({
+              email,
+              tournamentId: tournament.id,
+              phaseId: phase.id,
+              error: error.message
+            });
+          }
         }
       }
     }
     writeStore(store);
-    send(res, 200, JSON.stringify({ ok: true, sent, phases: phases.map(item => item.id) }));
+    send(res, 200, JSON.stringify({
+      ok: true,
+      sent,
+      failed,
+      phases: phases.map(item => item.id)
+    }));
   } catch (error) {
     send(res, 500, JSON.stringify({ error: error.message }));
   }
