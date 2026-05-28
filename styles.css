@@ -1139,13 +1139,44 @@ body[data-tenant] #tournamentList {
 
 .admin-user-row {
   display: grid;
-  grid-template-columns: minmax(190px, 1.3fr) minmax(150px, 0.8fr) minmax(140px, 0.7fr) 86px 86px minmax(190px, 0.9fr);
+  grid-template-columns: minmax(220px, 1.35fr) minmax(150px, 0.85fr) minmax(140px, 0.75fr) minmax(130px, 0.65fr) minmax(230px, 1fr);
   align-items: end;
   gap: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.74);
   padding: 12px;
+}
+
+.admin-user-row.is-pending {
+  border-color: color-mix(in srgb, var(--gold) 60%, var(--line));
+  background: color-mix(in srgb, var(--gold) 10%, white);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, white);
+}
+
+.status-badge.status-pending {
+  color: #7a5200;
+  background: #fff1bf;
+}
+
+.status-badge.status-rejected {
+  color: #9f1d1d;
+  background: #ffe0e0;
+}
+
+.request-actions {
+  flex-wrap: wrap;
 }
 
 .admin-user-row span,

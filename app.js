@@ -833,8 +833,36 @@ function isGlobalAdminSession() {
         state.globalSession?.user?.isSuperAdmin),
   );
 }
+function isCompanyApproverSession() {
+  const e = state.companySession?.user || null,
+    t = state.globalSession?.user || null;
+  return Boolean(
+    state.tenantId &&
+      ((e && (e.canApproveRequests || e.isAdmin || e.isSuperAdmin || "empresario" === e.role)) ||
+        (t && (t.canApproveRequests || t.isAdmin || t.isSuperAdmin || "empresario" === t.role))),
+  );
+}
+function canManageCompanyAdminUsers() {
+  return Boolean(isAdminSession() || isGlobalAdminSession());
+}
 function canUseAdminPanel() {
-  return isGlobalAdminSession();
+  return Boolean(isGlobalAdminSession() || isCompanyApproverSession());
+}
+function roleLabel(e) {
+  return "superadmin" === e
+    ? "Superadmin"
+    : "admin" === e
+      ? "Admin"
+      : "empresario" === e
+        ? "Empresario"
+        : "Jugador";
+}
+function approvalLabel(e) {
+  return "pending" === e
+    ? "Solicitud pendiente"
+    : "rejected" === e
+      ? "Solicitud rechazada"
+      : "Aprobado";
 }
 function syncAdminNavigation() {
   document.querySelectorAll("[data-admin-tab]").forEach((e) => {
@@ -864,9 +892,10 @@ function syncTenantNavigation() {
     e && state.tenantAccessGranted && a && (a.hidden = !0));
 }
 function updateAdminSections(e = state.adminSection || "users") {
-  ("results" !== e ||
-    (!state.tenantId && "global" === state.currentTournamentId) ||
-    (e = "users"),
+  (state.tenantId && !canManageCompanyAdminUsers() && "users" !== e && (e = "users"),
+    "results" !== e ||
+      (!state.tenantId && "global" === state.currentTournamentId) ||
+      (e = "users"),
     (state.adminSection = e));
   const t = document.getElementById("adminUsersPanel"),
     n = document.getElementById("adminResultsPanel"),
@@ -877,11 +906,13 @@ function updateAdminSections(e = state.adminSection || "users") {
     a && (a.hidden = "customize" !== e),
     o && (o.hidden = "games" !== e),
     document.querySelectorAll(".admin-subtab").forEach((t) => {
-      (t.classList.toggle("is-active", t.dataset.adminSection === e),
-        "customize" === t.dataset.adminSection && (t.hidden = !state.tenantId),
-        "results" === t.dataset.adminSection &&
+      const n = t.dataset.adminSection;
+      (t.classList.toggle("is-active", n === e),
+        "customize" === n && (t.hidden = !state.tenantId || !canManageCompanyAdminUsers()),
+        "games" === n && (t.hidden = state.tenantId && !canManageCompanyAdminUsers()),
+        "results" === n &&
           (t.hidden =
-            Boolean(state.tenantId) || "global" !== state.currentTournamentId));
+            Boolean(state.tenantId) || "global" !== state.currentTournamentId || !isGlobalAdminSession()));
     }));
 }
 function syncTopbarVisibility() {
@@ -985,7 +1016,7 @@ function renderCompanyAuth() {
       t?.user || (state.tenantAccessGranted ? state.globalSession?.user : null);
   if ((n && (n.hidden = !state.tenantId || !o), a && o)) {
     const e = o;
-    a.textContent = `${e.name || e.email} - ${t?.user?.area || state.tenant?.name || "Empresa"}${t?.user?.isAdmin ? " - Admin" : ""}`;
+    a.textContent = `${e.name || e.email} - ${t?.user?.area || state.tenant?.name || "Empresa"}${e.role ? ` - ${roleLabel(e.role)}` : ""}`;
   }
   const s = document.getElementById("companyLoginForm"),
     r = document.getElementById("companyAreaOptions");
@@ -1303,6 +1334,12 @@ async function submitTournamentUnlock() {
           o = state.lobbyTournaments.findIndex(
             (e) => e.id === t.tournament?.id,
           );
+        if (t.pendingApproval) {
+          o >= 0 && t.tournament && (state.lobbyTournaments[o] = t.tournament);
+          renderGlobalLobby();
+          a && ((a.hidden = !1), (a.textContent = t.message || "Solicitud enviada. Queda pendiente de aprobacion."));
+          return;
+        }
         if (
           (o >= 0 && (state.lobbyTournaments[o] = t.tournament),
           renderGlobalLobby(),
@@ -3548,6 +3585,12 @@ async function loginCompanyUser({ name: e, email: t, password: n, area: a }) {
       area: a,
     }),
   });
+  if (o.pendingApproval) {
+    state.tenant = o.tenant || state.tenant;
+    renderCompanyAuth();
+    renderCompanyAreas();
+    throw new Error(o.message || "Tu solicitud de ingreso esta pendiente de aprobacion.");
+  }
   return (
     (state.tenant = o.tenant || state.tenant),
     (state.dailyGamePlays = o.dailyGamePlays || {}),
@@ -3604,6 +3647,13 @@ async function registrarCompanyUser({ name: e, email: t, password: n }) {
             area: "General",
           }),
         });
+        if (a.pendingApproval) {
+          state.tenant = a.tenant || state.tenant;
+          renderCompanyAuth();
+          renderCompanyAreas();
+          showToast(a.message || "Solicitud enviada. Queda pendiente de aprobacion.");
+          return a;
+        }
         ((state.tenant = a.tenant || state.tenant),
           (state.dailyGamePlays = a.dailyGamePlays || {}),
           saveCompanySession({ token: a.token, user: a.user }),
@@ -3612,6 +3662,7 @@ async function registrarCompanyUser({ name: e, email: t, password: n }) {
           (document.getElementById("playerName").value = a.user.name || ""),
           "function" == typeof closeModals && closeModals(),
           openView("predictor"));
+        return a;
       } else
         showToast("El codigo ingresado es incorrecto. Intenta nuevamente.", !0);
     } else showToast("No se pudo enviar el correo. Verifica la direccion.", !0);
@@ -3710,6 +3761,7 @@ async function updateAdminUser({
   area: n,
   active: a,
   isAdmin: o,
+  role: s,
 }) {
   return apiJson("/api/admin-users", {
     method: "POST",
@@ -3723,6 +3775,19 @@ async function updateAdminUser({
       area: n,
       active: a,
       isAdmin: o,
+      role: s,
+    }),
+  });
+}
+async function reviewCompanyJoinRequest(e, t) {
+  return apiJson("/api/company-join-requests", {
+    method: "POST",
+    body: JSON.stringify({
+      tenantId: state.tenantId,
+      sessionToken: state.companySession?.token || "",
+      globalSessionToken: state.globalSession?.token || "",
+      email: e,
+      action: t,
     }),
   });
 }
@@ -4001,9 +4066,44 @@ async function loadAdminSummary() {
               state.companySession?.user?.isSuperAdmin ||
               state.globalSession?.user?.isSuperAdmin,
             ),
-            a = t || !n ? "disabled" : "",
-            o = e.isSuperAdmin ? "Superadmin" : e.isAdmin ? "Admin" : "Jugador";
-          return `\n    <form class="admin-user-row" data-admin-user="${escapeHtml(e.email)}">\n      <span>\n        <strong>${escapeHtml(e.email)}</strong>\n        <small>${o} - ${!1 === e.registered ? "Prode sin usuario registrado" : e.hasPrediction ? "Con prode" : "Sin prode"} - ${e.completedPhases?.length ? escapeHtml(e.completedPhases.join(", ")) : "Sin fechas"}</small>\n      </span>\n      <label>\n        Nombre\n        <input name="name" value="${escapeHtml(e.name || "")}" placeholder="Nombre" ${t}>\n      </label>\n      <label>\n        Area\n        <input name="area" value="${escapeHtml(e.area || "")}" list="companyAreaOptions" placeholder="Area" ${t}>\n      </label>\n      <label class="inline-check">\n        <input name="isAdmin" type="checkbox" ${e.isAdmin ? "checked" : ""} ${a}>\n        Admin\n      </label>\n      <div class="admin-user-actions">\n        <button type="submit" ${t}>Guardar</button>\n        <button class="secondary danger admin-delete-user" type="button" ${e.isSuperAdmin ? "disabled" : ""}>Eliminar</button>\n      </div>\n    </form>\n  `;
+            a = canManageCompanyAdminUsers(),
+            o = e.approvalStatus || "approved",
+            s = roleLabel(e.role),
+            r = approvalLabel(o),
+            i = o === "pending" && e.registered,
+            d = t || !a ? "disabled" : "",
+            l = t || !n ? "disabled" : "",
+            m = `status-${escapeHtml(o)}`;
+          return `
+    <form class="admin-user-row ${i ? "is-pending" : ""}" data-admin-user="${escapeHtml(e.email)}">
+      <span>
+        <strong>${escapeHtml(e.email)}</strong>
+        <small>${s} - <b class="status-badge ${m}">${r}</b> - ${!1 === e.registered ? "Prode sin usuario registrado" : e.hasPrediction ? "Con prode" : "Sin prode"} - ${e.completedPhases?.length ? escapeHtml(e.completedPhases.join(", ")) : "Sin fechas"}</small>
+      </span>
+      <label>
+        Nombre
+        <input name="name" value="${escapeHtml(e.name || "")}" placeholder="Nombre" ${t || !a ? "disabled" : ""}>
+      </label>
+      <label>
+        Area
+        <input name="area" value="${escapeHtml(e.area || "")}" list="companyAreaOptions" placeholder="Area" ${t || !a ? "disabled" : ""}>
+      </label>
+      <label>
+        Rol
+        <select name="role" ${l}>
+          <option value="player" ${"player" === e.role ? "selected" : ""}>Jugador</option>
+          <option value="empresario" ${"empresario" === e.role ? "selected" : ""}>Empresario</option>
+          <option value="admin" ${e.isAdmin && !e.isSuperAdmin ? "selected" : ""}>Admin</option>
+          ${e.isSuperAdmin ? '<option value="superadmin" selected>Superadmin</option>' : ""}
+        </select>
+      </label>
+      <div class="admin-user-actions request-actions">
+        ${i ? `<button class="secondary approve-company-user" type="button">Aceptar</button><button class="secondary danger reject-company-user" type="button">Rechazar</button>` : ""}
+        <button type="submit" ${d}>Guardar</button>
+        <button class="secondary danger admin-delete-user" type="button" ${e.isSuperAdmin || !a ? "disabled" : ""}>Eliminar</button>
+      </div>
+    </form>
+  `;
         })
         .join("")),
       t.querySelectorAll("[data-admin-user]").forEach((e) => {
@@ -4016,7 +4116,8 @@ async function loadAdminSummary() {
                   name: e.elements.name.value.trim(),
                   area: e.elements.area.value.trim(),
                   active: !0,
-                  isAdmin: e.elements.isAdmin.checked,
+                  role: e.elements.role?.value || "player",
+                  isAdmin: ["admin", "superadmin"].includes(e.elements.role?.value || ""),
                 };
               if (n.name && n.area)
                 try {
@@ -4042,6 +4143,31 @@ async function loadAdminSummary() {
                   await loadAdminSummary());
               } catch (e) {
                 t && (t.textContent = `No se pudo eliminar: ${e.message}`);
+              }
+            }),
+          e
+            .querySelector(".approve-company-user")
+            ?.addEventListener("click", async () => {
+              const t = e.querySelector("small");
+              try {
+                (await reviewCompanyJoinRequest(e.dataset.adminUser, "approve"),
+                  await loadAdminSummary(),
+                  await loadGlobalLobby().catch(() => {}));
+              } catch (e) {
+                t && (t.textContent = `No se pudo aceptar: ${e.message}`);
+              }
+            }),
+          e
+            .querySelector(".reject-company-user")
+            ?.addEventListener("click", async () => {
+              if (!window.confirm(`¿Rechazar la solicitud de ${e.dataset.adminUser}?`)) return;
+              const t = e.querySelector("small");
+              try {
+                (await reviewCompanyJoinRequest(e.dataset.adminUser, "reject"),
+                  await loadAdminSummary(),
+                  await loadGlobalLobby().catch(() => {}));
+              } catch (e) {
+                t && (t.textContent = `No se pudo rechazar: ${e.message}`);
               }
             }));
       }))
@@ -5112,9 +5238,11 @@ function openView(e) {
               "Para registrarte, completa también tu nombre y área.");
           t.textContent = "Registrando...";
           try {
-            (await registrarCompanyUser({ name: e, email: n, password: a }),
-              (document.getElementById("loginPassword").value = ""),
-              (t.textContent = "Usuario registrado y conectado."));
+            const o = await registrarCompanyUser({ name: e, email: n, password: a });
+            (document.getElementById("loginPassword").value = "");
+            t.textContent = o?.pendingApproval
+              ? "Solicitud enviada. Un empresario o administrador debe aprobar tu ingreso."
+              : "Usuario registrado y conectado.";
           } catch (e) {
             t.textContent = e.message;
           }

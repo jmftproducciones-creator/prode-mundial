@@ -608,6 +608,30 @@ function emptyStore() {
   };
 }
 
+function ensureEnvSeedUsers(store) {
+  if (!store.users || typeof store.users !== "object") store.users = {};
+  const empresarioPassword = String(process.env.EMPRESARIO_PASSWORD || process.env.EMPRESARIO_DEFAULT_PASSWORD || "");
+  const empresarioEmails = envTenantList("", "EMPRESARIO_EMAILS");
+  empresarioEmails.forEach((email) => {
+    if (!email) return;
+    const previous = store.users[email] || {};
+    store.users[email] = {
+      ...previous,
+      name: previous.name || process.env.EMPRESARIO_NAME || "Empresario Prode",
+      email,
+      active: true,
+      role: "empresario",
+      isAdmin: false,
+      isEmpresario: true,
+      approvalStatus: "approved",
+      password: empresarioPassword ? createPasswordRecord(empresarioPassword) : previous.password,
+      updatedAt: new Date().toISOString(),
+      createdAt: previous.createdAt || new Date().toISOString(),
+      seededFromEnv: true
+    };
+  });
+}
+
 function tenantFromValue(value) {
   const id = slug(value);
   if (TENANTS[id]) return TENANTS[id];
@@ -790,6 +814,7 @@ function normalizeStoreShape(store) {
     normalized.tournaments.unshift(emptyStore().tournaments[0]);
   }
   ensureTenantTournaments(normalized);
+  ensureEnvSeedUsers(normalized);
   return normalized;
 }
 
@@ -1373,15 +1398,14 @@ function sessionUser(store, tenant, token) {
   const email = tenantData.sessions[rawToken];
   const user = email ? tenantData.users[email] : null;
   if (!user) return null;
-  if (user.active === false) return null;
   const role = userRole(tenant.id, { ...user, email: user.email || email });
+  if (!isApprovedCompanyUser(user, role)) return null;
   return {
     name: user.name || "",
     email: user.email || email,
     area: user.area || "",
     role,
-    isAdmin: role === "admin" || role === "superadmin",
-    isSuperAdmin: role === "superadmin"
+    ...publicUserFlags(role)
   };
 }
 
@@ -1396,8 +1420,7 @@ function globalSessionUser(store, token) {
     name: user.name || "",
     email: user.email || email,
     role,
-    isAdmin: role === "admin" || role === "superadmin",
-    isSuperAdmin: role === "superadmin",
+    ...publicUserFlags(role),
     createdAt: user.createdAt || ""
   };
 }
@@ -1421,20 +1444,34 @@ function accessMapFor(store, email) {
 function hasTournamentAccess(store, user, tournament) {
   if (!tournament || tournament.isGlobal) return true;
   if (!user?.email) return false;
-  const access = store.tournamentAccess?.[normalizeEmail(user.email)]?.[tournament.id];
+  const email = normalizeEmail(user.email);
+  const role = userRole(tournament.tenantId || null, { ...user, email });
+  if (tournament.tenantId) {
+    const tenantData = store.tenants?.[tournament.tenantId];
+    const tenantUser = tenantData?.users?.[email];
+    if (tenantUser && !isApprovedCompanyUser(tenantUser, role)) return false;
+    if (canApproveCompanyRequestsRole(role)) return true;
+  }
+  const access = store.tournamentAccess?.[email]?.[tournament.id];
   return Boolean(access?.grantedAt);
 }
 
 function publicLobbyTournament(store, tournament, user = null) {
   const tenant = tournament.tenantId ? tenantFromValue(tournament.tenantId) : null;
   const access = hasTournamentAccess(store, user, tournament);
+  const email = normalizeEmail(user?.email || "");
+  const tenantUser = tournament.tenantId && email ? store.tenants?.[tournament.tenantId]?.users?.[email] : null;
+  const tenantRole = userRole(tournament.tenantId || null, { ...(tenantUser || user || {}), email });
+  const approvalStatus = tenantUser ? approvalStatusFor(tenantUser, tenantRole) : "";
   return {
     ...publicTournament(tournament, { includePrivateCode: tournament.isGlobal || access, compact: true }),
     isPrivate: !tournament.isGlobal,
     hasAccess: access,
+    pendingApproval: approvalStatus === "pending",
+    rejectedApproval: approvalStatus === "rejected",
     tenantPath: tenant ? `/prode/empresa/${encodeURIComponent(tenant.id)}` : "/prode",
     tenantName: tenant?.name || "",
-    lockedLabel: tournament.isGlobal ? "Publico" : access ? "Acceso habilitado" : "Privado"
+    lockedLabel: tournament.isGlobal ? "Publico" : access ? "Acceso habilitado" : approvalStatus === "pending" ? "Solicitud pendiente" : approvalStatus === "rejected" ? "Solicitud rechazada" : "Privado"
   };
 }
 
@@ -1473,6 +1510,11 @@ function isAdminEmail(tenantId, email) {
   return admins.includes(normalizeEmail(email));
 }
 
+function isEmpresarioEmail(tenantId, email) {
+  const empresarios = envTenantList(tenantId, "EMPRESARIO_EMAILS");
+  return empresarios.includes(normalizeEmail(email));
+}
+
 function isSuperAdminEmail(tenantId, email) {
   const normalized = normalizeEmail(email);
   const configured = envTenantList(tenantId, "SUPERADMIN_EMAILS");
@@ -1481,11 +1523,44 @@ function isSuperAdminEmail(tenantId, email) {
     || (tenantId === "acme" && ["admin@acme", "admin@acme.com"].includes(normalized));
 }
 
+function isAdminRole(role) {
+  return role === "admin" || role === "superadmin";
+}
+
+function canApproveCompanyRequestsRole(role) {
+  return role === "empresario" || isAdminRole(role);
+}
+
 function userRole(tenantId, user = {}) {
   if (isSuperAdminEmail(tenantId, user.email)) return "superadmin";
   if (user.role === "superadmin" || user.isSuperAdmin) return "superadmin";
   if (user.role === "admin" || user.isAdmin || isAdminEmail(tenantId, user.email)) return "admin";
+  if (user.role === "empresario" || user.isEmpresario || isEmpresarioEmail(tenantId, user.email)) return "empresario";
   return "player";
+}
+
+function approvalStatusFor(user = {}, role = "player") {
+  if (canApproveCompanyRequestsRole(role)) return "approved";
+  return user.approvalStatus || "approved";
+}
+
+function isApprovedCompanyUser(user = {}, role = "player") {
+  return user.active !== false && approvalStatusFor(user, role) === "approved";
+}
+
+function publicUserFlags(role) {
+  return {
+    isAdmin: isAdminRole(role),
+    isSuperAdmin: role === "superadmin",
+    isEmpresario: role === "empresario",
+    canApproveRequests: canApproveCompanyRequestsRole(role)
+  };
+}
+
+function normalizeEditableCompanyRole(value, fallbackIsAdmin = false) {
+  const role = String(value || "").trim().toLowerCase();
+  if (["player", "empresario", "admin"].includes(role)) return role;
+  return fallbackIsAdmin ? "admin" : "player";
 }
 
 function adminSessionUser(store, tenant, token) {
@@ -1496,6 +1571,22 @@ function adminSessionUser(store, tenant, token) {
 function superAdminSessionUser(store, tenant, token) {
   const user = sessionUser(store, tenant, token);
   return user?.isSuperAdmin ? user : null;
+}
+
+function companyApproverSessionUser(store, tenant, sessionToken = "", globalSessionToken = "") {
+  const tenantUser = sessionUser(store, tenant, sessionToken);
+  if (tenantUser?.canApproveRequests) return tenantUser;
+  const globalUser = globalSessionUser(store, globalSessionToken);
+  if (globalUser?.canApproveRequests) return globalUser;
+  return null;
+}
+
+function requireCompanyApprover(req, res, tenant, sessionToken = "", globalSessionToken = "") {
+  const store = readStore();
+  const user = companyApproverSessionUser(store, tenant, sessionToken, globalSessionToken);
+  if (user) return user;
+  send(res, 403, JSON.stringify({ error: "Se requiere rol Empresario o Administrador." }));
+  return null;
 }
 
 function requireAdmin(req, res, tenant, key, sessionToken = "", globalSessionToken = "") {
@@ -2539,14 +2630,13 @@ async function handleGlobalLogin(req, res) {
     const finalName = previousUser?.name || name;
     const token = randomSecret();
     const role = userRole(null, { ...(previousUser || {}), email });
-    const isAdmin = role === "admin" || role === "superadmin";
     store.users[email] = {
       ...(previousUser || {}),
       name: finalName,
       email,
       active: previousUser?.active !== false,
       role,
-      isAdmin,
+      ...publicUserFlags(role),
       password: previousUser?.password || createPasswordRecord(password),
       updatedAt: new Date().toISOString(),
       createdAt: previousUser?.createdAt || new Date().toISOString()
@@ -2556,7 +2646,7 @@ async function handleGlobalLogin(req, res) {
     send(res, 200, JSON.stringify({
       ok: true,
       token,
-      user: { name: finalName, email, role, isAdmin, isSuperAdmin: role === "superadmin" },
+      user: { name: finalName, email, role, ...publicUserFlags(role) },
       templates: TOURNAMENT_TEMPLATES.map(publicCompetitionTemplate),
       tournaments: ["global", ...Object.keys(TENANTS).map(tenantTournamentId)]
         .map(id => store.tournaments.find(tournament => tournament.id === id))
@@ -2590,13 +2680,12 @@ async function handleRegistrarGlobal(req, res) {
     }
     const token = randomSecret();
     const role = userRole(null, { email });
-    const isAdmin = role === "admin" || role === "superadmin";
     store.users[email] = {
       name,
       email,
       active: true,
       role,
-      isAdmin,
+      ...publicUserFlags(role),
       password: createPasswordRecord(password),
       updatedAt: new Date().toISOString(),
       createdAt: new Date().toISOString()
@@ -2606,7 +2695,7 @@ async function handleRegistrarGlobal(req, res) {
     send(res, 200, JSON.stringify({
       ok: true,
       token,
-      user: { name, email, role, isAdmin, isSuperAdmin: role === "superadmin" },
+      user: { name, email, role, ...publicUserFlags(role) },
       templates: TOURNAMENT_TEMPLATES.map(publicCompetitionTemplate),
       tournaments: ["global", ...Object.keys(TENANTS).map(tenantTournamentId)]
         .map(id => store.tournaments.find(tournament => tournament.id === id))
@@ -2737,37 +2826,65 @@ async function handleGrantTournamentAccess(req, res) {
       send(res, 401, JSON.stringify({ error: "Invalid tournament password" }));
       return;
     }
+
+    let tenantSession = null;
+    if (tournament.tenantId) {
+      const tenant = tenantFromValue(tournament.tenantId);
+      const tenantData = tenantStore(store, tenant.id);
+      const email = normalizeEmail(user.email);
+      const globalUserRecord = store.users?.[email] || null;
+      let tenantUser = tenantData.users[email] || null;
+      const role = userRole(tenant.id, { ...(tenantUser || {}), email });
+      const approvalStatus = tenantUser?.approvalStatus || (canApproveCompanyRequestsRole(role) ? "approved" : "pending");
+
+      if (!tenantUser) {
+        tenantUser = tenantData.users[email] = {
+          name: user.name || "",
+          email,
+          area: "",
+          active: true,
+          approvalStatus,
+          role,
+          isAdmin: isAdminRole(role),
+          isEmpresario: role === "empresario",
+          password: globalUserRecord?.password || createPasswordRecord(""),
+          updatedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString()
+        };
+      } else {
+        tenantUser.role = role;
+        tenantUser.isAdmin = isAdminRole(role);
+        tenantUser.isEmpresario = role === "empresario";
+        tenantUser.approvalStatus = approvalStatus;
+        tenantUser.updatedAt = new Date().toISOString();
+      }
+
+      if (tenantUser.active === false || approvalStatus === "rejected") {
+        writeStore(store);
+        send(res, 403, JSON.stringify({ error: "Tu solicitud de ingreso a la empresa fue rechazada." }));
+        return;
+      }
+      if (approvalStatus === "pending") {
+        writeStore(store);
+        send(res, 202, JSON.stringify({
+          ok: true,
+          pendingApproval: true,
+          message: "Solicitud enviada. Un empresario o administrador debe aprobar tu ingreso antes de jugar.",
+          tournament: publicLobbyTournament(store, tournament, user)
+        }));
+        return;
+      }
+
+      const token = randomSecret();
+      tenantData.sessions[token] = email;
+      tenantSession = { token, user: { name: tenantUser.name || user.name || "", email, area: tenantUser.area || "", role, ...publicUserFlags(role) } };
+    }
+
     accessMapFor(store, user.email)[tournament.id] = {
       tournamentId: tournament.id,
       grantedAt: new Date().toISOString(),
       grantedByPassword: true
     };
-    // Si el torneo pertenece a una empresa, creamos una sesión de empresa
-    // para que el usuario global pueda operar directamente desde la página de la empresa.
-    let tenantSession = null;
-    if (tournament.tenantId) {
-      const tenant = tenantFromValue(tournament.tenantId);
-      const tenantData = tenantStore(store, tenant.id);
-      const token = randomSecret();
-      // Aseguramos que exista el usuario en el tenant (registro ligero sin contraseña)
-      const email = normalizeEmail(user.email);
-      const globalUserRecord = store.users?.[email] || null;
-      if (!tenantData.users[email]) {
-        tenantData.users[email] = {
-          name: user.name || "",
-          email,
-          area: "",
-          active: true,
-          role: userRole(tenant.id, { email }),
-          isAdmin: false,
-          password: globalUserRecord?.password || createPasswordRecord(""),
-          updatedAt: new Date().toISOString(),
-          createdAt: new Date().toISOString()
-        };
-      }
-      tenantData.sessions[token] = email;
-      tenantSession = { token, user: { name: tenantData.users[email].name || user.name || "", email, area: tenantData.users[email].area || "" } };
-    }
     syncGlobalSubmissionToTournament(store, user.email, tournament);
     writeStore(store);
     send(res, 200, JSON.stringify({ ok: true, tournament: publicLobbyTournament(store, tournament, user), tenantSession }));
@@ -2805,9 +2922,21 @@ async function handleCompanyLogin(req, res) {
     const previousUser = tenantData.users[email];
     const globalUser = store.users?.[email] || null;
     const loginFromGlobal = !previousUser && globalUser && verifyPassword(password, globalUser);
+    const role = userRole(tenant.id, { ...(previousUser || {}), email });
+    const isAdmin = isAdminRole(role);
+
     if (previousUser) {
+      const approvalStatus = approvalStatusFor(previousUser, role);
       if (previousUser.active === false) {
         send(res, 403, JSON.stringify({ error: "User is disabled" }));
+        return;
+      }
+      if (approvalStatus === "pending") {
+        send(res, 403, JSON.stringify({ error: "Tu solicitud de ingreso a la empresa esta pendiente de aprobacion." }));
+        return;
+      }
+      if (approvalStatus === "rejected") {
+        send(res, 403, JSON.stringify({ error: "Tu solicitud de ingreso a la empresa fue rechazada." }));
         return;
       }
       if (!verifyPassword(password, previousUser)) {
@@ -2818,24 +2947,52 @@ async function handleCompanyLogin(req, res) {
       send(res, 400, JSON.stringify({ error: "Se requiere el nombre para el primer login" }));
       return;
     }
+
     const finalName = previousUser?.name || (loginFromGlobal ? globalUser.name : name);
     const finalArea = previousUser?.area || area || "";
-    const role = userRole(tenant.id, { ...(previousUser || {}), email });
-    const isAdmin = role === "admin" || role === "superadmin";
     if (finalArea && !tenantData.areas.some(item => areaId(item) === areaId(finalArea))) tenantData.areas.push(finalArea);
-    const token = randomSecret();
+
+    const approvalStatus = previousUser?.approvalStatus || (canApproveCompanyRequestsRole(role) ? "approved" : "pending");
     tenantData.users[email] = {
       ...(previousUser || {}),
       name: finalName,
       email,
       area: finalArea,
       active: previousUser?.active !== false,
+      approvalStatus,
       role,
       isAdmin,
+      isEmpresario: role === "empresario",
       password: previousUser?.password || (loginFromGlobal ? globalUser.password : createPasswordRecord(password)),
       updatedAt: new Date().toISOString(),
       createdAt: previousUser?.createdAt || new Date().toISOString()
     };
+
+    if (approvalStatus !== "approved") {
+      if (!store.users[email]) {
+        const globalRole = userRole(null, { email });
+        store.users[email] = {
+          name: finalName,
+          email,
+          active: true,
+          role: globalRole,
+          ...publicUserFlags(globalRole),
+          password: tenantData.users[email].password,
+          updatedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString()
+        };
+      }
+      writeStore(store);
+      send(res, 202, JSON.stringify({
+        ok: true,
+        pendingApproval: true,
+        message: "Solicitud enviada. Un empresario o administrador debe aprobar tu ingreso antes de jugar.",
+        tenant: publicTenant(tenant, tenantData)
+      }));
+      return;
+    }
+
+    const token = randomSecret();
     tenantData.sessions[token] = email;
     const globalToken = randomSecret();
     if (!store.users[email]) {
@@ -2845,7 +3002,7 @@ async function handleCompanyLogin(req, res) {
         email,
         active: true,
         role: globalRole,
-        isAdmin: globalRole === "admin" || globalRole === "superadmin",
+        ...publicUserFlags(globalRole),
         password: tenantData.users[email].password,
         updatedAt: new Date().toISOString(),
         createdAt: new Date().toISOString()
@@ -2856,7 +3013,8 @@ async function handleCompanyLogin(req, res) {
     send(res, 200, JSON.stringify({
       ok: true,
       token,
-      user: { name: finalName, email, area: finalArea, role, isAdmin, isSuperAdmin: role === "superadmin" },
+      globalToken,
+      user: { name: finalName, email, area: finalArea, role, ...publicUserFlags(role) },
       dailyGamePlays: currentDailyGamePlays(tenantData, email),
       tenant: publicTenant(tenant, tenantData)
     }));
@@ -2893,22 +3051,23 @@ async function handleRegistrarCompany(req, res) {
       return;
     }
     const role = userRole(tenant.id, { email });
-    const isAdmin = role === "admin" || role === "superadmin";
+    const isAdmin = isAdminRole(role);
+    const approvalStatus = canApproveCompanyRequestsRole(role) ? "approved" : "pending";
     if (!tenantData.areas.some(item => areaId(item) === areaId(area))) tenantData.areas.push(area);
-    const token = randomSecret();
+    const passwordRecord = createPasswordRecord(password);
     tenantData.users[email] = {
       name,
       email,
       area,
       active: true,
+      approvalStatus,
       role,
       isAdmin,
-      password: createPasswordRecord(password),
+      isEmpresario: role === "empresario",
+      password: passwordRecord,
       updatedAt: new Date().toISOString(),
       createdAt: new Date().toISOString()
     };
-    tenantData.sessions[token] = email;
-    const globalToken = randomSecret();
     if (!store.users[email]) {
       const globalRole = userRole(null, { email });
       store.users[email] = {
@@ -2916,19 +3075,34 @@ async function handleRegistrarCompany(req, res) {
         email,
         active: true,
         role: globalRole,
-        isAdmin: globalRole === "admin" || globalRole === "superadmin",
-        password: createPasswordRecord(password), // Usa la misma clave
+        ...publicUserFlags(globalRole),
+        password: passwordRecord,
         updatedAt: new Date().toISOString(),
         createdAt: new Date().toISOString()
       };
     }
+
+    if (approvalStatus !== "approved") {
+      writeStore(store);
+      send(res, 202, JSON.stringify({
+        ok: true,
+        pendingApproval: true,
+        message: "Solicitud enviada. Un empresario o administrador debe aprobar tu ingreso antes de jugar.",
+        tenant: publicTenant(tenant, tenantData)
+      }));
+      return;
+    }
+
+    const token = randomSecret();
+    tenantData.sessions[token] = email;
+    const globalToken = randomSecret();
     store.globalSessions[globalToken] = email;
     writeStore(store);
     send(res, 200, JSON.stringify({
       ok: true,
       token,
-      globalToken, // <--- AGREGAR ESTA LÍNEA
-      user: { name, email, area, role, isAdmin, isSuperAdmin: role === "superadmin" },
+      globalToken,
+      user: { name, email, area, role, ...publicUserFlags(role) },
       dailyGamePlays: currentDailyGamePlays(tenantData, email),
       tenant: publicTenant(tenant, tenantData)
     }));
@@ -3124,7 +3298,7 @@ async function handleAdminUpdateUser(req, res) {
         user.role = "superadmin";
         user.active = true;
       }
-      user.isAdmin = user.role === "admin" || user.role === "superadmin";
+      Object.assign(user, publicUserFlags(user.role));
       user.updatedAt = new Date().toISOString();
       if (!user.active) {
         Object.entries(store.globalSessions || {}).forEach(([token, sessionEmail]) => {
@@ -3157,15 +3331,17 @@ async function handleAdminUpdateUser(req, res) {
       return;
     }
     const active = body.active !== false;
-    const nextIsAdmin = Boolean(body.isAdmin || isAdminEmail(tenant.id, email));
+    const requestedRole = normalizeEditableCompanyRole(body.role, body.isAdmin);
     const currentRole = userRole(tenant.id, { ...user, email });
-    const currentIsAdmin = currentRole === "admin" || currentRole === "superadmin";
-    if (nextIsAdmin !== currentIsAdmin && !requireSuperAdmin(req, res, tenant, body.sessionToken, body.globalSessionToken)) return;
+    const nextRole = isSuperAdminEmail(tenant.id, email) ? "superadmin" : requestedRole;
+    if (nextRole !== currentRole && !requireSuperAdmin(req, res, tenant, body.sessionToken, body.globalSessionToken)) return;
     user.name = name;
     user.area = area;
     user.active = active;
-    user.role = isSuperAdminEmail(tenant.id, email) ? "superadmin" : nextIsAdmin ? "admin" : "player";
-    user.isAdmin = user.role === "admin" || user.role === "superadmin";
+    user.role = nextRole;
+    user.isAdmin = isAdminRole(user.role);
+    user.isEmpresario = user.role === "empresario";
+    if (canApproveCompanyRequestsRole(user.role)) user.approvalStatus = "approved";
     user.updatedAt = new Date().toISOString();
     if (!tenantData.areas.some(item => areaId(item) === areaId(area))) tenantData.areas.push(area);
     if (!active) {
@@ -3177,6 +3353,81 @@ async function handleAdminUpdateUser(req, res) {
     send(res, 200, JSON.stringify({
       ok: true,
       user: { name: user.name, email: user.email || email, area: user.area, active: user.active !== false, role: user.role, isAdmin: user.isAdmin, isSuperAdmin: user.role === "superadmin" }
+    }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+
+async function handleReviewCompanyJoinRequest(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const tenant = tenantFromValue(body.tenantId);
+    const email = normalizeEmail(body.email);
+    const action = String(body.action || "").trim().toLowerCase();
+    if (!tenant) {
+      send(res, 404, JSON.stringify({ error: "Empresa no encontrada." }));
+      return;
+    }
+    if (!email || !["approve", "reject"].includes(action)) {
+      send(res, 400, JSON.stringify({ error: "Email y accion son obligatorios." }));
+      return;
+    }
+    const reviewer = requireCompanyApprover(req, res, tenant, body.sessionToken, body.globalSessionToken);
+    if (!reviewer) return;
+    const store = readStore();
+    const tenantData = tenantStore(store, tenant.id);
+    const user = tenantData.users[email];
+    if (!user) {
+      send(res, 404, JSON.stringify({ error: "User not found" }));
+      return;
+    }
+    const targetRole = userRole(tenant.id, { ...user, email });
+    if (canApproveCompanyRequestsRole(targetRole) && !reviewer.isSuperAdmin) {
+      send(res, 403, JSON.stringify({ error: "Solo un superadmin puede revisar cuentas con permisos especiales." }));
+      return;
+    }
+    const now = new Date().toISOString();
+    user.reviewedAt = now;
+    user.reviewedBy = reviewer.email;
+    user.updatedAt = now;
+    if (action === "approve") {
+      user.active = true;
+      user.approvalStatus = "approved";
+      user.rejectedAt = "";
+      user.approvedAt = now;
+      const tournamentId = tenantTournamentId(tenant.id);
+      accessMapFor(store, email)[tournamentId] = {
+        tournamentId,
+        grantedAt: now,
+        grantedByPassword: false,
+        grantedByApproval: true,
+        grantedBy: reviewer.email
+      };
+    } else {
+      user.approvalStatus = "rejected";
+      user.rejectedAt = now;
+      user.approvedAt = "";
+      Object.entries(tenantData.sessions || {}).forEach(([token, sessionEmail]) => {
+        if (normalizeEmail(sessionEmail) === email) delete tenantData.sessions[token];
+      });
+      const tournamentId = tenantTournamentId(tenant.id);
+      if (store.tournamentAccess?.[email]) delete store.tournamentAccess[email][tournamentId];
+    }
+    writeStore(store);
+    send(res, 200, JSON.stringify({
+      ok: true,
+      user: {
+        name: user.name || "",
+        email: user.email || email,
+        area: user.area || "",
+        active: user.active !== false,
+        approvalStatus: approvalStatusFor(user, targetRole),
+        role: targetRole,
+        ...publicUserFlags(targetRole)
+      },
+      tenant: publicTenant(tenant, tenantData)
     }));
   } catch (error) {
     send(res, 500, JSON.stringify({ error: error.message }));
@@ -4520,7 +4771,8 @@ function handleAdminSummary(req, res) {
     }));
     return;
   }
-  if (!requireAdmin(req, res, tenant, adminKey, sessionToken, globalSessionToken)) return;
+  const approver = requireCompanyApprover(req, res, tenant, sessionToken, globalSessionToken);
+  if (!approver) return;
   const tenantData = tenantStore(store, tenant.id);
   const tournament = store.tournaments.find(item => item.id === tenantTournamentId(tenant.id));
   const submissions = tournament?.submissions || [];
@@ -4529,17 +4781,19 @@ function handleAdminSummary(req, res) {
     .map(user => {
       const submission = byEmail.get(normalizeEmail(user.email));
       const role = userRole(tenant.id, user);
-      const admin = role === "admin" || role === "superadmin";
+      const flags = publicUserFlags(role);
+      const approvalStatus = approvalStatusFor(user, role);
       if (user.role !== role) user.role = role;
-      if (admin && !user.isAdmin) user.isAdmin = true;
+      if (flags.isAdmin && !user.isAdmin) user.isAdmin = true;
+      if (flags.isEmpresario && !user.isEmpresario) user.isEmpresario = true;
       return {
         name: user.name || "",
         email: user.email || "",
         area: user.area || "",
         active: user.active !== false,
+        approvalStatus,
         role,
-        isAdmin: admin,
-        isSuperAdmin: role === "superadmin",
+        ...flags,
         registered: true,
         registeredAt: user.createdAt || "",
         updatedAt: user.updatedAt || "",
@@ -4571,6 +4825,8 @@ function handleAdminSummary(req, res) {
     tournament: tournament ? publicTournament(tournament, { includePrivateCode: true }) : null,
     stats: {
       users: users.length + extraPlayers.length,
+      pendingRequests: users.filter(user => user.approvalStatus === "pending").length,
+      rejectedRequests: users.filter(user => user.approvalStatus === "rejected").length,
       predictions: submissions.length,
       areas: tenantData.areas.length
     },
@@ -4756,6 +5012,10 @@ const server = http.createServer((req, res) => {
   }
   if (req.method === "GET" && req.url.startsWith("/api/company-session")) {
     handleCompanySession(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/company-join-requests") {
+    handleReviewCompanyJoinRequest(req, res);
     return;
   }
   if (req.method === "POST" && req.url === "/api/admin-users") {
