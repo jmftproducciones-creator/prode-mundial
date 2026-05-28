@@ -1,9 +1,9 @@
 {
-  "name": "Prode BAIT Mundial 2026",
-  "short_name": "Prode BAIT",
+  "name": "Prode",
+  "short_name": "Prode",
   "description": "Prode Mundial 2026 para jugar con amigos, empresas y minitorneos.",
-  "start_url": "/prode/global/",
-  "scope": "/prode/global/",
+  "start_url": "/prode/",
+  "scope": "/prode/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#ffffff",

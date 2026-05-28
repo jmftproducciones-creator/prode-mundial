@@ -636,7 +636,9 @@ const FLAG_CODES = {
     tenantAccessGranted: !1,
     globalGames: null,
     dailyGamePlays: {},
+    profileStats: { fanPoints: 0, rewardName: "Fan Points" },
     leaderboardArea: "",
+    leaderboardViews: {},
     adminKey: "",
     adminUnlocked: !1,
     currentView: "inicio",
@@ -782,6 +784,9 @@ function companySessionKey() {
 function globalSessionKey() {
   return "globalSession";
 }
+function leaderboardViewsKey() {
+  return "leaderboardViews:v1";
+}
 function tenantTournamentId(e = state.tenantId) {
   return e ? `empresa-${e}` : "";
 }
@@ -795,7 +800,8 @@ function loadStoredGlobalSession() {
 }
 function saveGlobalSession(e) {
   ((state.globalSession = e),
-    localStorage.setItem(globalSessionKey(), JSON.stringify(e)));
+    localStorage.setItem(globalSessionKey(), JSON.stringify(e)),
+    applyAvatarToUi(e?.user?.avatar || currentAvatar()));
 }
 function clearGlobalSession() {
   (localStorage.removeItem(globalSessionKey()),
@@ -816,12 +822,27 @@ function loadStoredCompanySession() {
 function saveCompanySession(e) {
   state.tenantId &&
     ((state.companySession = e),
-    localStorage.setItem(companySessionKey(), JSON.stringify(e)));
+    localStorage.setItem(companySessionKey(), JSON.stringify(e)),
+    applyAvatarToUi(e?.user?.avatar || currentAvatar()));
 }
 function clearCompanySession() {
   (state.tenantId && localStorage.removeItem(companySessionKey()),
     (state.companySession = null),
     (state.adminUnlocked = !1));
+}
+function loadStoredLeaderboardViews() {
+  try {
+    const e = JSON.parse(localStorage.getItem(leaderboardViewsKey()) || "{}");
+    return e && "object" == typeof e ? e : {};
+  } catch {
+    return {};
+  }
+}
+function saveLeaderboardViews() {
+  localStorage.setItem(
+    leaderboardViewsKey(),
+    JSON.stringify(state.leaderboardViews || {}),
+  );
 }
 function isAdminSession() {
   return Boolean(state.companySession?.user?.isAdmin);
@@ -1550,6 +1571,15 @@ async function submitDailyGamePlay(e, t) {
   });
   return (
     (state.dailyGamePlays = n.dailyGamePlays || state.dailyGamePlays || {}),
+    n?.play?.completed &&
+      n?.play?.points &&
+      (state.profileStats = {
+        fanPoints: Number(state.profileStats?.fanPoints || 0) + Number(n.play.points || 0),
+        rewardName:
+          n.play.rewardName ||
+          state.profileStats?.rewardName ||
+          "Fan Points",
+      }),
     n
   );
 }
@@ -1573,9 +1603,9 @@ function renderDailyGames() {
     s)
   ) {
     const e = n?.rewardName || "Fan Points",
-      t = Number(n?.points?.camisetadle || 0),
-      a = Number(n?.points?.desafio || 0);
-    s.innerHTML = `\n      <span>${escapeHtml(state.tenant?.name || "Global")}</span>\n      <span>Camisetadle +${t} ${escapeHtml(e)}</span>\n      <span>Desafio +${a} ${escapeHtml(e)}</span>\n    `;
+      t = 20,
+      a = 15;
+    s.innerHTML = `\n      <span>${escapeHtml(state.tenant?.name || "Global")}</span>\n      <span>Camisetadle +${t} ${escapeHtml(e)}</span>\n      <span>Desafio +${a} ${escapeHtml(e)}</span>\n      <span>Total: ${Number(state.profileStats?.fanPoints || 0)} ${escapeHtml(state.profileStats?.rewardName || e)}</span>\n    `;
   }
   if (!n?.enabled)
     return void (e.innerHTML =
@@ -4174,6 +4204,22 @@ async function loadAdminSummary() {
     : (t.innerHTML =
         '<p class="empty">Todavia no hay usuarios registrados.</p>');
 }
+function leaderboardViewContextKey(e, t = "") {
+  const n = state.currentTournamentId || "global",
+    a = state.tenantId || "global",
+    o = state.leaderboardArea || "all";
+  return "mini" === e
+    ? ["mini", n, a, t || "default"].join(":")
+    : ["main", n, a, o].join(":");
+}
+function getLeaderboardView(e) {
+  return state.leaderboardViews?.[e] || "general";
+}
+function setLeaderboardView(e, t) {
+  (state.leaderboardViews || (state.leaderboardViews = {}),
+    (state.leaderboardViews[e] = t || "general"),
+    saveLeaderboardViews());
+}
 async function loadLeaderboard() {
   const e = document.getElementById("leaderboardPanel"),
     t = document.getElementById("mainLeaderboardPanel");
@@ -4184,6 +4230,8 @@ async function loadLeaderboard() {
     t &&
       (t.innerHTML = `<p class="empty" style="text-align: center;">Cargando tabla de ${n?.name || "torneo"}...</p>`));
   try {
+    const a0 = leaderboardViewContextKey("main"),
+      o0 = getLeaderboardView(a0);
     const n = (e, t) => {
         const n = new URLSearchParams({
           tournamentId: state.currentTournamentId,
@@ -4236,12 +4284,17 @@ async function loadLeaderboard() {
       const e = s.hasRealResults
         ? "Puntaje calculado con resultados reales guardados."
         : "Sin resultados reales guardados: todos figuran con 0 puntos.";
-      i = renderLeaderboardBlock(s, d, e);
+      i = renderLeaderboardBlock(s, d, e, o0);
     } else
       i = `<p class="empty" style="text-align: center;">Todavia no hay prodes guardados en ${escapeHtml(d)}.</p>`;
     [e, t].forEach((e) => {
       e &&
         ((e.innerHTML = i),
+        e.querySelectorAll(".leaderboard-view-select").forEach((e) => {
+          e.addEventListener("change", (e) => {
+            (setLeaderboardView(a0, e.target.value), loadLeaderboard());
+          });
+        }),
         e.querySelectorAll(".view-user-prode").forEach((e) => {
           e.addEventListener("click", () => showUserProde(e.dataset.email));
         }));
@@ -4262,9 +4315,80 @@ async function loadLeaderboard() {
           '<p class="empty" style="text-align: center;">No se pudo cargar el leaderboard.</p>'));
   }
 }
-function renderLeaderboardBlock(e, t, n) {
-  return e.leaderboard.length
-    ? `\n      <div class="leaderboard-head" style="text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">\n        <div>\n          <h3>${t}</h3>\n          <p>${n}</p>\n        </div>\n        <strong>${e.leaderboard.length} jugadores</strong>\n      </div>\n      <div class="leaderboard-table" style="display: flex; flex-direction: column; align-items: center; width: 100%;">\n        ${e.leaderboard.map((e, t) => `\n          <div class="leaderboard-row" style="display:flex; align-items:center; justify-content:center; gap:0.5rem; flex-wrap:wrap; text-align:center; width:100%;">\n            <b style="flex-shrink:0;">${t + 1}</b>\n            <span style="flex:1; min-width: 120px;">${escapeHtml(e.player.name)}<small style="display:block;">${escapeHtml(e.player.area || "Participante")}</small></span>\n            <strong style="flex-shrink:0;">${e.score.points} pts</strong>\n            <em style="flex:2; min-width: 150px; display:block;">Exactos🎯:${e.score.exactScoreHits}</em>\n            <button class="secondary view-user-prode" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; flex-shrink:0;" data-email="${escapeHtml(e.player.email)}">Ver jugada</button>\n          </div>\n        `).join("")}\n      </div>\n    `
+function renderLeaderboardBlock(e, t, n, a = "general") {
+  const v = [
+      { id: "general", label: "General" },
+      { id: "group1", label: "Fecha 1" },
+      { id: "group2", label: "Fecha 2" },
+      { id: "group3", label: "Fecha 3" },
+      { id: "r32", label: "16avos" },
+      { id: "r16", label: "8avos" },
+      { id: "final-pack", label: "4tos, Semis, Tercer Puesto y Final" },
+    ],
+    o = (a || "general").trim(),
+    s = (e.tournament?.scoring || state.defaultScoring || {}),
+    r = {
+      groupPosition: Number(s.groupPosition) || 1,
+      knockoutWinner: Number(s.knockoutWinner) || 3,
+      exactScore: Number(s.exactScore) || 2,
+      champion: Number(s.champion) || 10,
+    },
+    i = (e, t = "home", n = "away") => {
+      if (!e) return null;
+      const a = e[t] !== "" && null !== e[t] && void 0 !== e[t],
+        o = e[n] !== "" && null !== e[n] && void 0 !== e[n];
+      if (!a || !o) return null;
+      const s = Number(e[t]),
+        r = Number(e[n]);
+      return Number.isFinite(s) && Number.isFinite(r) ? { home: s, away: r } : null;
+    },
+    d = (e) => (GROUP_MATCHDAY_FIXTURES[e] || []).slice(),
+    l = (e) => {
+      if ("r32" === e) return R32_MATCHES.map((e) => e[0]);
+      if ("r16" === e) return LATER_ROUNDS.r16.map((e) => e[0]);
+      if ("final-pack" === e)
+        return [...LATER_ROUNDS.qf, ...LATER_ROUNDS.sf, ...LATER_ROUNDS.third, ...LATER_ROUNDS.final].map((e) => e[0]);
+      return [];
+    },
+    m = (e, t, n) => {
+      if (!e?.prediction || !t?.tournament?.realResults || "general" === n) return e.score;
+      const a = t.tournament.realResults,
+        o = { points: 0, exactScoreHits: 0 };
+      if (GROUP_PHASE_IDS.includes(n))
+        return (
+          d(n).forEach((t) => {
+            const n = i(a.groupMatches?.[t]),
+              s = i(e.prediction.groupMatches?.[t]);
+            if (!n || !s) return;
+            Math.sign(n.home - n.away) === Math.sign(s.home - s.away) && (o.points += r.knockoutWinner);
+            n.home === s.home && n.away === s.away && ((o.points += r.exactScore), (o.exactScoreHits += 1));
+          }),
+          o
+        );
+      return (
+        l(n).forEach((t) => {
+          const n = a.winners?.[t],
+            s = e.prediction.winners?.[t];
+          n && s && n === s && (o.points += r.knockoutWinner);
+          const d = i(a.scores?.[t], "left", "right"),
+            l = i(e.prediction.scores?.[t], "left", "right");
+          d && l && d.home === l.home && d.away === l.away && ((o.points += r.exactScore), (o.exactScoreHits += 1));
+        }),
+        "final-pack" === n && a.winners?.m104 && e.prediction.winners?.m104 === a.winners.m104 && (o.points += r.champion),
+        o
+      );
+    },
+    c = (e.leaderboard || [])
+      .map((t) => ({ ...t, score: m(t, e, o) }))
+      .sort((e, t) => {
+        const n = null !== e.prediction,
+          a = null !== t.prediction;
+        if (n && !a) return -1;
+        if (!n && a) return 1;
+        return t.score.points - e.score.points || new Date(e.createdAt) - new Date(t.createdAt);
+      });
+  return c.length
+    ? `\n      <div class="leaderboard-head" style="text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">\n        <div>\n          <h3>${t}</h3>\n          <p>${n}</p>\n        </div>\n        <label style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; justify-content:center;">\n          <span style="font-weight:700;">Vista:</span>\n          <select class="leaderboard-view-select">\n            ${v.map((e) => `<option value="${e.id}" ${e.id === o ? "selected" : ""}>${e.label}</option>`).join("")}\n          </select>\n        </label>\n        <strong>${c.length} jugadores</strong>\n      </div>\n      <div class="leaderboard-table" style="display: flex; flex-direction: column; align-items: center; width: 100%;">\n        ${c.map((e, t) => `\n          <div class="leaderboard-row" style="display:flex; align-items:center; justify-content:center; gap:0.5rem; flex-wrap:wrap; text-align:center; width:100%;">\n            <b style="flex-shrink:0;">${t + 1}</b>\n            <span style="flex:1; min-width: 120px;">${escapeHtml(e.player.name)}<small style="display:block;">${escapeHtml(e.player.area || "Participante")}</small></span>\n            <strong style="flex-shrink:0;">${e.score.points} pts</strong>\n            <em style="flex:2; min-width: 150px; display:block;">Exactos🎯:${e.score.exactScoreHits || 0}</em>\n            <button class="secondary view-user-prode" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; flex-shrink:0;" data-email="${escapeHtml(e.player.email)}">Ver jugada</button>\n          </div>\n        `).join("")}\n      </div>\n    `
     : `<p class="empty" style="text-align: center;">Todavia no hay prodes guardados en ${t}.</p>`;
 }
 function showUserProde(e) {
@@ -4487,15 +4611,47 @@ function renderMiniTournaments(e = []) {
             i = (o.tournament?.minitournaments || n.minitournaments || []).find(
               (e) => e.id === t,
             ),
-            d = i && i.creatorEmail === r;
+            d = i && i.creatorEmail === r,
+            l = leaderboardViewContextKey("mini", t),
+            m = getLeaderboardView(l);
           if (!s.length)
             return void (a.innerHTML =
               '<p class="empty" style="text-align: center; margin: 0;">Todavía no hay jugadores en este minitorneo.</p>');
-          const l = `\n          <div class="leaderboard-table" style="display: flex; flex-direction: column; align-items: center; width: 100%;">\n            ${s.map((e, n) => `\n              <div class="leaderboard-row" style="display:flex; align-items:center; justify-content:center; gap:0.5rem; flex-wrap:wrap; text-align:center; width:100%;">\n                <b style="flex-shrink:0;">${n + 1}</b>\n                <span style="flex:1; min-width: 120px;">${escapeHtml(e.player.name)}<small style="display:block;">${escapeHtml(e.player.area || "Participante")}</small></span>\n                <strong style="flex-shrink:0; align-items:center;">${e.score.points} pts</strong>\n                <em style="flex:2; min-width: 150px; display:block;">Exactos🎯:${e.score.exactScoreHits}</em>\n                <button class="secondary view-user-prode" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; flex-shrink:0;" data-email="${escapeHtml(e.player.email)}">Ver jugada</button>\n                ${d && e.player.email !== r ? `<button class="secondary danger remove-mini-user" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; flex-shrink:0;" data-mini-id="${t}" data-email="${escapeHtml(e.player.email)}">Eliminar</button>` : ""}\n              </div>\n            `).join("")}\n          </div>\n        `;
-          ((a.innerHTML = l),
+          const c = renderLeaderboardBlock(
+            o,
+            `Minitorneo: ${o.minitournamentName || i?.name || t}`,
+            o.hasRealResults
+              ? "Puntaje calculado con resultados reales guardados."
+              : "Sin resultados reales guardados: todos figuran con 0 puntos.",
+            m,
+          );
+          ((a.innerHTML = c),
+            a.querySelectorAll(".leaderboard-view-select").forEach((e) => {
+              e.addEventListener("change", () => {
+                setLeaderboardView(l, e.value);
+                const n = a
+                  .closest(".minitournament-card")
+                  ?.querySelector(`.view-mini-leaderboard[data-mini-id="${t}"]`);
+                (n?.click(), n?.click());
+              });
+            }),
             a.querySelectorAll(".view-user-prode").forEach((e) => {
               e.addEventListener("click", () => showUserProde(e.dataset.email));
             }),
+            d &&
+              a.querySelectorAll(".leaderboard-row").forEach((e) => {
+                const n = e.querySelector(".view-user-prode")?.dataset.email || "";
+                if (!n || n === r) return;
+                const a = document.createElement("button");
+                ((a.className = "secondary danger remove-mini-user"),
+                  (a.style.padding = "0.25rem 0.5rem"),
+                  (a.style.fontSize = "0.75rem"),
+                  (a.style.flexShrink = "0"),
+                  (a.dataset.miniId = t),
+                  (a.dataset.email = n),
+                  (a.textContent = "Eliminar"),
+                  e.appendChild(a));
+              }),
             a.querySelectorAll(".remove-mini-user").forEach((e) => {
               e.addEventListener("click", () =>
                 removeUserFromMiniTournament(e.dataset.miniId, e.dataset.email),
@@ -5524,6 +5680,7 @@ function injectLeaderboardTab() {
   }
 }
 async function init() {
+  state.leaderboardViews = loadStoredLeaderboardViews();
   (initialResetToken() &&
     ((document.getElementById("resetPasswordModal").hidden = !1),
     openView("lobby")),
@@ -5535,6 +5692,7 @@ async function init() {
     await loadTenant(),
     state.tenantId && !state.tenantAccessGranted && openView("predictor"),
     await loadTemplates(),
+    await loadProfileStats().catch(() => {}),
     initialContinueToken() ? await loadContinuation() : await loadTournaments(),
     loadGlobalLobby().catch(() => {}),
     loadLiveResults(),
@@ -5869,7 +6027,72 @@ async function init() {
 // LÓGICA DE MODAL DE PERFIL Y FOTO DE CUENTA
 // ==========================================
 
-function openProfileModal() {
+const DEFAULT_AVATAR =
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ccc'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
+function currentUserRef() {
+  return state.companySession?.user || state.globalSession?.user || null;
+}
+function currentAvatar() {
+  return currentUserRef()?.avatar || DEFAULT_AVATAR;
+}
+function currentProfileBorder() {
+  return currentUserRef()?.profileBorder || "";
+}
+function applyProfileBorderToUi(e) {
+  const t = ["border-gold", "border-neon", "border-fire"],
+    n = e || "";
+  [
+    document.querySelector("#topbarAvatar"),
+    document.querySelector(".avatar-container"),
+  ].forEach((e) => {
+    if (!e) return;
+    t.forEach((t) => e.classList.remove(t));
+    n && e.classList.add(n);
+  });
+}
+function applyAvatarToUi(e) {
+  const t = e || DEFAULT_AVATAR,
+    n = document.getElementById("profileAvatarPreview"),
+    a = document.querySelector("#topbarAvatar img");
+  n && (n.src = t);
+  a && (a.src = t);
+  applyProfileBorderToUi(currentProfileBorder());
+}
+async function saveAvatarRemote(e, t = currentProfileBorder()) {
+  const n = await apiJson("/api/profile-avatar", {
+    method: "POST",
+    body: JSON.stringify({
+      avatar: e,
+      profileBorder: t,
+      tenantId: state.tenantId || "",
+      sessionToken: state.companySession?.token || "",
+      globalSessionToken: state.globalSession?.token || "",
+    }),
+  });
+  n.companyUser &&
+    state.companySession?.token &&
+    saveCompanySession({ token: state.companySession.token, user: n.companyUser });
+  n.globalUser &&
+    state.globalSession?.token &&
+    saveGlobalSession({ token: state.globalSession.token, user: n.globalUser });
+}
+async function loadProfileStats() {
+  try {
+    const e = new URLSearchParams({
+      tenantId: state.tenantId || "",
+      sessionToken: state.companySession?.token || "",
+      globalSessionToken: state.globalSession?.token || "",
+    });
+    const t = await apiJson(`/api/profile-stats?${e.toString()}`);
+    state.profileStats = {
+      fanPoints: Number(t.fanPoints || 0),
+      rewardName: t.rewardName || "Fan Points",
+    };
+  } catch {
+    state.profileStats = { fanPoints: 0, rewardName: "Fan Points" };
+  }
+}
+async function openProfileModal() {
   const modal = document.getElementById("profileModal");
   if (!modal) return;
   // Busca el usuario en la sesión global o en la de empresa
@@ -5882,11 +6105,54 @@ function openProfileModal() {
   document.getElementById("profileNameInput").value = user.name;
   document.getElementById("profileEmailInput").value = user.email || "No registrado";
   // Busca si el usuario ya se subió una foto en esta PC/Celular
-  const savedAvatar = localStorage.getItem(`avatar_${user.name}`);
-  if (savedAvatar) {
-    document.getElementById("profileAvatarPreview").src = savedAvatar;
-  } else {
-    document.getElementById("profileAvatarPreview").src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ccc'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
+  applyAvatarToUi(currentAvatar());
+  await loadProfileStats();
+  const pointsEl = document.getElementById("profileFanPoints");
+  pointsEl &&
+    (pointsEl.textContent = `${Number(state.profileStats?.fanPoints || 0)} ${state.profileStats?.rewardName || "Fan Points"}`);
+  const rewards = [
+    { id: "", name: "Sin contorno", cost: 0 },
+    { id: "border-gold", name: "Oro", cost: 300 },
+    { id: "border-neon", name: "Neon", cost: 500 },
+    { id: "border-fire", name: "Fuego", cost: 1000 },
+  ];
+  const borderWrap = document.getElementById("profileBorderOptions"),
+    legendEl = document.getElementById("profileBorderLegend"),
+    current = currentProfileBorder(),
+    points = Number(state.profileStats?.fanPoints || 0);
+  const locked = rewards
+    .filter((e) => e.id && points < e.cost)
+    .sort((a, b) => a.cost - b.cost);
+  if (legendEl) {
+    if (!locked.length) {
+      legendEl.textContent =
+        "Ya desbloqueaste todos los contornos. Cada día hay 1 Camisetadle (+20) y 1 desafío de palabras (+15).";
+    } else {
+      const next = locked[0],
+        missing = Math.max(0, Number(next.cost) - points);
+      legendEl.textContent = `Te faltan ${missing} Fan Points para desbloquear ${next.name}. Recordatorio: hay 1 Camisetadle (+20) y 1 desafío de palabras (+15) por día.`;
+    }
+  }
+  if (borderWrap) {
+    borderWrap.innerHTML = rewards
+      .map((e) => {
+        const unlocked = points >= e.cost,
+          selected = current === e.id;
+        return `<button type="button" class="border-option ${selected ? "is-selected" : ""}" data-border="${e.id}" ${unlocked ? "" : "disabled"}>${escapeHtml(e.name)} ${e.cost ? `(${e.cost})` : ""}</button>`;
+      })
+      .join("");
+    borderWrap.querySelectorAll("[data-border]").forEach((e) => {
+      e.addEventListener("click", async () => {
+        const t = String(e.dataset.border || "");
+        try {
+          await saveAvatarRemote(currentAvatar(), t);
+          applyProfileBorderToUi(t);
+          await openProfileModal();
+        } catch (n) {
+          alert(`No se pudo guardar el contorno: ${n.message}`);
+        }
+      });
+    });
   }
   // Oculta el menú desplegable viejo para que no moleste
   const dropdownPanel = document.getElementById("dropdownInfoPanel");
@@ -5908,16 +6174,13 @@ document.getElementById("profileAvatarInput")?.addEventListener("change", functi
     return;
   }
   const reader = new FileReader();
-  reader.onload = function(event) {
-    const base64Image = event.target.result;
-    document.getElementById("profileAvatarPreview").src = base64Image;
-    const user = state.companySession?.user || state.globalSession?.user;
-    if (user && user.name) {
-      // Guarda la foto en la memoria del navegador
-      localStorage.setItem(`avatar_${user.name}`, base64Image);
-      // Actualiza la imagen en la barra superior (TopBar chiquito)
-      const topAvatar = document.querySelector("#topbarAvatar img");
-      if (topAvatar) topAvatar.src = base64Image;
+  reader.onload = async function(event) {
+    const base64Image = String(event.target.result || "");
+    applyAvatarToUi(base64Image);
+    try {
+      await saveAvatarRemote(base64Image);
+    } catch (err) {
+      alert(`No se pudo guardar la foto en la cuenta: ${err.message}`);
     }
   };
   reader.readAsDataURL(file);
@@ -5999,12 +6262,6 @@ document.getElementById("changePasswordForm")?.addEventListener("submit", async 
 });
 // 5. Cargar la foto en la barra superior (TopBar) al iniciar o cambiar de cuenta
 document.getElementById("topbarAvatar")?.addEventListener("click", () => {
-  const user = state.companySession?.user || state.globalSession?.user;
-  if (user && user.name) {
-    const savedAvatar = localStorage.getItem(`avatar_${user.name}`);
-    if (savedAvatar) {
-      const topAvatar = document.querySelector("#topbarAvatar img");
-      if (topAvatar) topAvatar.src = savedAvatar;
-    }
-  }
+  applyAvatarToUi(currentAvatar());
 });
+

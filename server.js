@@ -312,6 +312,10 @@ const DEFAULT_DAILY_GAMES = {
     }
   ]
 };
+const FIXED_DAILY_GAME_POINTS = {
+  camisetadle: 20,
+  desafio: 15,
+};
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -1404,6 +1408,8 @@ function sessionUser(store, tenant, token) {
     name: user.name || "",
     email: user.email || email,
     area: user.area || "",
+    avatar: user.avatar || "",
+    profileBorder: user.profileBorder || "",
     role,
     ...publicUserFlags(role)
   };
@@ -1419,10 +1425,34 @@ function globalSessionUser(store, token) {
   return {
     name: user.name || "",
     email: user.email || email,
+    avatar: user.avatar || "",
+    profileBorder: user.profileBorder || "",
     role,
     ...publicUserFlags(role),
     createdAt: user.createdAt || ""
   };
+}
+
+function sanitizeAvatarDataUrl(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  if (!/^data:image\/(png|jpeg|jpg|webp|gif);base64,/i.test(text)) return null;
+  if (text.length > 2_500_000) return null;
+  return text;
+}
+function sanitizeProfileBorder(value) {
+  const allowed = new Set(["", "border-gold", "border-neon", "border-fire"]);
+  const border = String(value || "").trim();
+  return allowed.has(border) ? border : null;
+}
+function totalFanPoints(gamePlays = {}, email = "") {
+  const normalized = normalizeEmail(email);
+  const byDate = gamePlays?.[normalized] || {};
+  return Object.values(byDate).reduce((sum, day) => {
+    const camisetadle = Number(day?.camisetadle?.points || 0);
+    const desafio = Number(day?.desafio?.points || 0);
+    return sum + camisetadle + desafio;
+  }, 0);
 }
 
 function requireGlobalAdmin(req, res, store, token) {
@@ -2646,7 +2676,7 @@ async function handleGlobalLogin(req, res) {
     send(res, 200, JSON.stringify({
       ok: true,
       token,
-      user: { name: finalName, email, role, ...publicUserFlags(role) },
+      user: { name: finalName, email, avatar: store.users[email]?.avatar || "", profileBorder: store.users[email]?.profileBorder || "", role, ...publicUserFlags(role) },
       templates: TOURNAMENT_TEMPLATES.map(publicCompetitionTemplate),
       tournaments: ["global", ...Object.keys(TENANTS).map(tenantTournamentId)]
         .map(id => store.tournaments.find(tournament => tournament.id === id))
@@ -2877,7 +2907,7 @@ async function handleGrantTournamentAccess(req, res) {
 
       const token = randomSecret();
       tenantData.sessions[token] = email;
-      tenantSession = { token, user: { name: tenantUser.name || user.name || "", email, area: tenantUser.area || "", role, ...publicUserFlags(role) } };
+      tenantSession = { token, user: { name: tenantUser.name || user.name || "", email, area: tenantUser.area || "", avatar: tenantUser.avatar || store.users?.[email]?.avatar || "", profileBorder: tenantUser.profileBorder || store.users?.[email]?.profileBorder || "", role, ...publicUserFlags(role) } };
     }
 
     accessMapFor(store, user.email)[tournament.id] = {
@@ -3014,7 +3044,7 @@ async function handleCompanyLogin(req, res) {
       ok: true,
       token,
       globalToken,
-      user: { name: finalName, email, area: finalArea, role, ...publicUserFlags(role) },
+      user: { name: finalName, email, area: finalArea, avatar: tenantData.users[email]?.avatar || store.users?.[email]?.avatar || "", profileBorder: tenantData.users[email]?.profileBorder || store.users?.[email]?.profileBorder || "", role, ...publicUserFlags(role) },
       dailyGamePlays: currentDailyGamePlays(tenantData, email),
       tenant: publicTenant(tenant, tenantData)
     }));
@@ -3102,7 +3132,7 @@ async function handleRegistrarCompany(req, res) {
       ok: true,
       token,
       globalToken,
-      user: { name, email, area, role, ...publicUserFlags(role) },
+      user: { name, email, area, avatar: tenantData.users[email]?.avatar || store.users?.[email]?.avatar || "", profileBorder: tenantData.users[email]?.profileBorder || store.users?.[email]?.profileBorder || "", role, ...publicUserFlags(role) },
       dailyGamePlays: currentDailyGamePlays(tenantData, email),
       tenant: publicTenant(tenant, tenantData)
     }));
@@ -3148,6 +3178,86 @@ async function handleChangePassword(req, res) {
 
     writeStore(store);
     send(res, 200, JSON.stringify({ success: true }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleProfileAvatar(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const avatar = sanitizeAvatarDataUrl(body.avatar);
+    const profileBorder = sanitizeProfileBorder(body.profileBorder);
+    if (avatar === null) {
+      send(res, 400, JSON.stringify({ error: "Formato de imagen no valido o demasiado grande." }));
+      return;
+    }
+    if (profileBorder === null) {
+      send(res, 400, JSON.stringify({ error: "Contorno de perfil invalido." }));
+      return;
+    }
+    const store = readStore();
+    const tenant = tenantFromValue(body.tenantId);
+    const companyUser = tenant ? sessionUser(store, tenant, body.sessionToken) : null;
+    const globalUser = globalSessionUser(store, body.globalSessionToken || body.sessionToken);
+    const authUser = companyUser || globalUser;
+    if (!authUser?.email) {
+      send(res, 401, JSON.stringify({ error: "Sesion invalida." }));
+      return;
+    }
+    const email = normalizeEmail(authUser.email);
+    const now = new Date().toISOString();
+    if (store.users?.[email]) {
+      store.users[email].avatar = avatar;
+      store.users[email].profileBorder = profileBorder;
+      store.users[email].updatedAt = now;
+    }
+    Object.values(store.tenants || {}).forEach(tenantData => {
+      if (tenantData?.users?.[email]) {
+        tenantData.users[email].avatar = avatar;
+        tenantData.users[email].profileBorder = profileBorder;
+        tenantData.users[email].updatedAt = now;
+      }
+    });
+    writeStore(store);
+    const freshTenantUser = tenant ? sessionUser(store, tenant, body.sessionToken) : null;
+    const freshGlobalUser = globalSessionUser(store, body.globalSessionToken || body.sessionToken);
+    send(res, 200, JSON.stringify({
+      ok: true,
+      avatar,
+      profileBorder,
+      companyUser: freshTenantUser || null,
+      globalUser: freshGlobalUser || null
+    }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleProfileStats(req, res) {
+  try {
+    const url = new URL(req.url, "http://localhost");
+    const tenant = tenantFromValue(url.searchParams.get("tenantId"));
+    const store = readStore();
+    const companyUser = tenant
+      ? sessionUser(store, tenant, url.searchParams.get("sessionToken"))
+      : null;
+    const globalUser = globalSessionUser(
+      store,
+      url.searchParams.get("globalSessionToken") || url.searchParams.get("sessionToken"),
+    );
+    const user = companyUser || globalUser;
+    if (!user?.email) {
+      send(res, 401, JSON.stringify({ error: "Sesion invalida." }));
+      return;
+    }
+    const points = tenant
+      ? totalFanPoints(tenantStore(store, tenant.id).gamePlays, user.email)
+      : totalFanPoints(store.globalGamePlays, user.email);
+    const rewardName = tenant
+      ? publicGames(tenantStore(store, tenant.id)).rewardName
+      : globalGames(store).rewardName;
+    send(res, 200, JSON.stringify({ ok: true, fanPoints: points, rewardName }));
   } catch (error) {
     send(res, 500, JSON.stringify({ error: error.message }));
   }
@@ -3766,7 +3876,7 @@ async function handleDailyGamePlay(req, res) {
       attempts: Number(previous?.attempts || 0) + 1,
       completed: correct,
       completedAt: correct ? new Date().toISOString() : "",
-      points: correct ? Number(games.points?.[gameType] || 0) : 0,
+      points: correct ? Number(FIXED_DAILY_GAME_POINTS[gameType] || 0) : 0,
       rewardName: games.rewardName || DEFAULT_DAILY_GAMES.rewardName,
       updatedAt: new Date().toISOString()
     };
@@ -5008,6 +5118,14 @@ const server = http.createServer((req, res) => {
   }
   if (req.method === "POST" && req.url === "/api/change-password") {
     handleChangePassword(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/profile-avatar") {
+    handleProfileAvatar(req, res);
+    return;
+  }
+  if (req.method === "GET" && req.url.startsWith("/api/profile-stats")) {
+    handleProfileStats(req, res);
     return;
   }
   if (req.method === "GET" && req.url.startsWith("/api/company-session")) {
