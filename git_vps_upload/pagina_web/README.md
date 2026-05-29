@@ -1,6 +1,6 @@
-# NBF Soft Web
+# BAIT Web
 
-Web institucional estatica para presentar NBF Soft y sus proyectos de muestra.
+Web institucional estatica para presentar BAIT y sus proyectos de muestra.
 
 ## Uso local
 

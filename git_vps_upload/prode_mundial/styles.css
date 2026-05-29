@@ -56,7 +56,7 @@ body::before {
   pointer-events: none;
 }
 
-body > * {
+body>* {
   position: relative;
   z-index: 1;
 }
@@ -64,8 +64,8 @@ body > * {
 body[data-auth-gate="global"] .topbar,
 body[data-auth-gate="global"] .summary-band,
 body[data-auth-gate="global"] .brand-watermark,
-body[data-auth-gate="global"] main > .view:not(#lobby),
-body[data-auth-gate="global"] #lobby > .section-head,
+body[data-auth-gate="global"] main>.view:not(#lobby),
+body[data-auth-gate="global"] #lobby>.section-head,
 body[data-auth-gate="global"] #globalTournamentLobby,
 body[data-auth-gate="global"] #globalSession {
   display: none !important;
@@ -91,7 +91,10 @@ body[data-auth-gate="global"] #globalLogin {
 
 .brand-watermark {
   position: fixed;
-  right: 18px;
+  left: 50%;
+  /* Lo empuja al medio */
+  transform: translateX(-50%);
+  /* Lo centra perfectamente sobre su propio eje */
   bottom: 14px;
   z-index: 20;
   display: block;
@@ -108,8 +111,10 @@ body[data-auth-gate="global"] #globalLogin {
 }
 
 body[data-tenant] .brand-watermark {
-  right: 18px;
+  left: 50%;
+  transform: translateX(-50%);
   bottom: 104px;
+  /* Lo sube un poquito más cuando estás dentro de un torneo de empresa */
   z-index: 35;
   width: clamp(72px, 7vw, 98px);
   opacity: 1;
@@ -156,6 +161,7 @@ button.secondary {
   align-items: end;
   gap: 20px;
   padding: 28px clamp(16px, 4vw, 48px) 18px;
+  z-index: 100;
 }
 
 body[data-tenant] .topbar {
@@ -192,7 +198,7 @@ p {
 
 h1 {
   margin-bottom: 0;
-  font-size: clamp(2.1rem, 5vw, 4.8rem);
+  font-size: clamp(1.5rem, 3.5vw, 2.8rem);
   line-height: 0.95;
 }
 
@@ -330,7 +336,8 @@ main {
 
 .home-fixture-line {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 32px minmax(0, 1fr);
+  /* CAMBIO CLAVE: Cambiamos 32px por auto para que se estire según el marcador */
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 10px;
   min-height: 42px;
@@ -340,10 +347,21 @@ main {
 .home-fixture-line b {
   color: var(--ink);
   text-align: center;
+  /* NUEVO: Evita que el resultado se parta en dos renglones */
+  white-space: nowrap;
+  /* NUEVO: Le da un respiro a los costados para que no se pegue a las banderas */
+  padding: 0 5px;
 }
 
-.home-fixture-line .team-badge:last-child {
-  justify-content: flex-end;
+.home-fixture-line .team-badge {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+
+.home-fixture-line .flag {
+  object-fit: cover !important;
+  object-position: center !important;
 }
 
 .home-rules-panel {
@@ -397,6 +415,116 @@ body[data-tenant] .tournament-admin-only,
 body[data-tenant] #tournamentList {
   display: none;
 }
+
+/* Avatar button for user session */
+.avatar-button {
+  width: 40px;
+  height: 40px;
+  padding: 4px;
+  border-radius: 10px;
+  background: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(16, 16, 16, 0.08);
+  cursor: pointer;
+}
+
+.avatar-button img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 7px;
+}
+
+/* Small modal panel used for the session menu */
+.modal-panel.small {
+  width: 280px;
+  max-width: calc(100% - 32px);
+}
+
+.session-menu-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 0 18px;
+}
+
+.session-menu-actions .secondary {
+  text-align: left;
+}
+
+.session-menu-actions .danger {
+  background: #b4233a;
+  color: white;
+  border: 0;
+}
+
+.info-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 12px;
+}
+
+.info-table td {
+  padding: 8px 6px;
+  vertical-align: middle;
+}
+
+.info-table input {
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Dropdown anchored to topbar avatar */
+.session-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.session-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 280px;
+  background: white;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(16, 16, 16, 0.12);
+  padding: 8px;
+  z-index: 9999;
+}
+
+.session-dropdown .session-dropdown-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px;
+}
+
+.session-dropdown .secondary {
+  width: 100%;
+  text-align: left;
+}
+
+.dropdown-info-panel {
+  padding: 8px;
+  border-top: 1px solid var(--line);
+  margin-top: 6px;
+}
+
+
 
 .lock-banner,
 .live-status,
@@ -588,6 +716,48 @@ body[data-tenant] #tournamentList {
   color: color-mix(in srgb, var(--muted) 72%, white);
 }
 
+.password-control {
+  position: relative;
+  display: block;
+}
+
+.password-control input {
+  width: 100%;
+  padding-right: 46px;
+}
+
+.password-toggle,
+.company-login-card .password-toggle,
+.modal-panel .password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #5f625f;
+  font-size: 1rem;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
+.password-toggle:hover {
+  background: rgba(99, 16, 9, 0.08);
+  filter: none;
+}
+
+.password-toggle.is-visible {
+  background: rgba(99, 16, 9, 0.12);
+  color: #631009;
+}
+
 .company-login-card button:not(.secondary) {
   width: 100%;
   background: #631009;
@@ -595,12 +765,53 @@ body[data-tenant] #tournamentList {
   min-height: 48px;
 }
 
-.company-login-card .login-create-toggle {
+.company-login-card .login-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+
+.company-login-card .login-actions button {
+  width: 100%;
+  min-height: 48px;
+}
+
+.company-login-card .login-home-link {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.company-login-card .login-home-link a {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.company-login-card .password-toggle {
+  width: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  background: transparent;
+  color: #5f625f;
+}
+
+.company-login-card .login-create-toggle,
+.company-login-card .login-forgot-toggle {
   width: 100%;
   justify-content: center;
   background: transparent;
   border-color: rgba(99, 16, 9, 0.22);
   color: #631009;
+}
+
+.company-login-card .login-forgot-toggle {
+  min-height: 40px;
+  border-color: rgba(99, 16, 9, 0.34);
+  background: #fff8ec;
+  color: #631009;
+  font-weight: 900;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .company-login::before,
@@ -611,9 +822,9 @@ body[data-tenant] #tournamentList {
   opacity: 0.08;
 }
 
-.company-login > *,
-.company-areas > *,
-.global-login > * {
+.company-login>*,
+.company-areas>*,
+.global-login>* {
   position: relative;
   z-index: 1;
 }
@@ -659,6 +870,7 @@ body[data-tenant] #tournamentList {
 .leaderboard-table {
   display: grid;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .tournament-card,
@@ -745,6 +957,12 @@ body[data-tenant] #tournamentList {
   gap: 14px;
 }
 
+.admin-global-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 14px;
+}
+
 .admin-subtabs {
   display: flex;
   flex-wrap: wrap;
@@ -767,6 +985,237 @@ body[data-tenant] #tournamentList {
   color: white;
 }
 
+.danger {
+  border-color: color-mix(in srgb, #9f1d1d 36%, var(--line));
+  color: #9f1d1d;
+}
+
+.danger:hover {
+  background: color-mix(in srgb, #9f1d1d 10%, white);
+}
+
+.profile-card {
+  max-width: 400px !important;
+  width: 90%;
+  border-radius: 16px !important;
+  background: #ffffff;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  padding: 0 !important;
+}
+
+.profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: var(--ink); /* Usa el color oscuro que ya tenés en el prode */
+  color: #ffffff;
+}
+
+.profile-header h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.profile-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.profile-avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar-container {
+  width: 110px;
+  height: 110px;
+  border-radius: 12px; /* Cuadrado con bordes redondeados */
+  overflow: hidden;
+  border: 3px solid var(--accent);
+  background: #f8fafc;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.avatar-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Mantiene la proporción para que no se estire */
+}
+
+.btn-change-avatar {
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: opacity 0.2s;
+}
+
+.btn-change-avatar:hover { opacity: 0.8; }
+
+.profile-info-group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.info-item label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.readonly-field {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  padding: 10px 12px !important;
+  font-size: 1rem;
+  cursor: not-allowed;
+}
+
+.btn-secondary-profile {
+  width: 100%;
+  padding: 12px;
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary-profile:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.profile-border-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.border-option {
+  width: 92px;
+  min-height: 46px;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.border-option.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, white);
+}
+
+.border-option:disabled {
+  cursor: not-allowed;
+  opacity: 1;
+  background: #fff;
+}
+
+.border-option.is-locked .border-option-preview {
+  filter: grayscale(0.15);
+}
+
+.border-option-preview {
+  width: 30px;
+  height: 18px;
+  border-radius: 999px;
+  border: 3px solid #cbd5e1;
+  display: block;
+  background: #f8fafc;
+}
+
+.border-option-preview.border-none {
+  border-color: #cbd5e1;
+  box-shadow: inset 0 0 0 1px #eef2f7;
+}
+
+.border-option-preview.border-gold {
+  border-color: #d7a934;
+  background: linear-gradient(135deg, #fff7cc, #d7a934);
+  box-shadow: 0 0 0 2px rgba(215, 169, 52, 0.32), 0 0 12px rgba(215, 169, 52, 0.6);
+}
+
+.border-option-preview.border-neon {
+  border-color: #00ffcc;
+  background: linear-gradient(135deg, #e6fffb, #00ffcc);
+  box-shadow: 0 0 0 2px rgba(0, 255, 204, 0.24), 0 0 12px rgba(0, 255, 204, 0.7);
+}
+
+.border-option-preview.border-fire {
+  border-color: #ff4500;
+  background: linear-gradient(135deg, #ffe0b2, #ff4500);
+  box-shadow: 0 0 0 2px rgba(255, 69, 0, 0.24), 0 0 12px rgba(255, 140, 0, 0.72);
+}
+
+.border-option-text {
+  display: block;
+  font-size: 0.7rem;
+  line-height: 1;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.profile-border-legend {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.pw-input {
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+  transition: all 0.2s;
+}
+
+.pw-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
 .admin-panel {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -776,13 +1225,44 @@ body[data-tenant] #tournamentList {
 
 .admin-user-row {
   display: grid;
-  grid-template-columns: minmax(190px, 1.3fr) minmax(150px, 0.8fr) minmax(140px, 0.7fr) 86px 86px minmax(190px, 0.9fr);
+  grid-template-columns: minmax(220px, 1.35fr) minmax(150px, 0.85fr) minmax(140px, 0.75fr) minmax(130px, 0.65fr) minmax(230px, 1fr);
   align-items: end;
   gap: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.74);
   padding: 12px;
+}
+
+.admin-user-row.is-pending {
+  border-color: color-mix(in srgb, var(--gold) 60%, var(--line));
+  background: color-mix(in srgb, var(--gold) 10%, white);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, white);
+}
+
+.status-badge.status-pending {
+  color: #7a5200;
+  background: #fff1bf;
+}
+
+.status-badge.status-rejected {
+  color: #9f1d1d;
+  background: #ffe0e0;
+}
+
+.request-actions {
+  flex-wrap: wrap;
 }
 
 .admin-user-row span,
@@ -871,7 +1351,7 @@ body[data-tenant] #tournamentList {
   overflow: hidden;
 }
 
-.game-card.is-completed > :not(.game-completed-panel) {
+.game-card.is-completed> :not(.game-completed-panel) {
   opacity: 0.28;
   filter: saturate(0.8);
   pointer-events: none;
@@ -1162,7 +1642,7 @@ body[data-tenant] #tournamentList {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 1100;
+  z-index: 1300;
   display: grid;
   place-items: center;
   padding: 20px;
@@ -1178,6 +1658,33 @@ body[data-tenant] #tournamentList {
   background: #fff8ec;
   box-shadow: 0 24px 80px rgba(99, 16, 9, 0.24);
   padding: 18px;
+}
+
+.verification-code-panel {
+  width: min(100%, 420px);
+}
+
+.verification-code-panel .section-head {
+  position: static;
+  margin-top: 0;
+}
+
+.verification-code-form input {
+  min-height: 54px;
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: 4px;
+}
+
+.verification-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.verification-actions button {
+  width: 100%;
 }
 
 .icon-close {
@@ -1207,13 +1714,15 @@ body[data-tenant] #tournamentList {
 }
 
 .leaderboard-row {
-  display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) 100px 110px;
+  position: relative; /* Clave para poder centrar los puntos flotando */
+  display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
   padding: 12px;
   background: rgba(255, 255, 255, 0.74);
   backdrop-filter: blur(1px);
+  border-radius: 8px; 
+  flex-wrap: wrap;
 }
 
 .leaderboard-row b {
@@ -1224,12 +1733,16 @@ body[data-tenant] #tournamentList {
   border-radius: 999px;
   background: var(--accent);
   color: white;
+  flex-shrink: 0;
+  margin-right: 12px;
 }
 
 .leaderboard-row span {
   display: grid;
   gap: 2px;
   font-weight: 900;
+  flex: 1; 
+  text-align: left;
 }
 
 .leaderboard-row small {
@@ -1239,8 +1752,15 @@ body[data-tenant] #tournamentList {
 }
 
 .leaderboard-row strong {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   color: var(--accent-2);
   font-size: 1.05rem;
+  background: rgba(255, 255, 255, 0.6); 
+  padding: 2px 8px;
+  border-radius: 6px;
+  z-index: 2;
 }
 
 .leaderboard-row em {
@@ -1248,6 +1768,8 @@ body[data-tenant] #tournamentList {
   font-style: normal;
   font-size: 0.8rem;
   font-weight: 800;
+  flex: 1; 
+  text-align: right;
 }
 
 label {
@@ -1340,13 +1862,13 @@ textarea {
   opacity: 0.74;
 }
 
-.group-card > *,
-.custom-match-card > *,
-.match-card > *,
-.thirds-panel > *,
-.tournament-card > *,
-.leaderboard-panel > *,
-.live-card > * {
+.group-card>*,
+.custom-match-card>*,
+.match-card>*,
+.thirds-panel>*,
+.tournament-card>*,
+.leaderboard-panel>*,
+.live-card>* {
   position: relative;
   z-index: 1;
 }
@@ -1459,12 +1981,44 @@ textarea {
   font-size: 0.8rem;
 }
 
-.group-title > span {
+.group-title>span {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 6px;
   max-width: 78%;
+}
+
+.round button.score-btn.up {
+  width: 47px;
+}
+
+.round button.score-btn.down {
+  width: 47px;
+}
+
+.standings-panel {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    -webkit-overflow-scrolling: touch; /* Suaviza el scroll en iOS */
+}
+/* Distribución: 6 grupos por fila en móviles, 4 en escritorio */
+.standings-grid {
+    display: grid;
+    /* En móviles (pantallas pequeñas), definimos 6 columnas */
+    grid-template-columns: repeat(6, 200px); 
+    gap: 10px;
+    padding: 10px;
+}
+
+.group-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 0.8rem; /* Tamaño optimizado para leer bien en móvil */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .team-badge {
@@ -1489,14 +2043,32 @@ textarea {
   border-radius: 2px;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.14);
   object-fit: cover;
+  /* Esto evita que se recorte, antes era cover */
+  object-position: center;
+  /* Esto la mantiene bien centrada */
+  background-color: transparent;
   overflow: hidden;
 }
 
 .flag-placeholder {
-  background: #d9dedb;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
+  display: inline-grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--accent) 14%, #d9dedb);
+  color: var(--accent);
+  font-size: 0.52rem;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.match-real-result {
+  width: fit-content;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 10%, white);
+  color: var(--accent);
+  padding: 5px 8px;
+  font-size: 0.76rem;
+  font-weight: 850;
 }
 
 .selectors {
@@ -1601,8 +2173,14 @@ textarea {
   text-align: center;
 }
 
-.group-match .team-badge {
+.group-match .team-badge,
+.teams-line .team-badge,
+.custom-match-line .team-badge {
   overflow: hidden;
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  /* Esto centra la bandera y el texto en su mitad */
 }
 
 .group-match .team-badge span {
@@ -1673,7 +2251,7 @@ textarea {
   pointer-events: none;
 }
 
-.selector-row > * {
+.selector-row>* {
   position: relative;
   z-index: 1;
 }
@@ -1746,10 +2324,74 @@ textarea {
   font-weight: 800;
 }
 
+/* --- BORDES DESBLOQUEABLES --- */
+.avatar-button {
+  transition: all 0.3s ease;
+  border: 3px solid transparent;
+  border-radius: 999px;
+}
+
+/* Borde Oro */
+.border-gold {
+  border-color: var(--gold) !important;
+  box-shadow: 0 0 0 4px var(--gold), 0 0 16px rgba(215, 169, 52, 0.75) !important;
+}
+
+/* Borde Neón (Animado) */
+.border-neon {
+  border-color: #00ffcc !important;
+  box-shadow: 0 0 0 4px #00ffcc, 0 0 20px rgba(0, 255, 204, 0.95) !important;
+  animation: pulse-neon 2s infinite alternate;
+}
+
+/* Borde Fuego (Animado) */
+.border-fire {
+  border-color: #ff4500 !important;
+  box-shadow: 0 0 0 4px #ff4500, 0 0 20px #ff8c00 !important;
+  animation: pulse-fire 1.5s infinite alternate;
+}
+
+@keyframes pulse-neon {
+  from { box-shadow: 0 0 0 2px #00ffcc, 0 0 10px rgba(0,255,204,0.5); }
+  to { box-shadow: 0 0 0 4px #00ffcc, 0 0 20px rgba(0,255,204,1); }
+}
+
+@keyframes pulse-fire {
+  from { box-shadow: 0 0 0 2px #ff4500, 0 0 10px #ff8c00; }
+  to { box-shadow: 0 0 0 4px #ff0000, 0 0 20px #ff4500; }
+}
+
+/* Tienda de recompensas */
+.rewards-store {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.reward-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.reward-card .preview-border {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--line);
+}
+
 .round {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
   min-width: 0;
 }
 
@@ -1795,6 +2437,12 @@ textarea {
 }
 
 .match-title {
+  display: flex;
+  justify-content: space-between;
+  /* Esto empuja un elemento a cada lado */
+  align-items: center;
+  /* Alinea los textos verticalmente */
+  width: 100%;
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 900;
@@ -1811,6 +2459,33 @@ textarea {
 
 .teams-line span {
   overflow-wrap: anywhere;
+}
+
+.knockout-team-side {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 48px;
+  align-items: center;
+  gap: 8px;
+}
+
+.knockout-team-right {
+  grid-template-columns: 48px minmax(0, 1fr);
+}
+
+.knockout-team-right .team-badge {
+  order: 2;
+}
+
+.knockout-team-right .knockout-score-input {
+  order: 1;
+}
+
+.knockout-score-input {
+  width: 48px;
+  min-height: 36px;
+  padding: 0 8px;
+  text-align: center;
+  font-weight: 900;
 }
 
 .teams-line .team-badge {
@@ -1842,6 +2517,81 @@ textarea {
   color: var(--muted);
   font-weight: 900;
   text-align: center;
+}
+
+/* Cuando el usuario está DENTRO de un torneo privado (Prueba1, etc.) */
+body[data-tenant] #dropdownLobbyBtn {
+  display: none !important;
+  /* Escondemos el botón de Torneos y Lobby */
+}
+
+body[data-tenant] #dropdownGlobalBtn {
+  display: none !important;
+  /* Forzamos a que se muestre el botón de Prode Global */
+}
+
+/* Forzar a que los párrafos del menú desplegable de usuario sean oscuros siempre */
+.session-dropdown p {
+  color: var(--ink) !important;
+}
+
+/* Fondo general de la pantalla de login: mezcla el color principal con tonos oscuros */
+.company-login {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 80%, var(--ink) 20%), color-mix(in srgb, var(--accent) 40%, var(--ink) 60%)),
+    url("/prode-static/descargar.webp") center / cover !important;
+}
+
+/* Tarjeta de login con fondo adaptable */
+.company-login-card {
+  background: var(--panel) !important;
+  border-color: var(--line) !important;
+}
+
+/* Textos de la tarjeta usando la tinta seleccionada */
+.company-login-card h2,
+.company-login-card p {
+  color: var(--ink) !important;
+}
+
+/* Kicker superior (Prode Mundial) y el botón principal */
+.company-login-card .login-kicker {
+  color: var(--accent) !important;
+}
+
+.company-login-card button:not(.secondary) {
+  background: var(--accent) !important;
+  color: #ffffff !important;
+}
+
+/* Inputs adaptados al panel */
+.company-login-card input {
+  background: color-mix(in srgb, var(--line) 30%, var(--panel)) !important;
+  color: var(--ink) !important;
+  border: 1px solid var(--line) !important;
+}
+
+.company-login-card input::placeholder {
+  color: var(--muted) !important;
+}
+
+/* Contenedor de logos gemelos */
+.login-logos-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.login-logos-container img {
+  max-height: 70px;
+  width: auto;
+  border-radius: 8px;
+  object-fit: contain;
+  margin: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  /* Sombra elegante para que resalten */
 }
 
 .submit-panel {
@@ -2013,6 +2763,156 @@ textarea {
   font-size: 1.3rem;
 }
 
+/* Estilos para Minitorneos */
+.minitournaments-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.minitournament-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.minitournament-card h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--ink);
+}
+
+.minitournament-card p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--ink-light);
+  flex: 1;
+}
+
+.mini-players {
+  font-size: 0.85rem;
+  color: var(--ink-lighter);
+  display: block;
+}
+
+.minitournament-card button {
+  margin-top: auto;
+  width: 100%;
+}
+
+.leaderboard-container, 
+#leaderboardView {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 0 !important; /* Eliminamos paddings raros que achiquen los carteles */
+  margin: 0 auto !important;
+  display: flex;
+  flex-direction: column;
+  gap: 12px; /* Separación elegante entre carteles */
+}
+
+/* Forzamos a que cada fila de usuario tenga el mismo ancho exacto que el cartel superior */
+.user-leaderboard-row,
+.leaderboard-card-row {
+  width: 100% !important;
+  box-sizing: border-box !important; /* Evita que el padding ensanche la caja por fuera */
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* Espaciado interno para el nuevo bloque de "Exactos" */
+.user-row-details {
+  margin-top: 4px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+/* Ocultar las flechas nativas por completo */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Contenedor que agrupa el input y los botones */
+.score-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  position: relative;
+}
+
+/* Diseño de los botones Arriba/Abajo */
+.score-btn {
+  width: 100%;
+  height: 28px; /* Altura perfecta para el pulgar */
+  min-height: 28px;
+  padding: 0;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--accent);
+  border: 1px solid var(--line);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  z-index: 1;
+}
+
+/* Efectos al tocar/pasar el mouse */
+.score-btn:hover:not(:disabled),
+.score-btn:active:not(:disabled) {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.score-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #f0f0f0;
+}
+
+/* Ajustes para que encastren como piezas de lego con el input */
+.score-wrapper .score-btn.up {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  margin-bottom: -1px; /* Para fusionar los bordes */
+}
+
+.score-wrapper .score-btn.down {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  margin-top: -1px;
+}
+
+/* Ajustes al input original para que encaje al medio */
+.score-wrapper input[type="number"] {
+  border-radius: 0 !important; /* Cuadrado para pegar con los botones */
+  min-height: 42px !important;
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 900;
+  position: relative;
+  z-index: 2; /* Queda por encima para que los bordes se vean bien */
+  margin: 0;
+}
+
+@media (min-width: 1051px) {
+    .standings-grid {
+        grid-template-columns: repeat(4, 1fr); /* Vuelve a 4 columnas */
+    }
+}
+
 @media (max-width: 1050px) {
   .groups-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2026,6 +2926,10 @@ textarea {
     grid-template-columns: 1fr;
   }
 
+  .minitournaments-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+
   .matchday-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2033,9 +2937,20 @@ textarea {
   .thirds-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .standings-row {
+  display: flex;
+  justify-content: space-between;
+  grid-template-columns: 24px minmax(0, 1fr) 34px 34px 34px;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+  font-size: 0.74rem;
+}
 }
 
 @media (max-width: 780px) {
+
   .topbar,
   .section-head,
   .submit-panel {
@@ -2063,12 +2978,43 @@ textarea {
   .game-guess-form,
   .camisetadle-form,
   .live-score,
-  .leaderboard-row,
   .admin-user-row,
   .thirds-grid,
   .group-match,
   .standings-row {
     grid-template-columns: 1fr;
+  }
+
+  .leaderboard-row {
+    display: grid !important;
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px 10px;
+    text-align: left !important;
+  }
+
+  .leaderboard-row b {
+    margin-right: 0;
+  }
+
+  .leaderboard-row span {
+    min-width: 0;
+  }
+
+  .leaderboard-row strong {
+    position: static;
+    transform: none;
+    justify-self: end;
+    white-space: nowrap;
+    font-size: 0.95rem;
+  }
+
+  .leaderboard-row em,
+  .leaderboard-row button {
+    grid-column: 2 / -1;
+    justify-self: stretch;
+    text-align: left !important;
+    min-width: 0 !important;
   }
 
   .admin-theme-form,
@@ -2085,8 +3031,113 @@ textarea {
     grid-template-columns: 1fr;
   }
 
+  .round {
+    grid-template-columns: 1fr;
+  }
+
+  .group-match {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: nowrap !important; /* La magia: prohíbe el salto de línea */
+    gap: 8px !important; /* Reduce un poquito el espacio entre elementos */
+  }
+
+  .knockout-score-input {
+    width: 45px !important; /* Achicamos el input para que no ocupe toda la pantalla */
+    text-align: center;
+    padding: 4px;
+  }
+
+  .group-match span {
+    flex-shrink: 0; /* Evita que las banderitas se aplasten o se deformen */
+    min-width: 35px;
+    text-align: center;
+  }
+
+  .round .score-btn {
+    width: 53px !important; /* Achicamos un poco el ancho del botón */
+    height: 22px !important; /* Achicamos la altura */
+    padding: 0 !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transform: scale(0.85); /* Reduce el botón entero proporcionalmente para que no sobresalga */
+  }
+  
+  .round .score-row { /* Si los botones están dentro de un contenedor propio que los empuja, ajustamos su espacio */
+    gap: 4px !important; /* Le quitamos separación a los elementos para que todo encaje */
+  }
+  
+  .round .group-match {
+    gap: 4px !important; /* Aseguramos que el contenedor del input + botones no desborde */
+  }
+
+  .group-card table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem; /* Fuente más pequeña para que quepa todo */
+  }
+
+  .group-card th, .group-card td {
+      padding: 2px 4px; /* Reducimos el padding al mínimo */
+      text-align: center;
+  }
+
+  /* Alineación específica para el nombre del equipo a la izquierda */
+  .group-card td:nth-child(1) {
+      text-align: left;
+      font-weight: bold;
+      white-space: nowrap; /* Evita que el nombre del equipo se parta en dos líneas */
+  }
+
+  .standings-row {
+  display: flex;
+  justify-content: space-between
+  grid-template-columns: 24px minmax(0, 1fr) 34px 34px 34px;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+  font-size: 0.74rem;
+}
+
   .actions button {
     flex: 1 1 150px;
+  }
+
+  .modal-backdrop {
+    align-items: end;
+    place-items: end center;
+    padding: 12px;
+  }
+
+  .modal-panel {
+    width: 100%;
+    max-height: calc(100dvh - 24px);
+    padding: 14px;
+    border-radius: 10px;
+  }
+
+  .modal-panel .section-head.compact {
+    align-items: stretch;
+    gap: 8px;
+    margin: 0 0 12px;
+  }
+
+  .form-status,
+  .phase-status,
+  .live-status,
+  .lock-banner {
+    width: 100%;
+    margin: 12px 0;
+    padding: 12px;
+    font-size: 0.92rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .verification-actions {
+    grid-template-columns: 1fr;
   }
 
   .submit-panel {
@@ -2102,4 +3153,64 @@ textarea {
   .submit-panel p {
     display: none;
   }
+
+  .teams-line {
+    grid-template-columns: 1fr;
+  }
+
+  .teams-line b {
+    display: none;
+  }
+
+  .knockout-team-side,
+  .knockout-team-right {
+    grid-template-columns: minmax(0, 1fr) 48px;
+  }
+
+  .knockout-team-right .team-badge,
+  .knockout-team-right .knockout-score-input {
+    order: initial;
+  }
+}
+
+
+/* Password visibility buttons must stay inside the input, not inherit login button styles. */
+.company-login-card button.password-toggle,
+.modal-panel button.password-toggle,
+button.password-toggle {
+  position: absolute !important;
+  right: 8px !important;
+  top: 50% !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  width: 34px !important;
+  min-width: 34px !important;
+  max-width: 34px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  color: #5f625f !important;
+  transform: translateY(-50%) !important;
+  box-shadow: none !important;
+}
+
+.company-login-card button.password-toggle:hover,
+.modal-panel button.password-toggle:hover,
+button.password-toggle:hover,
+.company-login-card button.password-toggle.is-visible,
+.modal-panel button.password-toggle.is-visible,
+button.password-toggle.is-visible {
+  background: rgba(99, 16, 9, 0.10) !important;
+  color: #631009 !important;
+  filter: none !important;
+}
+
+.password-toggle svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
 }
