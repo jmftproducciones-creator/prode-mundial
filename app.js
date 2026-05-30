@@ -1584,6 +1584,10 @@ async function submitDailyGamePlay(e, t) {
           state.profileStats?.rewardName ||
           "Fan Points",
       }),
+    document.getElementById("profileFanPoints") &&
+      ("value" in document.getElementById("profileFanPoints")
+        ? (document.getElementById("profileFanPoints").value = `${Number(state.profileStats?.fanPoints || 0)} ${state.profileStats?.rewardName || "Fan Points"}`)
+        : (document.getElementById("profileFanPoints").textContent = `${Number(state.profileStats?.fanPoints || 0)} ${state.profileStats?.rewardName || "Fan Points"}`)),
     n
   );
 }
@@ -1700,9 +1704,7 @@ function renderDailyGames() {
       i && d
         ? submitDailyGamePlay("camisetadle", { player: o, number: s })
             .then(() => {
-              ((state.dailyGamePlays.camisetadle = { completed: !0 }),
-                clearDailyProgress("camisetadle", r.id),
-                renderDailyGames());
+              (clearDailyProgress("camisetadle", r.id), renderDailyGames());
             })
             .catch((e) => {
               c.textContent = e.message;
@@ -1747,9 +1749,7 @@ function renderDailyGames() {
     )
       return void submitDailyGamePlay("desafio", { answer: n })
         .then(() => {
-          ((state.dailyGamePlays.desafio = { completed: !0 }),
-            clearDailyProgress("desafio", i.id),
-            renderDailyGames());
+          (clearDailyProgress("desafio", i.id), renderDailyGames());
         })
         .catch((e) => {
           a.textContent = e.message;
@@ -3938,7 +3938,8 @@ function parseCamisetadleItems(e) {
     .map((e, t) => {
       const n = e.split("|").map((e) => e.trim()),
         a = /^\d{4}-\d{2}-\d{2}$/.test(n[0] || ""),
-        [o, s, r, i, d, l] = a ? n : ["", ...n];
+        c = !a && n[0] === "" && n.length >= 6,
+        [o, s, r, i, d, l] = a || c ? n : ["", ...n];
       return {
         id: `custom-${t + 1}`,
         date: o,
@@ -3957,7 +3958,8 @@ function parseChallengeItems(e) {
     .map((e, t) => {
       const n = e.split("|").map((e) => e.trim()),
         a = /^\d{4}-\d{2}-\d{2}$/.test(n[0] || ""),
-        [o, s, r, i, d, l] = a ? n : ["", ...n];
+        c = !a && n[0] === "" && n.length >= 6,
+        [o, s, r, i, d, l] = a || c ? n : ["", ...n];
       return {
         id: `challenge-${t + 1}`,
         date: o,
@@ -6120,7 +6122,9 @@ async function openProfileModal() {
   await loadProfileStats();
   const pointsEl = document.getElementById("profileFanPoints");
   pointsEl &&
-    (pointsEl.value = `${Number(state.profileStats?.fanPoints || 0)} ${state.profileStats?.rewardName || "Fan Points"}`);
+    ("value" in pointsEl
+      ? (pointsEl.value = `${Number(state.profileStats?.fanPoints || 0)} ${state.profileStats?.rewardName || "Fan Points"}`)
+      : (pointsEl.textContent = `${Number(state.profileStats?.fanPoints || 0)} ${state.profileStats?.rewardName || "Fan Points"}`));
   const rewards = [
     { id: "", name: "Sin contorno", cost: 0, preview: "border-none" },
     { id: "border-gold", name: "Oro", cost: 300, preview: "border-gold" },

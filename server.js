@@ -4426,7 +4426,7 @@ function handlePaymentStatus(req, res) {
     const submission = materializeApprovedPaymentDraft(req, tournament, payment);
     if (submission) writeStore(store);
   }
-  const existingSubmission = (tournament.submissions || []).some(item => normalizeEmail(item.player?.email) === email);
+  const existingSubmission = (tournament.submissions || []).some(item => sameEmailIdentity(item.player?.email, email));
   send(res, 200, JSON.stringify({
     required: paymentSettings(tournament).required && !existingSubmission,
     canSubmit: existingSubmission || paymentAllowsFirstSubmission(tournament, email),
@@ -4973,11 +4973,12 @@ function handleLeaderboard(req, res) {
     const withoutEmail = [];
     rows.forEach(row => {
       const email = normalizeEmail(row.player?.email);
-      if (!email) {
+      const identity = emailIdentity(email);
+      if (!identity) {
         withoutEmail.push(row);
         return;
       }
-      byEmail.set(email, preferLeaderboardRow(byEmail.get(email), row));
+      byEmail.set(identity, preferLeaderboardRow(byEmail.get(identity), row));
     });
     return [...byEmail.values(), ...withoutEmail];
   };
