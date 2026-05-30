@@ -1,0 +1,10 @@
+.env
+node_modules/
+*.log
+*.bak
+*.backup-*
+backups/
+data/prode-store.json
+data/*.backup-*
+git_vps_upload/
+backup-*/
