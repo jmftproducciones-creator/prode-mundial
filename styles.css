@@ -2450,9 +2450,9 @@ textarea {
 
 .teams-line {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 32px minmax(0, 1fr);
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-size: 0.88rem;
   font-weight: 850;
 }
@@ -2462,21 +2462,36 @@ textarea {
 }
 
 .knockout-team-side {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 48px;
+  display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+}
+
+.knockout-team-left {
+  justify-content: flex-start;
 }
 
 .knockout-team-right {
-  grid-template-columns: 48px minmax(0, 1fr);
+  justify-content: flex-end;
+}
+
+.knockout-team-side .team-badge {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.teams-line .score-wrapper {
+  width: 47px;
+  min-width: 47px;
+  flex: 0 0 47px;
 }
 
 .knockout-team-right .team-badge {
   order: 2;
 }
 
-.knockout-team-right .knockout-score-input {
+.knockout-team-right .score-wrapper {
   order: 1;
 }
 
@@ -2490,6 +2505,14 @@ textarea {
 
 .teams-line .team-badge {
   color: var(--ink);
+}
+
+.knockout-team-left .team-badge {
+  justify-content: flex-start;
+}
+
+.knockout-team-right .team-badge {
+  justify-content: flex-end;
 }
 
 .teams-line b {
@@ -3035,6 +3058,29 @@ input[type="number"] {
     grid-template-columns: 1fr;
   }
 
+  .teams-line {
+    grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr);
+    gap: 8px;
+    align-items: center;
+  }
+
+  .teams-line b {
+    display: block;
+  }
+
+  .knockout-team-left {
+    justify-content: flex-end;
+  }
+
+  .knockout-team-right {
+    justify-content: flex-start;
+  }
+
+  .knockout-team-side .team-badge {
+    flex: 0 1 auto;
+    max-width: 100%;
+  }
+
   .group-match {
     display: flex;
     justify-content: center;
@@ -3155,21 +3201,20 @@ input[type="number"] {
   }
 
   .teams-line {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr);
+    gap: 8px;
   }
 
   .teams-line b {
-    display: none;
+    display: block;
   }
 
-  .knockout-team-side,
+  .knockout-team-left {
+    justify-content: flex-end;
+  }
+
   .knockout-team-right {
-    grid-template-columns: minmax(0, 1fr) 48px;
-  }
-
-  .knockout-team-right .team-badge,
-  .knockout-team-right .knockout-score-input {
-    order: initial;
+    justify-content: flex-start;
   }
 }
 

@@ -1298,6 +1298,13 @@ function normalizeAreaName(value) {
     .slice(0, 60);
 }
 
+function profileIdentity(name = "", area = "") {
+  const normalizedName = slug(String(name || "").trim());
+  const normalizedArea = areaId(area || "");
+  if (!normalizedName) return "";
+  return `${normalizedName}:${normalizedArea}`;
+}
+
 function areaId(value) {
   return slug(normalizeAreaName(value));
 }
@@ -4158,18 +4165,22 @@ function preferSubmissionForLeaderboard(current, candidate) {
 function dedupeTournamentSubmissions(tournament) {
   if (!Array.isArray(tournament?.submissions)) return;
   const byEmail = new Map();
-  const withoutEmail = [];
+  const byProfile = new Map();
   tournament.submissions.forEach(submission => {
     const email = normalizeEmail(submission.player?.email);
     const identity = emailIdentity(email);
+    const profileKey = profileIdentity(submission.player?.name, submission.player?.area);
     if (!identity) {
-      withoutEmail.push(submission);
+      if (!profileKey) return;
+      byProfile.set(profileKey, preferSubmissionForLeaderboard(byProfile.get(profileKey), submission));
       return;
     }
     submission.player = { ...(submission.player || {}), email };
-    byEmail.set(identity, preferSubmissionForLeaderboard(byEmail.get(identity), submission));
+    const preferred = preferSubmissionForLeaderboard(byEmail.get(identity), submission);
+    byEmail.set(identity, preferred);
+    if (profileKey) byProfile.set(profileKey, preferSubmissionForLeaderboard(byProfile.get(profileKey), preferred));
   });
-  tournament.submissions = [...byEmail.values(), ...withoutEmail];
+  tournament.submissions = [...byEmail.values(), ...[...byProfile.values()].filter(item => !emailIdentity(item.player?.email))];
 }
 
 function syncGlobalSubmissionToTournament(store, email, tournament) {
@@ -4295,6 +4306,7 @@ async function handleSubmitProde(req, res) {
     }
 
     const email = normalizeEmail(payload.player.email);
+    payload.player.email = email;
     const existingIndex = tournament.submissions.findIndex(item => sameEmailIdentity(item.player?.email, email));
     const previous = existingIndex >= 0 ? tournament.submissions[existingIndex] : null;
     if (!previous && !paymentAllowsFirstSubmission(tournament, email)) {
@@ -4361,6 +4373,7 @@ function materializeApprovedPaymentDraft(req, tournament, payment) {
   if (!payload?.player?.email || !payload?.player?.name || !payload?.tournament) return null;
   const email = normalizeEmail(payload.player.email);
   if (!email || !sameEmailIdentity(email, payment.player?.email)) return null;
+  payload.player.email = email;
   const existingIndex = tournament.submissions.findIndex(item => sameEmailIdentity(item.player?.email, email));
   const previous = existingIndex >= 0 ? tournament.submissions[existingIndex] : null;
   const continuationToken = previous?.continuationToken || randomSecret();
@@ -4970,17 +4983,32 @@ function handleLeaderboard(req, res) {
   };
   const dedupeLeaderboardRows = rows => {
     const byEmail = new Map();
-    const withoutEmail = [];
+    const byProfile = new Map();
     rows.forEach(row => {
       const email = normalizeEmail(row.player?.email);
       const identity = emailIdentity(email);
+      const profileKey = profileIdentity(row.player?.name, row.player?.area);
       if (!identity) {
-        withoutEmail.push(row);
+        if (!profileKey) return;
+        const previous = byProfile.get(profileKey);
+        byProfile.set(profileKey, preferLeaderboardRow(previous, row));
         return;
       }
-      byEmail.set(identity, preferLeaderboardRow(byEmail.get(identity), row));
+      const preferred = preferLeaderboardRow(byEmail.get(identity), row);
+      byEmail.set(identity, preferred);
+      if (profileKey) {
+        const currentProfileRow = byProfile.get(profileKey);
+        const merged = preferLeaderboardRow(currentProfileRow, preferred);
+        byProfile.set(profileKey, merged && !normalizeEmail(merged.player?.email) && normalizeEmail(preferred.player?.email)
+          ? { ...merged, player: { ...(merged.player || {}), email: preferred.player.email } }
+          : merged);
+      }
     });
-    return [...byEmail.values(), ...withoutEmail];
+    const emailRows = [...byEmail.values()];
+    const profileRowsWithoutEmail = [...byProfile.entries()]
+      .filter(([, row]) => !emailIdentity(row?.player?.email))
+      .map(([, row]) => row);
+    return [...emailRows, ...profileRowsWithoutEmail];
   };
   leaderboard = dedupeLeaderboardRows(leaderboard);
 

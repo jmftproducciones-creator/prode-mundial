@@ -10,7 +10,7 @@ const WORLD_CUP_GROUPS = {
     I: ["Francia", "Senegal", "Noruega", "Irak"],
     J: ["Argentina", "Austria", "Argelia", "Jordania"],
     K: ["Portugal", "Colombia", "Uzbekistán", "RD Congo"],
-    L: ["Inglaterra", "Croacia", "Panamá", "Ghana"],
+    L: ["Inglaterra", "Croacia", "Ghana", "Panamá"],
   },
   APP_CONFIG = {
     entryDeadline: "2026-06-11T12:00:00-03:00",
@@ -254,7 +254,7 @@ const FLAG_CODES = {
       "D-0-1",
       "B-2-1",
       "C-0-1",
-      "C-3-2",
+      "C-2-3",
       "D-2-3",
       "E-0-3",
       "F-0-1",
@@ -279,12 +279,12 @@ const FLAG_CODES = {
       "B-0-2",
       "A-0-1",
       "D-0-2",
-      "C-2-1",
-      "C-0-3",
+      "C-3-1",
+      "C-0-2",
       "D-3-1",
       "F-0-3",
       "E-0-2",
-      "E-1-3",
+      "E-3-1",
       "F-2-1",
       "H-0-2",
       "G-0-1",
@@ -302,8 +302,8 @@ const FLAG_CODES = {
     group3: [
       "B-1-0",
       "B-3-2",
-      "C-2-0",
-      "C-1-3",
+      "C-3-0",
+      "C-1-2",
       "A-3-0",
       "A-2-1",
       "E-3-2",
@@ -655,6 +655,7 @@ const FLAG_CODES = {
     userMiniTournaments: {},
     inviteHandled: !1,
   };
+const CHAMPION_PICK_DEADLINE = new Date("2026-06-28T15:00:00-03:00");
 function initialTenantId() {
   const e = new URLSearchParams(window.location.search),
     t = window.location.pathname.match(/(?:^|\/)(?:prode\/)?empresa\/([^/]+)/);
@@ -786,6 +787,29 @@ function globalSessionKey() {
 }
 function leaderboardViewsKey() {
   return "leaderboardViews:v1";
+}
+function championPickStorageKey() {
+  const e = state.currentTournamentId || "global",
+    t = String(
+      state.companySession?.user?.email ||
+        state.globalSession?.user?.email ||
+        "anon",
+    )
+      .trim()
+      .toLowerCase();
+  return `championPick:v1:${e}:${t}`;
+}
+function saveChampionPickLocal(e) {
+  try {
+    localStorage.setItem(championPickStorageKey(), String(e || ""));
+  } catch {}
+}
+function loadChampionPickLocal() {
+  try {
+    return String(localStorage.getItem(championPickStorageKey()) || "").trim();
+  } catch {
+    return "";
+  }
 }
 function tenantTournamentId(e = state.tenantId) {
   return e ? `empresa-${e}` : "";
@@ -1964,6 +1988,29 @@ function teamBadge(e) {
 function groupMatchId(e, t, n) {
   return `${e}-${t}-${n}`;
 }
+function migrateLegacyMatchIds(e) {
+  if (!e || !e.groupMatches) return e;
+  const t = {
+      "C-3-2": "C-2-3",
+      "C-2-1": "C-3-1",
+      "C-0-3": "C-0-2",
+      "C-2-0": "C-3-0",
+      "C-1-3": "C-1-2",
+      "E-1-3": "E-3-1",
+    },
+    n = { ...(e.groupMatches || {}) };
+  let a = !1;
+  return (
+    Object.entries(t).forEach(([e, t]) => {
+      if (!Object.prototype.hasOwnProperty.call(n, e)) return;
+      Object.prototype.hasOwnProperty.call(n, t) || (n[t] = n[e]);
+      delete n[e];
+      a = !0;
+    }),
+    a && (e.groupMatches = n),
+    e
+  );
+}
 function buildMatchSchedule() {
   const e = { ...KNOCKOUT_SCHEDULE };
   return (
@@ -2004,7 +2051,7 @@ function buildMatchSchedule() {
         t: "19:00",
         v: "Estadio Nueva York Nueva Jersey",
       },
-      { n: 7, id: "C-3-2", d: "13 de Jun", t: "22:00", v: "Estadio Boston" },
+      { n: 7, id: "C-2-3", d: "13 de Jun", t: "22:00", v: "Estadio Boston" },
       {
         n: 8,
         id: "D-2-3",
@@ -2093,10 +2140,10 @@ function buildMatchSchedule() {
         v: "Estadio Guadalajara",
       },
       { n: 29, id: "D-0-2", d: "19 de Jun", t: "16:00", v: "Estadio Seattle" },
-      { n: 30, id: "C-2-1", d: "19 de Jun", t: "19:00", v: "Estadio Boston" },
+      { n: 30, id: "C-3-1", d: "19 de Jun", t: "19:00", v: "Estadio Boston" },
       {
         n: 31,
-        id: "C-0-3",
+        id: "C-0-2",
         d: "19 de Jun",
         t: "22:00",
         v: "Estadio Filadelfia",
@@ -2112,7 +2159,7 @@ function buildMatchSchedule() {
       { n: 34, id: "E-0-2", d: "20 de Jun", t: "17:00", v: "Estadio Toronto" },
       {
         n: 35,
-        id: "E-1-3",
+        id: "E-3-1",
         d: "20 de Jun",
         t: "23:00",
         v: "Estadio Kansas City",
@@ -2180,8 +2227,8 @@ function buildMatchSchedule() {
         v: "Estadio BC Place Vancouver",
       },
       { n: 50, id: "B-3-2", d: "24 de Jun", t: "16:00", v: "Estadio Seattle" },
-      { n: 51, id: "C-2-0", d: "24 de Jun", t: "19:00", v: "Estadio Miami" },
-      { n: 52, id: "C-1-3", d: "24 de Jun", t: "19:00", v: "Estadio Atlanta" },
+      { n: 51, id: "C-3-0", d: "24 de Jun", t: "19:00", v: "Estadio Miami" },
+      { n: 52, id: "C-1-2", d: "24 de Jun", t: "19:00", v: "Estadio Atlanta" },
       {
         n: 53,
         id: "A-3-0",
@@ -2381,8 +2428,32 @@ function groupStandings(e, t) {
 }
 function applyGroupStandings(e, t) {
   ((e.groups[t] = groupStandings(e, t).map((e) => e.team)),
-    pruneDependentWinners(e, 0),
-    autoAssignThirdsIfPossible(e));
+    autoAssignThirdsIfPossible(e),
+    syncKnockoutPredictionsWithResolvedSlots(e));
+}
+function refreshDerivedGroupState(e) {
+  groupKeys().forEach((t) => {
+    e.groups[t] = groupStandings(e, t).map((e) => e.team);
+  });
+  autoAssignThirdsIfPossible(e);
+  syncKnockoutPredictionsWithResolvedSlots(e);
+}
+function syncKnockoutPredictionsWithResolvedSlots(e) {
+  (e.winners || (e.winners = {}), e.scores || (e.scores = {}));
+  ALL_BRACKET_MATCHES.forEach(([t, n, a]) => {
+    const o = resolveSlot(n, e, t),
+      s = resolveSlot(a, e, t),
+      r = [o, s].filter(Boolean),
+      i = e.winners[t] || "",
+      d = e.scores[t] || { left: "", right: "" };
+    e.scores[t] = d;
+    if (r.length < 2) {
+      (("" !== d.left || "" !== d.right) && (e.scores[t] = { left: "", right: "" }),
+        i && ((e.winners[t] = ""), pruneDependentWinners(e, Number(t.slice(1)))));
+      return;
+    }
+    i && !r.includes(i) && ((e.winners[t] = ""), pruneDependentWinners(e, Number(t.slice(1))));
+  });
 }
 function syncGroupScoresFromDom(e, t) {
   e.querySelectorAll("[data-group-match-id]").forEach((e) => {
@@ -2500,19 +2571,21 @@ function phaseRenderModel() {
     !e?.realResults
   )
     return state.prediction;
-  const n = JSON.parse(JSON.stringify(e.realResults)),
+  const n = JSON.parse(
+      JSON.stringify(state.prediction || createEmptyTournament()),
+    ),
     a = new Set(t.matchIds || []),
-    o = n.winners || {},
-    s = n.scores || {};
+    o = e.realResults?.winners || {},
+    s = e.realResults?.scores || {};
   return (
-    state.prediction.winners || (state.prediction.winners = {}),
-    state.prediction.scores || (state.prediction.scores = {}),
-    (n.winners = new Proxy(state.prediction.winners, {
+    n.winners || (n.winners = {}),
+    n.scores || (n.scores = {}),
+    (n.winners = new Proxy(n.winners, {
       get: (e, t) => (a.has(t) ? e[t] : o[t]),
       set: (e, t, n) => ((e[t] = n), !0),
       has: (e, t) => (a.has(t) ? t in e : t in o),
     })),
-    (n.scores = new Proxy(state.prediction.scores, {
+    (n.scores = new Proxy(n.scores, {
       get: (e, t) => (a.has(t) ? e[t] : s[t]),
       set: (e, t, n) => ((e[t] = n), !0),
       has: (e, t) => (a.has(t) ? t in e : t in s),
@@ -2592,6 +2665,124 @@ function realCustomResult(e) {
 function scoreLabel(e) {
   return e && "" !== e.left && "" !== e.right ? `${e.left}-${e.right}` : "";
 }
+function cloneRealResultsBase(e) {
+  const t = e || createEmptyTournament();
+  return {
+    groups: { ...(t.groups || {}) },
+    groupMatches: { ...(t.groupMatches || {}) },
+    thirdAssignments: { ...(t.thirdAssignments || {}) },
+    winners: { ...(t.winners || {}) },
+    scores: { ...(t.scores || {}) },
+    custom: { ...(t.custom || {}) },
+  };
+}
+function isLiveMatchPlayable(e) {
+  if (!e) return !1;
+  const t = String(e.status || "")
+    .trim()
+    .toLowerCase();
+  return !(
+    "" === t ||
+    "programado" === t ||
+    "scheduled" === t ||
+    "not started" === t ||
+    "sin iniciar" === t
+  );
+}
+function normalizeLiveStatusScore(e) {
+  if (!e) return null;
+  const t = Number(e.homeScore),
+    n = Number(e.awayScore);
+  return Number.isFinite(t) && Number.isFinite(n) ? { home: t, away: n } : null;
+}
+function resolveLiveMatchId(e) {
+  const t = normalizeLiveMatch(e),
+    n = String(t.id || "").trim();
+  if (n && MATCH_SCHEDULE[n]) return n;
+  const a = teamLabel(t.home).trim().toLowerCase(),
+    o = teamLabel(t.away).trim().toLowerCase();
+  if (!a || !o) return "";
+  for (const s of Object.keys(MATCH_SCHEDULE)) {
+    if (!s.includes("-")) continue;
+    const [e, t, n] = s.split("-"),
+      r = (WORLD_CUP_GROUPS[e]?.[t] || t).trim().toLowerCase(),
+      i = (WORLD_CUP_GROUPS[e]?.[n] || n).trim().toLowerCase();
+    if ((r === a && i === o) || (r === o && i === a)) return s;
+  }
+  return "";
+}
+function effectiveRealResults() {
+  const e = cloneRealResultsBase(
+      state.real || currentTournament()?.realResults || createEmptyTournament(),
+    ),
+    t = Array.isArray(state.live?.matches) ? state.live.matches : [];
+  t.forEach((t) => {
+    const n = normalizeLiveStatusScore(t);
+    if (!n || !isLiveMatchPlayable(t)) return;
+    const a = resolveLiveMatchId(t);
+    if (!a) return;
+    if (a.includes("-")) return void (e.groupMatches[a] = { home: n.home, away: n.away });
+    e.scores[a] = { left: n.home, right: n.away };
+  });
+  return e;
+}
+function leaderboardMatchIdsForView(e) {
+  if (GROUP_PHASE_IDS.includes(e)) return (GROUP_MATCHDAY_FIXTURES[e] || []).slice();
+  if ("r32" === e) return R32_MATCHES.map((e) => e[0]);
+  if ("r16" === e) return LATER_ROUNDS.r16.map((e) => e[0]);
+  if ("final-pack" === e)
+    return [...LATER_ROUNDS.qf, ...LATER_ROUNDS.sf, ...LATER_ROUNDS.third, ...LATER_ROUNDS.final].map((e) => e[0]);
+  return Object.keys(MATCH_SCHEDULE).sort(
+    (e, t) => (MATCH_SCHEDULE[e]?.number || 999) - (MATCH_SCHEDULE[t]?.number || 999),
+  );
+}
+function scorePredictionForView(e, t, n = "general") {
+  if (!e) return { points: 0, exactScoreHits: 0 };
+  const a = state.defaultScoring || {},
+    o = {
+      groupPosition: Number(a.groupPosition) || 1,
+      knockoutWinner: Number(a.knockoutWinner) || 3,
+      exactScore: Number(a.exactScore) || 2,
+      champion: Number(a.champion) || 10,
+    },
+    s = { points: 0, exactScoreHits: 0 },
+    r = leaderboardMatchIdsForView(n);
+  r.forEach((n) => {
+    if (n.includes("-")) {
+      const a = matchScores(t.groupMatches?.[n] || {}),
+        r = matchScores(e.groupMatches?.[n] || {});
+      if (!a || !r || null === a.home || null === a.away || null === r.home || null === r.away) return;
+      Math.sign(a.home - a.away) === Math.sign(r.home - r.away) && (s.points += o.knockoutWinner);
+      a.home === r.home && a.away === r.away && ((s.points += o.exactScore), (s.exactScoreHits += 1));
+      return;
+    }
+    const a = matchScores({
+        home: t.scores?.[n]?.left,
+        away: t.scores?.[n]?.right,
+      }),
+      r = matchScores({
+        home: e.scores?.[n]?.left,
+        away: e.scores?.[n]?.right,
+      });
+    if (a && r && null !== a.home && null !== a.away && null !== r.home && null !== r.away) {
+      if (Math.sign(a.home - a.away) === Math.sign(r.home - r.away) && 0 !== Math.sign(a.home - a.away))
+        s.points += o.knockoutWinner;
+      a.home === r.home && a.away === r.away && ((s.points += o.exactScore), (s.exactScoreHits += 1));
+    } else {
+      const i = t.winners?.[n],
+        d = e.winners?.[n];
+      i && d && i === d && (s.points += o.knockoutWinner);
+    }
+  });
+  return (
+    "general" === n &&
+      t.winners?.m104 &&
+      e.winners?.m104 &&
+      t.winners.m104 === e.winners.m104 &&
+      (s.points += o.champion),
+    s
+  );
+}
 function setWinnerFromScore(e, t, n, a) {
   const o = e.scores[t];
   o &&
@@ -2646,14 +2837,7 @@ function getThirdPlaceRankings(e) {
 }
 function getBestThirds(e) {
   const t = getThirdPlaceRankings(e);
-  if (t.length <= 8) return t;
-  const n = t[7];
-  return t.filter(
-    (e) =>
-      e.pts > n.pts ||
-      (e.pts === n.pts && e.gd > n.gd) ||
-      (e.pts === n.pts && e.gd === n.gd && e.gf >= n.gf),
-  );
+  return t.slice(0, 8);
 }
 function thirdSelectionCandidates(e) {
   const t = getThirdPlaceRankings(e),
@@ -2665,54 +2849,22 @@ function thirdSelectionCandidates(e) {
       : thirdPlaceTeams(e);
 }
 function allowedThirdPlaceTeams(e, t, { allowFallback: n = !1 } = {}) {
-  const a = THIRD_PLACE_SLOTS[t] || [],
-    o = thirdSelectionCandidates(e),
-    s = new Map(o.map((e) => [e.group, e])),
-    r = a
-      .filter((e) => s.has(e))
-      .map((e) => s.get(e))
-      .filter((e) => e?.team);
-  return r.length || !n ? r : o.filter((e) => e?.team);
+  const a = thirdSelectionCandidates(e).filter((e) => e?.team),
+    o = new Set(),
+    s = [];
+  return (
+    a.forEach((e) => {
+      const t = `${e.group}:${e.team}`;
+      o.has(t) || (o.add(t), s.push(e));
+    }),
+    s
+  );
 }
 function thirdMatchIds() {
   return R32_MATCHES.filter(([, , e]) => "3*" === e).map(([e]) => e);
 }
 function autoAssignThirdsIfPossible(e) {
-  const t = getThirdPlaceRankings(e),
-    n = getBestThirds(e);
-  if (12 !== t.length || 8 !== n.length) return !1;
-  e.thirdAssignments || (e.thirdAssignments = {});
-  const a = n.map((e) => e.group),
-    o = thirdMatchIds(),
-    s = {};
-  if (
-    !(function e(t) {
-      if (t === o.length) return !0;
-      const n = o[t],
-        r = THIRD_PLACE_SLOTS[n] || [];
-      for (const o of a)
-        if (!Object.values(s).includes(o) && r.includes(o)) {
-          if (((s[n] = o), e(t + 1))) return !0;
-          delete s[n];
-        }
-      return !1;
-    })(0)
-  )
-    return !1;
-  let r = !1;
-  return (
-    o.forEach((t) => {
-      const a = s[t],
-        o = n.find((e) => e.group === a)?.team || "";
-      o &&
-        e.thirdAssignments[t] !== o &&
-        ((e.thirdAssignments[t] = o),
-        (e.winners[t] = ""),
-        pruneDependentWinners(e, Number(t.slice(1))),
-        (r = !0));
-    }),
-    r
-  );
+  return !1;
 }
 
 function enhanceScoreInputs() {
@@ -2770,15 +2922,10 @@ function renderThirdAssignments(e, t) {
     r = getThirdPlaceRankings(t),
     i = 12 === r.length && 8 === s.length;
   let d =
-    "Cada llave muestra solo los terceros de grupos permitidos para ese cruce.";
-  i
-    ? (d =
-        "Los 8 mejores terceros se detectaron automaticamente. Podes cambiarlos manualmente si queres ajustar los cruces.")
-    : s.length > 8 && 12 === getThirdPlaceRankings(t).length
-      ? (d = "Hay empate en el 8vo puesto. Elegi manualmente para desempatar.")
-      : r.length < 12 &&
-        (d =
-          "Faltan grupos por completar. Mientras tanto podes asignar manualmente con los terceros disponibles.");
+    "Asignación manual de terceros: podes elegir a mano para cada cruce de 16avos.";
+  r.length < 12 &&
+    (d =
+      "Faltan grupos por completar. Mientras tanto podes asignar manualmente con los terceros disponibles.");
   const l = Object.values(t.thirdAssignments || {}).filter(Boolean);
   n.innerHTML = `\n    <div class="thirds-head">\n      <h3>Asignacion de mejores terceros</h3>\n      <p>${d}</p>\n    </div>\n  `;
   const m = document.createElement("div");
@@ -2813,6 +2960,51 @@ function renderThirdAssignments(e, t) {
         m.appendChild(r));
     }),
     n.appendChild(m));
+}
+
+function renderMiniStandings(e, t) {
+  const n = document.getElementById(e);
+  if (!n) return;
+  const a = groupKeys();
+  n.innerHTML = `
+    <div class="section-head compact">
+      <div>
+        <h3>Mini tabla de grupos</h3>
+        <p>Se actualiza automaticamente a medida que completas los pronosticos.</p>
+      </div>
+    </div>
+  `;
+  const o = document.createElement("div");
+  o.className = "standings-grid";
+  a.forEach((e) => {
+    const n = groupStandings(t, e);
+    const a = document.createElement("article");
+    a.className = "group-card";
+    a.innerHTML = `
+      <h4>Grupo ${e}</h4>
+      <table>
+        <thead>
+          <tr><th>#</th><th>Equipo</th><th>Pts</th><th>DG</th><th>GF</th></tr>
+        </thead>
+        <tbody>
+          ${n
+            .map(
+              (t, n) =>
+                `<tr>
+                  <td>${n + 1}</td>
+                  <td>${escapeHtml(teamLabel(t.team))}</td>
+                  <td>${t.pts}</td>
+                  <td>${t.gd >= 0 ? "+" : ""}${t.gd}</td>
+                  <td>${t.gf}</td>
+                </tr>`,
+            )
+            .join("")}
+        </tbody>
+      </table>
+    `;
+    o.appendChild(a);
+  });
+  n.appendChild(o);
 }
 function calculateMatchPoints(e, t) {
   if (
@@ -2915,9 +3107,15 @@ function renderGroups(e, t, n, a = {}) {
           p = (n) => {
             ((getGroupMatch(t, a.id, a.home, a.away)[n.target.dataset.side] =
               n.target.value),
-              syncGroupScoresFromDom(l, t));
+              syncGroupScoresFromDom(l, t),
+              refreshDerivedGroupState(t));
             const o = l.querySelector(".group-standings-body");
             o && (o.innerHTML = standingsMarkup(t, e));
+            renderMiniStandings("miniStandingsPanel", state.prediction);
+            renderThirdAssignments("thirdsPanel", phaseRenderModel());
+            const s = phaseRenderModel();
+            renderBracket("bracket", s, "prediction");
+            renderBracket("realBracket", state.real, "real");
           };
         (u[0].addEventListener("input", p),
           u[0].addEventListener("change", p),
@@ -2984,10 +3182,22 @@ function renderMatchdayMatches(e, t, n, a) {
             (n.addEventListener("input", (n) => {
               getGroupMatch(t, e.id, e.home, e.away)[n.target.dataset.side] =
                 n.target.value;
+              refreshDerivedGroupState(t);
+              renderMiniStandings("miniStandingsPanel", state.prediction);
+              renderThirdAssignments("thirdsPanel", phaseRenderModel());
+              const a = phaseRenderModel();
+              renderBracket("bracket", a, "prediction");
+              renderBracket("realBracket", state.real, "real");
             }),
               n.addEventListener("change", (n) => {
                 getGroupMatch(t, e.id, e.home, e.away)[n.target.dataset.side] =
                   n.target.value;
+                refreshDerivedGroupState(t);
+                renderMiniStandings("miniStandingsPanel", state.prediction);
+                renderThirdAssignments("thirdsPanel", phaseRenderModel());
+                const a = phaseRenderModel();
+                renderBracket("bracket", a, "prediction");
+                renderBracket("realBracket", state.real, "real");
               }));
           }),
             o.appendChild(u));
@@ -3225,6 +3435,15 @@ function fillModel(e) {
     (groupKeys().forEach((t) => {
       ((e.groups[t] = [...WORLD_CUP_GROUPS[t]]),
         groupFixtures(t).forEach((t) => {
+          const a = state.real?.groupMatches?.[t.id],
+            o =
+              a &&
+              "" !== a.home &&
+              void 0 !== a.home &&
+              "" !== a.away &&
+              void 0 !== a.away,
+            s = isMatchTimeLocked(t.id);
+          if (o || s) return;
           const n = getGroupMatch(e, t.id, t.home, t.away);
           ((n.home = String(Math.floor(5 * Math.random()))),
             (n.away = String(Math.floor(5 * Math.random()))));
@@ -3242,11 +3461,23 @@ function fillModel(e) {
   (renderAll(),
     setTimeout(() => {
       (ALL_BRACKET_MATCHES.forEach(([t, n, a]) => {
+        const l = state.real?.scores?.[t],
+          m = state.real?.winners?.[t],
+          c =
+            l &&
+            "" !== l.left &&
+            void 0 !== l.left &&
+            "" !== l.right &&
+            void 0 !== l.right,
+          u = Boolean(m && "" !== m),
+          p = isMatchTimeLocked(t);
+        if (c || u || p) return;
         let o = Math.floor(5 * Math.random()),
           s = Math.floor(5 * Math.random());
         o === s && (o < 4 ? (o += 1) : (s -= 1));
         const r = resolveSlot(n, e, t),
           i = resolveSlot(a, e, t);
+        if (!r || !i) return;
         ((e.scores[t] = { left: String(o), right: String(s) }),
           (e.winners[t] = o > s ? r : i));
       }),
@@ -3254,6 +3485,20 @@ function fillModel(e) {
     }, 0));
 }
 function clearModel(e) {
+  const n = JSON.parse(JSON.stringify(e || {})),
+    a = state.real || currentTournament()?.realResults || {},
+    o = (e) =>
+      e &&
+      "" !== e.home &&
+      void 0 !== e.home &&
+      "" !== e.away &&
+      void 0 !== e.away,
+    s = (e) =>
+      e &&
+      "" !== e.left &&
+      void 0 !== e.left &&
+      "" !== e.right &&
+      void 0 !== e.right;
   const t = createEmptyTournament();
   ((e.groups = t.groups),
     (e.groupMatches = t.groupMatches),
@@ -3261,6 +3506,23 @@ function clearModel(e) {
     (e.winners = t.winners),
     (e.scores = t.scores),
     (e.custom = t.custom),
+    Object.keys(a.groupMatches || {}).forEach((t) => {
+      o(a.groupMatches[t]) &&
+        n.groupMatches?.[t] &&
+        (e.groupMatches[t] = { ...n.groupMatches[t] });
+    }),
+    Object.keys(a.scores || {}).forEach((t) => {
+      s(a.scores[t]) &&
+        n.scores?.[t] &&
+        (e.scores[t] = { ...n.scores[t] });
+    }),
+    Object.keys(a.winners || {}).forEach((t) => {
+      a.winners?.[t] &&
+        n.winners?.[t] &&
+        (e.winners[t] = n.winners[t]);
+    }),
+    n.winners?.m104 && (e.winners.m104 = n.winners.m104),
+    refreshDerivedGroupState(e),
     renderAll());
 }
 function renderAll() {
@@ -3289,6 +3551,9 @@ function renderAll() {
     document.querySelectorAll("[data-worldcup-stage='thirds']").forEach((t) => {
       t.hidden = !e || !l;
     }),
+    document.querySelectorAll("[data-worldcup-stage='mini-standings']").forEach((t) => {
+      t.hidden = !e || (!r && !i);
+    }),
     e)
   ) {
     const e = phaseRenderModel(),
@@ -3309,6 +3574,7 @@ function renderAll() {
       renderGroups("groupsGrid", state.prediction, "prediction", {
         matchdayId: o,
       }),
+      renderMiniStandings("miniStandingsPanel", state.prediction),
       renderMatchdayMatches("matchdayGrid", state.prediction, "prediction", o),
       renderGroups("realGroupsGrid", state.real, "real"),
       renderThirdAssignments("thirdsPanel", e),
@@ -3320,9 +3586,53 @@ function renderAll() {
       renderCustomSheet("realCustomSheet", state.real, "real"));
   (renderPhaseStatus(),
     setPredictionLocked(isEntryClosed()),
+    renderHomeChampionPicker(),
     syncLobbyTabVisibility(),
     updateHomeMatchesView());
     enhanceScoreInputs();
+}
+function championTeams() {
+  const e = new Set();
+  return (
+    groupKeys().forEach((t) => {
+      (WORLD_CUP_GROUPS[t] || []).forEach((t) => {
+        const n = teamLabel(t).trim();
+        n && e.add(n);
+      });
+    }),
+    Array.from(e).sort((e, t) => e.localeCompare(t, "es"))
+  );
+}
+function championDeadlinePassed() {
+  return Date.now() > CHAMPION_PICK_DEADLINE.getTime();
+}
+function renderHomeChampionPicker() {
+  const e = document.getElementById("homeChampionSelector"),
+    t = document.getElementById("saveChampionHome"),
+    n = document.getElementById("homeChampionStatus"),
+    a0 = document.getElementById("homeChampionCurrent");
+  if (!e || !t || !n || !a0) return;
+  const a = championTeams();
+  const o0 = [
+    '<option value="">Seleccionar campeon...</option>',
+    ...a.map((e) => `<option value="${escapeHtml(e)}">${escapeHtml(e)}</option>`),
+  ].join("");
+  e.innerHTML !== o0 && (e.innerHTML = o0);
+  const o = state.prediction?.winners?.m104 || loadChampionPickLocal() || "";
+  o &&
+    (state.prediction.winners || (state.prediction.winners = {}),
+    (state.prediction.winners.m104 = o));
+  o && (e.value = o);
+  (a0.innerHTML = o
+    ? `Campeon elegido: ${teamBadge(o)}`
+    : "Todavia no elegiste campeon.");
+  const s = championDeadlinePassed();
+  (e.disabled = s || isEntryClosed(),
+    t.disabled = s || isEntryClosed(),
+    s
+      ? ((n.hidden = !1),
+        (n.textContent = "El plazo para elegir campeon cerro el 28 de junio a las 15:00 hs."))
+      : n.hidden && (n.hidden = !0));
 }
 function syncLobbyTabVisibility() {
   const e = document.querySelector('.tab[data-view="lobby"]');
@@ -3451,12 +3761,19 @@ async function loadTournaments() {
       state.tournaments.find((e) => "global" === e.id) || state.tournaments[0];
     if (
       ((state.real = a?.realResults
-        ? JSON.parse(JSON.stringify(a.realResults))
+        ? migrateLegacyMatchIds(JSON.parse(JSON.stringify(a.realResults)))
         : createEmptyTournament()),
       state.tournaments.some((e) => e.id === state.currentTournamentId) ||
         (state.currentTournamentId = state.tournaments[0]?.id || "global"),
       renderTournamentControls(),
       syncPhaseSelectorForTournament(),
+      (() => {
+        const e = loadChampionPickLocal();
+        e &&
+          !state.prediction?.winners?.m104 &&
+          (state.prediction.winners || (state.prediction.winners = {}),
+          (state.prediction.winners.m104 = e));
+      })(),
       renderAll(),
       state.tenantId && state.currentTournamentId)
     ) {
@@ -4258,7 +4575,8 @@ async function loadLeaderboard() {
       },
       a = (state.tenantId && state.leaderboardArea) || "",
       o = null,
-      s = await n(a, o);
+      s = await n(a, o),
+      r0 = effectiveRealResults();
     state.leaderboardData = s.leaderboard || [];
     const r = String(
       state.companySession?.user?.email ||
@@ -4278,7 +4596,10 @@ async function loadLeaderboard() {
         e.prediction &&
         (state.loadedPredictionForTournament !== state.currentTournamentId ||
           isPredictionEmpty(state.prediction)) &&
-        ((state.prediction = JSON.parse(JSON.stringify(e.prediction))),
+        ((state.prediction = migrateLegacyMatchIds(
+          JSON.parse(JSON.stringify(e.prediction)),
+        )),
+        saveChampionPickLocal(state.prediction?.winners?.m104 || ""),
         (state.loadedPredictionForTournament = state.currentTournamentId),
         renderAll());
     }
@@ -4290,10 +4611,10 @@ async function loadLeaderboard() {
         : a && (d = `Área: ${a} - ${s.tournament.name}`),
       s.leaderboard.length)
     ) {
-      const e = s.hasRealResults
+      const e = s.hasRealResults || (state.live?.matches || []).length
         ? "Puntaje calculado con resultados reales guardados."
         : "Sin resultados reales guardados: todos figuran con 0 puntos.";
-      i = renderLeaderboardBlock(s, d, e, o0);
+      i = renderLeaderboardBlock(s, d, e, o0, r0);
     } else
       i = `<p class="empty" style="text-align: center;">Todavia no hay prodes guardados en ${escapeHtml(d)}.</p>`;
     [e, t].forEach((e) => {
@@ -4305,7 +4626,9 @@ async function loadLeaderboard() {
           });
         }),
         e.querySelectorAll(".view-user-prode").forEach((e) => {
-          e.addEventListener("click", () => showUserProde(e.dataset.email));
+          e.addEventListener("click", () =>
+            showUserProde(e.dataset.email, s.leaderboard || [], r0, o0),
+          );
         }));
     });
     const l = document.getElementById("mainLeaderboardTitle"),
@@ -4324,7 +4647,7 @@ async function loadLeaderboard() {
           '<p class="empty" style="text-align: center;">No se pudo cargar el leaderboard.</p>'));
   }
 }
-function renderLeaderboardBlock(e, t, n, a = "general") {
+function renderLeaderboardBlock(e, t, n, a = "general", o0 = null) {
   const v = [
       { id: "general", label: "General" },
       { id: "group1", label: "Fecha 1" },
@@ -4335,6 +4658,7 @@ function renderLeaderboardBlock(e, t, n, a = "general") {
       { id: "final-pack", label: "4tos, Semis, Tercer Puesto y Final" },
     ],
     o = (a || "general").trim(),
+    p = o0 || effectiveRealResults(),
     s = (e.tournament?.scoring || state.defaultScoring || {}),
     r = {
       groupPosition: Number(s.groupPosition) || 1,
@@ -4359,34 +4683,7 @@ function renderLeaderboardBlock(e, t, n, a = "general") {
         return [...LATER_ROUNDS.qf, ...LATER_ROUNDS.sf, ...LATER_ROUNDS.third, ...LATER_ROUNDS.final].map((e) => e[0]);
       return [];
     },
-    m = (e, t, n) => {
-      if (!e?.prediction || !t?.tournament?.realResults || "general" === n) return e.score;
-      const a = t.tournament.realResults,
-        o = { points: 0, exactScoreHits: 0 };
-      if (GROUP_PHASE_IDS.includes(n))
-        return (
-          d(n).forEach((t) => {
-            const n = i(a.groupMatches?.[t]),
-              s = i(e.prediction.groupMatches?.[t]);
-            if (!n || !s) return;
-            Math.sign(n.home - n.away) === Math.sign(s.home - s.away) && (o.points += r.knockoutWinner);
-            n.home === s.home && n.away === s.away && ((o.points += r.exactScore), (o.exactScoreHits += 1));
-          }),
-          o
-        );
-      return (
-        l(n).forEach((t) => {
-          const n = a.winners?.[t],
-            s = e.prediction.winners?.[t];
-          n && s && n === s && (o.points += r.knockoutWinner);
-          const d = i(a.scores?.[t], "left", "right"),
-            l = i(e.prediction.scores?.[t], "left", "right");
-          d && l && d.home === l.home && d.away === l.away && ((o.points += r.exactScore), (o.exactScoreHits += 1));
-        }),
-        "final-pack" === n && a.winners?.m104 && e.prediction.winners?.m104 === a.winners.m104 && (o.points += r.champion),
-        o
-      );
-    },
+    m = (e, t, n) => (e?.prediction && p ? scorePredictionForView(e.prediction, p, n) : e.score),
     c = (e.leaderboard || [])
       .map((t) => ({ ...t, score: m(t, e, o) }))
       .sort((e, t) => {
@@ -4400,13 +4697,48 @@ function renderLeaderboardBlock(e, t, n, a = "general") {
     ? `\n      <div class="leaderboard-head" style="text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">\n        <div>\n          <h3>${t}</h3>\n          <p>${n}</p>\n        </div>\n        <label style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; justify-content:center;">\n          <span style="font-weight:700;">Vista:</span>\n          <select class="leaderboard-view-select">\n            ${v.map((e) => `<option value="${e.id}" ${e.id === o ? "selected" : ""}>${e.label}</option>`).join("")}\n          </select>\n        </label>\n        <strong>${c.length} jugadores</strong>\n      </div>\n      <div class="leaderboard-table" style="display: flex; flex-direction: column; align-items: center; width: 100%;">\n        ${c.map((e, t) => `\n          <div class="leaderboard-row" style="display:flex; align-items:center; justify-content:center; gap:0.5rem; flex-wrap:wrap; text-align:center; width:100%;">\n            <b style="flex-shrink:0;">${t + 1}</b>\n            <span style="flex:1; min-width: 120px;">${escapeHtml(e.player.name)}<small style="display:block;">${escapeHtml(e.player.area || "Participante")}</small></span>\n            <strong style="flex-shrink:0;">${e.score.points} pts</strong>\n            <em style="flex:2; min-width: 150px; display:block;">Exactos🎯:${e.score.exactScoreHits || 0}</em>\n            <button class="secondary view-user-prode" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; flex-shrink:0;" data-email="${escapeHtml(e.player.email)}">Ver jugada</button>\n          </div>\n        `).join("")}\n      </div>\n    `
     : `<p class="empty" style="text-align: center;">Todavia no hay prodes guardados en ${t}.</p>`;
 }
-function showUserProde(e) {
-  const t = (state.leaderboardData || []).find((t) => t.player.email === e);
-  if (!t) return;
-  const n = t.prediction || {},
-    a = state.real || currentTournament()?.realResults || {},
-    o =
-      t.score?.points ?? ("number" == typeof t.score ? t.score : t.points || 0),
+function showUserProde(e, t = null, n0 = null, a1 = "general") {
+  const a0 = String(e || "")
+      .trim()
+      .toLowerCase(),
+    o0 = Array.isArray(t) ? t : state.leaderboardData || [],
+    s0 = n0 || effectiveRealResults(),
+    r0 = o0.find(
+      (e) =>
+        String(e.player?.email || "")
+          .trim()
+          .toLowerCase() === a0,
+    ),
+    t0 =
+      r0 ||
+      (state.leaderboardData || []).find(
+        (e) =>
+          String(e.player?.email || "")
+            .trim()
+            .toLowerCase() === a0,
+      );
+  const i0 = t0;
+  if (!i0) return;
+  const n = i0.prediction || {},
+    a = s0,
+    oView = scorePredictionForView(n, a, a1),
+    o = Number(oView?.points || 0),
+    vLabel =
+      "general" === a1
+        ? "General"
+        : "group1" === a1
+          ? "Fecha 1"
+          : "group2" === a1
+            ? "Fecha 2"
+            : "group3" === a1
+              ? "Fecha 3"
+              : "r32" === a1
+                ? "16avos"
+                : "r16" === a1
+                  ? "8avos"
+                  : "final-pack" === a1
+                    ? "4tos / Semis / Final"
+                    : "General",
     s = "dynamicUserProdeModal";
   document.getElementById(s)?.remove();
   const r = document.createElement("div");
@@ -4419,68 +4751,69 @@ function showUserProde(e) {
     (r.style.display = "grid"),
     (r.style.placeItems = "center"),
     (r.style.padding = "20px"));
-  const i = [];
-  (Object.keys(n.groupMatches || {}).forEach((e) => {
-    const t = a.groupMatches?.[e];
-    if (
-      t &&
-      "" !== t.home &&
-      "" !== t.away &&
-      void 0 !== t.home &&
-      void 0 !== t.away
-    ) {
-      const a = n.groupMatches[e],
-        o = e.split("-"),
+  const i = [],
+    d0 = leaderboardMatchIdsForView(a1);
+  (d0.forEach((e) => {
+    const t = MATCH_SCHEDULE[e]?.number || 999;
+    if (e.includes("-")) {
+      const o = e.split("-"),
         s = o[1],
         r = o[2],
         d = WORLD_CUP_GROUPS[o[0]]?.[s] || s,
         l = WORLD_CUP_GROUPS[o[0]]?.[r] || r,
-        m = MATCH_SCHEDULE[e]?.number || 999;
+        m = n.groupMatches?.[e] || null,
+        c = a.groupMatches?.[e] || null;
+      if (
+        !c ||
+        "" === c.home ||
+        "" === c.away ||
+        void 0 === c.home ||
+        void 0 === c.away
+      )
+        return;
       i.push({
         id: e,
-        number: m,
+        number: t,
         type: "group",
-        label: `Partido ${m} - Grupo ${o[0]}`,
+        label: `Partido ${t} - Grupo ${o[0]}`,
         homeKey: s,
         awayKey: r,
         homeName: d,
         awayName: l,
-        predHome: a?.home,
-        predAway: a?.away,
-        realHome: t.home,
-        realAway: t.away,
-        earnedPoints: a ? calculateMatchPoints(a, t) : 0,
+        predHome: m?.home,
+        predAway: m?.away,
+        realHome: c?.home ?? "-",
+        realAway: c?.away ?? "-",
+        earnedPoints: m && c ? calculateMatchPoints(m, c) || 0 : 0,
       });
+      return;
     }
+    const o = n.scores?.[e] || null,
+      s = a.scores?.[e] || null;
+    if (
+      !s ||
+      "" === s.left ||
+      "" === s.right ||
+      void 0 === s.left ||
+      void 0 === s.right
+    )
+      return;
+    i.push({
+      id: e,
+      number: t,
+      type: "bracket",
+      label: `Partido ${t} - Fase Final (${e.toUpperCase()})`,
+      homeKey: "",
+      awayKey: "",
+      homeName: "Local",
+      awayName: "Visitante",
+      predHome: o?.left,
+      predAway: o?.right,
+      realHome: s?.left ?? "-",
+      realAway: s?.right ?? "-",
+      earnedPoints: 0,
+    });
   }),
-    Object.keys(n.scores || {}).forEach((e) => {
-      const t = a.scores?.[e];
-      if (
-        t &&
-        "" !== t.left &&
-        "" !== t.right &&
-        void 0 !== t.left &&
-        void 0 !== t.right
-      ) {
-        const a = n.scores[e],
-          o = MATCH_SCHEDULE[e]?.number || 999;
-        i.push({
-          id: e,
-          number: o,
-          type: "bracket",
-          label: `Partido ${o} - Fase Final (${e.toUpperCase()})`,
-          homeKey: "",
-          awayKey: "",
-          homeName: "Local",
-          awayName: "Visitante",
-          predHome: a?.left,
-          predAway: a?.right,
-          realHome: t.left,
-          realAway: t.right,
-          earnedPoints: 0,
-        });
-      }
-    }),
     i.sort((e, t) => e.number - t.number));
   let d = "";
   (i.forEach((e) => {
@@ -4503,9 +4836,9 @@ function showUserProde(e) {
         '<p style="color: var(--muted); padding: 30px 0; text-align: center; font-weight: 700; font-size: 0.95rem;">No hay partidos finalizados con resultado oficial en esta sección.</p>'));
   let l = "";
   ((l = n.winners?.m104
-    ? `\n      <div style="margin-bottom: 18px; padding: 12px; background: linear-gradient(135deg, rgba(215,169,52,0.12), rgba(215,169,52,0.03)); border: 2px dashed var(--gold, #d7a934); border-radius: 10px; text-align: center; font-weight: 800; color: var(--ink); font-size: 0.95rem;">\n        🏆 Campeón Pronosticado: <span style="color: var(--accent-2, #b4233a); font-size: 1.1rem; font-weight: 900; margin-left: 4px;">${escapeHtml(n.winners.m104)}</span>\n      </div>\n    `
-    : '\n      <div style="margin-bottom: 18px; padding: 12px; background: rgba(0,0,0,0.03); border: 1px dashed var(--line); border-radius: 10px; text-align: center; font-weight: 700; color: var(--muted); font-size: 0.88rem;">\n        No seleccionó campeón para la fase final.\n      </div>\n    '),
-    (r.innerHTML = `\n    <div class="modal-panel" style="width: min(100%, 540px); max-height: 80vh; display: flex; flex-direction: column; background: #fffaf1; border-radius: 14px; border: 1px solid var(--line); box-shadow: 0 25px 70px rgba(0,0,0,0.4); overflow: hidden; animation: modalPop 0.2s ease-out;">\n      <div style="background: linear-gradient(135deg, var(--accent), #084c3e); color: white; padding: 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--gold);">\n        <div>\n          <span style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.75); font-weight: 800;">Historial de Aciertos</span>\n          <h3 style="margin: 2px 0 0 0; font-size: 1.3rem; font-weight: 900; color: white;">Prode de ${escapeHtml(t.player.name)}</h3>\n        </div>\n        <div style="background: rgba(255,255,255,0.2); padding: 5px 12px; border-radius: 30px; font-weight: 900; font-size: 0.95rem; box-shadow: inset 0 1px 2px rgba(0,0,0,0.15);">\n          ${o} Pts\n        </div>\n      </div>\n      <div style="flex: 1; overflow-y: auto; padding: 18px; background: #fffaf1;">\n        ${l}\n        <div style="display: flex; flex-direction: column;">\n          ${d}\n        </div>\n      </div>\n      <div style="padding: 14px 18px; background: var(--bg, #f5f1e8); border-top: 1px solid var(--line); display: flex; justify-content: flex-end;">\n        <button id="closeUserProdeModalBtn" style="background: var(--accent-2, #b4233a); color: white; min-height: 40px; padding: 0 26px; font-size: 0.9rem; font-weight: 900; border-radius: 6px; cursor: pointer; border: 0; box-shadow: 0 4px 12px rgba(180,35,58,0.25); transition: all 0.15s ease;">\n          Cerrar Cartel\n        </button>\n      </div>\n    </div>\n    <style>\n      @keyframes modalPop {\n        from { opacity: 0; transform: scale(0.97) translateY(5px); }\n        to { opacity: 1; transform: scale(1) translateY(0); }\n      }\n      #closeUserProdeModalBtn:hover {\n        filter: brightness(0.92);\n        transform: translateY(-1px);\n      }\n    </style>\n  `),
+    ? `\n      <div style="margin-bottom: 18px; padding: 12px; background: linear-gradient(135deg, rgba(215,169,52,0.12), rgba(215,169,52,0.03)); border: 2px dashed var(--gold, #d7a934); border-radius: 10px; text-align: center; font-weight: 800; color: var(--ink); font-size: 0.95rem;">\n        <div style="margin-bottom: 6px;">Campeón elegido:</div>\n        <div style="display:flex; justify-content:center; align-items:center;">${teamBadge(n.winners.m104)}</div>\n      </div>\n    `
+    : '\n      <div style="margin-bottom: 18px; padding: 12px; background: rgba(0,0,0,0.03); border: 1px dashed var(--line); border-radius: 10px; text-align: center; font-weight: 700; color: var(--muted); font-size: 0.88rem;">\n        Campeón elegido: S/P\n      </div>\n    '),
+    (r.innerHTML = `\n    <div class="modal-panel" style="width: min(100%, 540px); max-height: 80vh; display: flex; flex-direction: column; background: #fffaf1; border-radius: 14px; border: 1px solid var(--line); box-shadow: 0 25px 70px rgba(0,0,0,0.4); overflow: hidden; animation: modalPop 0.2s ease-out;">\n      <div style="background: linear-gradient(135deg, var(--accent), #084c3e); color: white; padding: 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--gold);">\n        <div>\n          <span style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.75); font-weight: 800;">Historial de Aciertos - ${escapeHtml(vLabel)}</span>\n          <h3 style="margin: 2px 0 0 0; font-size: 1.3rem; font-weight: 900; color: white;">Prode de ${escapeHtml(i0.player.name)}</h3>\n        </div>\n        <div style="background: rgba(255,255,255,0.2); padding: 5px 12px; border-radius: 30px; font-weight: 900; font-size: 0.95rem; box-shadow: inset 0 1px 2px rgba(0,0,0,0.15);">\n          ${o} Pts\n        </div>\n      </div>\n      <div style="flex: 1; overflow-y: auto; padding: 18px; background: #fffaf1;">\n        ${l}\n        <div style="display: flex; flex-direction: column;">\n          ${d}\n        </div>\n      </div>\n      <div style="padding: 14px 18px; background: var(--bg, #f5f1e8); border-top: 1px solid var(--line); display: flex; justify-content: flex-end;">\n        <button id="closeUserProdeModalBtn" style="background: var(--accent-2, #b4233a); color: white; min-height: 40px; padding: 0 26px; font-size: 0.9rem; font-weight: 900; border-radius: 6px; cursor: pointer; border: 0; box-shadow: 0 4px 12px rgba(180,35,58,0.25); transition: all 0.15s ease;">\n          Cerrar Cartel\n        </button>\n      </div>\n    </div>\n    <style>\n      @keyframes modalPop {\n        from { opacity: 0; transform: scale(0.97) translateY(5px); }\n        to { opacity: 1; transform: scale(1) translateY(0); }\n      }\n      #closeUserProdeModalBtn:hover {\n        filter: brightness(0.92);\n        transform: translateY(-1px);\n      }\n    </style>\n  `),
     r
       .querySelector("#closeUserProdeModalBtn")
       .addEventListener("click", () => r.remove()),
@@ -4645,7 +4978,9 @@ function renderMiniTournaments(e = []) {
               });
             }),
             a.querySelectorAll(".view-user-prode").forEach((e) => {
-              e.addEventListener("click", () => showUserProde(e.dataset.email));
+              e.addEventListener("click", () =>
+                showUserProde(e.dataset.email, s, effectiveRealResults(), m),
+              );
             }),
             d &&
               a.querySelectorAll(".leaderboard-row").forEach((e) => {
@@ -4912,7 +5247,11 @@ async function loadLiveResults() {
       source: t.source || "",
       matches: Array.isArray(t.matches) ? t.matches : [],
     }),
-      renderLiveResults());
+      renderLiveResults(),
+      (("leaderboard" === state.currentView ||
+        "main-leaderboard" === state.currentView) &&
+        loadLeaderboard().catch(() => {}),
+      renderAll()));
   } catch (t) {
     e.textContent = "No se pudieron cargar los resultados en vivo.";
   }
@@ -5168,7 +5507,7 @@ function scoreTournament(e, t) {
   );
 }
 function renderScore(e) {
-  return scoreTournament(e.tournament, state.real);
+  return scoreTournament(e.tournament, effectiveRealResults());
 }
 function extractPayloadFromPdf(e) {
   const t = e.match(
@@ -5985,6 +6324,50 @@ async function init() {
   document.getElementById("btnGoToPredictor")?.addEventListener("click", () => {
     document.querySelector('.tab[data-view="predictor"]')?.click();
   }),
+  document
+    .getElementById("saveChampionHome")
+    ?.addEventListener("click", async () => {
+      const e = document.getElementById("homeChampionSelector"),
+        t = document.getElementById("homeChampionStatus");
+      if (!e || !t) return;
+      if (!state.globalSession?.token && !state.companySession?.token)
+        return (
+          (t.hidden = !1),
+          void (t.textContent =
+            "Primero inicia sesion para guardar el campeon.")
+        );
+      if (championDeadlinePassed())
+        return (
+          (t.hidden = !1),
+          void (t.textContent = "El plazo para elegir campeon ya cerro.")
+        );
+      const n = String(e.value || "").trim();
+      if (!n)
+        return (
+          (t.hidden = !1),
+          void (t.textContent = "Selecciona un equipo antes de guardar.")
+        );
+      (state.prediction.winners || (state.prediction.winners = {}),
+        (state.prediction.winners.m104 = n),
+        saveChampionPickLocal(n),
+        renderHomeChampionPicker(),
+        renderAll(),
+        (t.hidden = !1),
+        (t.textContent = "Guardando campeón..."));
+      try {
+        const e = {
+          ...buildPayload(),
+          phaseId: "all",
+          tournament: JSON.parse(JSON.stringify(state.prediction)),
+        };
+        await submitProde(e);
+        (await loadTournaments(),
+          await loadLeaderboard(),
+          (t.textContent = `Campeón guardado: ${n}.`));
+      } catch (e) {
+        t.textContent = `No se pudo guardar el campeón: ${e.message}`;
+      }
+    }),
   document
     .getElementById("createMiniTournamentBtn")
     ?.addEventListener("click", () => {

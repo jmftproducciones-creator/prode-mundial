@@ -128,6 +128,22 @@
         </article>
       </div>
 
+      <section class="home-rules-panel" id="championPickPanel">
+        <div>
+          <h2>Elegi tu campeon del Mundial</h2>
+          <p>Este pronostico se muestra en todos los perfiles de <strong>Ver jugada</strong>.</p>
+          <p><strong>Podes elegir campeon hasta el 28 de junio a las 15:00 hs.</strong></p>
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; margin-top:0.75rem;">
+            <select id="homeChampionSelector" style="min-width:240px;">
+              <option value="">Seleccionar campeón</option>
+            </select>
+            <button id="saveChampionHome" type="button">Guardar campeón</button>
+          </div>
+          <p id="homeChampionCurrent" style="margin-top:0.5rem; font-weight:700;"></p>
+          <p id="homeChampionStatus" class="form-status" style="margin-top:0.75rem;" hidden></p>
+        </div>
+      </section>
+
       <section class="home-rules-panel">
         <div>
           <h2>Reglas del Prode</h2>
@@ -139,13 +155,9 @@
               ambos equipos (sumando 5 puntos en total).</li>
             <li><strong>Campeon (10 Puntos):</strong> Bonus especial si adivinas correctamente al campeon del torneo.
             </li>
-            <li><strong>Por Ejemplo:</strong> En un partido en el que Argentina <strong>Gana 2 a 0</strong> a Jordania,
-              <ul>
-                <li>Si tu pronostico fue que el partido empataba o que ganaba Jordania, <strong>no sumas puntos.</strong></li>
-                <li>Si tu pronostico fue de 2-1 que gana Argentina, <strong>sumas 3 puntos.</strong></li>
-                <li>Si tu pronostico fue 2-0 que gana Argentina, <strong>sumas 5 puntos</strong> (3 por el ganador + 2 por el resultado exacto).</li>
-              </ul>
-            </li>
+            <li><strong>Por ejemplo:</strong> si Argentina gana 2-0 a Jordania y vos pusiste empate o gana Jordania, no sumas puntos.</li>
+            <li>Si en ese mismo partido pronosticaste 2-1 para Argentina, <strong>sumas 3 puntos.</strong></li>
+            <li>Si pronosticaste 2-0 para Argentina, <strong>sumas 5 puntos</strong> (3 por ganador + 2 por exacto).</li>
           </ul>
         </div>
         <button id="btnGoToPredictor" type="button">Empezar</button>
@@ -401,6 +413,7 @@
 
       <div class="groups-grid" id="groupsGrid" data-worldcup-editor></div>
       <div class="matchday-grid" id="matchdayGrid" data-worldcup-editor hidden></div>
+      <div class="standings-panel" id="miniStandingsPanel" data-worldcup-editor data-worldcup-stage="mini-standings"></div>
       <div class="custom-sheet" id="customSheet" data-custom-editor hidden></div>
 
       <div class="section-head compact" data-worldcup-editor data-worldcup-stage="thirds">
