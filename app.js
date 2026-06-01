@@ -6251,6 +6251,7 @@ function hasProfileSession() {
 async function loadProfileStats() {
   if (!hasProfileSession()) {
     state.profileStats || (state.profileStats = { fanPoints: 0, rewardName: "Fan Points" });
+    updateFanPointsUi();
     return;
   }
 
@@ -6272,6 +6273,16 @@ async function loadProfileStats() {
     }
     if (!state.profileStats) state.profileStats = { fanPoints: 0, rewardName: "Fan Points" };
   }
+  updateFanPointsUi();
+}
+function updateFanPointsUi() {
+  const value = `${Number(state.profileStats?.fanPoints || 0)} ${state.profileStats?.rewardName || "Fan Points"}`;
+  const pointsEl = document.getElementById("profileFanPoints");
+  pointsEl &&
+    ("value" in pointsEl
+      ? (pointsEl.value = value)
+      : (pointsEl.textContent = value));
+  renderDailyGames();
 }
 async function openProfileModal() {
   const modal = document.getElementById("profileModal");
