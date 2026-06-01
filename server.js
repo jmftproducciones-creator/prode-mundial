@@ -841,6 +841,12 @@ function normalizeStoreShape(store) {
   if (!normalized.tournaments.some(tournament => tournament.id === "global")) {
     normalized.tournaments.unshift(emptyStore().tournaments[0]);
   }
+  normalized.tournaments.forEach(tournament => {
+    tournament.scoring = normalizeScoring(tournament.scoring);
+    if (tournament.templateId === "worldcup-2026" && tournament.scoring.champion < DEFAULT_SCORING.champion) {
+      tournament.scoring.champion = DEFAULT_SCORING.champion;
+    }
+  });
   ensureTenantTournaments(normalized);
   ensureBaseAdminMemberships(normalized);
   return normalized;
@@ -4574,6 +4580,7 @@ async function handleSaveRealResults(req, res) {
       send(res, 404, JSON.stringify({ error: "Global tournament not found" }));
       return;
     }
+    completeWorldCupRealResults(realResults);
     const updatedAt = new Date().toISOString();
     realResults.updatedAt = updatedAt;
     if (realResults.custom?.matches) {
@@ -4616,6 +4623,52 @@ async function handleSaveRealResults(req, res) {
   } catch (error) {
     send(res, 500, JSON.stringify({ error: error.message }));
   }
+}
+
+function completeWorldCupRealResults(realResults) {
+  if (!realResults || typeof realResults !== "object") return;
+  const groupMatches = realResults.groupMatches || {};
+  realResults.groups || (realResults.groups = {});
+  WORLD_CUP_GROUP_KEYS.forEach(group => {
+    const table = new Map();
+    const ensure = team => {
+      if (!team) return null;
+      if (!table.has(team)) table.set(team, { team, pts: 0, gf: 0, ga: 0, gd: 0 });
+      return table.get(team);
+    };
+    Object.entries(groupMatches).forEach(([id, match]) => {
+      if (!String(id).startsWith(`${group}-`) || !match) return;
+      if (match.home === "" || match.home === undefined || match.away === "" || match.away === undefined) return;
+      const homeTeam = match.homeTeam || match.homeCode || match.homeName || "";
+      const awayTeam = match.awayTeam || match.awayCode || match.awayName || "";
+      const home = ensure(homeTeam);
+      const away = ensure(awayTeam);
+      if (!home || !away) return;
+      const homeScore = Number(match.home);
+      const awayScore = Number(match.away);
+      if (!Number.isFinite(homeScore) || !Number.isFinite(awayScore)) return;
+      home.gf += homeScore;
+      home.ga += awayScore;
+      away.gf += awayScore;
+      away.ga += homeScore;
+      if (homeScore > awayScore) home.pts += 3;
+      else if (homeScore < awayScore) away.pts += 3;
+      else {
+        home.pts += 1;
+        away.pts += 1;
+      }
+      home.gd = home.gf - home.ga;
+      away.gd = away.gf - away.ga;
+    });
+    const standings = [...table.values()].sort(
+      (a, b) =>
+        b.pts - a.pts ||
+        b.gd - a.gd ||
+        b.gf - a.gf ||
+        a.team.localeCompare(b.team),
+    );
+    if (standings.length) realResults.groups[group] = standings.map(row => row.team);
+  });
 }
 
 async function syncTournamentApiResults(store, tournament, options = {}) {

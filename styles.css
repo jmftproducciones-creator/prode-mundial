@@ -2021,6 +2021,25 @@ textarea {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+#miniStandingsPanel.standings-panel {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+#miniStandingsPanel .standings-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(190px, 220px);
+  grid-template-columns: none;
+  width: max-content;
+  min-width: 0;
+  padding: 10px 2px 12px;
+}
+
+#miniStandingsPanel .group-card {
+  min-width: 190px;
+}
+
 .team-badge {
   display: inline-flex;
   align-items: center;

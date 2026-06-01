@@ -3318,6 +3318,8 @@ function pruneDependentWinners(e, t) {
     });
 }
 function fillModel(e) {
+  const lockedSnapshot =
+    e === state.prediction ? JSON.parse(JSON.stringify(state.prediction)) : null;
   if (!usesWorldCupEditor()) {
     const t = tournamentDefinition(),
       n = "league" === t.mode,
@@ -3336,6 +3338,7 @@ function fillModel(e) {
             winner: t === o && n ? "draw" : t > o ? e.home : e.away,
           }));
       }),
+      restoreLockedPredictionFields(e, lockedSnapshot),
       void renderAll()
     );
   }
@@ -3349,6 +3352,7 @@ function fillModel(e) {
         }),
         applyGroupStandings(e, t));
     }),
+    restoreLockedPredictionFields(e, lockedSnapshot),
     !autoAssignThirdsIfPossible(e))
   ) {
     e.thirdAssignments = {};
@@ -3368,10 +3372,13 @@ function fillModel(e) {
         ((e.scores[t] = { left: String(o), right: String(s) }),
           (e.winners[t] = o > s ? r : i));
       }),
+        restoreLockedPredictionFields(e, lockedSnapshot),
         renderAll());
     }, 0));
 }
 function clearModel(e) {
+  const lockedSnapshot =
+    e === state.prediction ? JSON.parse(JSON.stringify(state.prediction)) : null;
   const t = createEmptyTournament();
   ((e.groups = t.groups),
     (e.groupMatches = t.groupMatches),
@@ -3379,7 +3386,80 @@ function clearModel(e) {
     (e.winners = t.winners),
     (e.scores = t.scores),
     (e.custom = t.custom),
+    restoreLockedPredictionFields(e, lockedSnapshot),
     renderAll());
+}
+function hasOfficialGroupResult(e) {
+  const t = state.real?.groupMatches?.[e];
+  return Boolean(
+    t &&
+      t.home !== "" &&
+      t.home !== undefined &&
+      t.away !== "" &&
+      t.away !== undefined,
+  );
+}
+function hasOfficialBracketResult(e) {
+  const t = state.real?.scores?.[e],
+    n = state.real?.winners?.[e];
+  return Boolean(
+    (t &&
+      t.left !== "" &&
+      t.left !== undefined &&
+      t.right !== "" &&
+      t.right !== undefined) ||
+      (n && n !== ""),
+  );
+}
+function restoreLockedPredictionFields(e, t) {
+  if (e !== state.prediction || !t) return;
+  groupKeys().forEach((n) => {
+    groupFixtures(n).forEach((a) => {
+      if ((hasOfficialGroupResult(a.id) || isMatchTimeLocked(a.id)) && t.groupMatches?.[a.id]) {
+        e.groupMatches || (e.groupMatches = {});
+        e.groupMatches[a.id] = JSON.parse(JSON.stringify(t.groupMatches[a.id]));
+      }
+    });
+    applyGroupStandings(e, n);
+  });
+  ALL_BRACKET_MATCHES.forEach(([n]) => {
+    if (!(hasOfficialBracketResult(n) || isMatchTimeLocked(n))) return;
+    if (t.scores?.[n]) {
+      e.scores || (e.scores = {});
+      e.scores[n] = JSON.parse(JSON.stringify(t.scores[n]));
+    }
+    if (t.winners?.[n]) {
+      e.winners || (e.winners = {});
+      e.winners[n] = t.winners[n];
+    }
+  });
+}
+function normalizeRealResultsForSave(e) {
+  if (!usesWorldCupEditor() || !e) return;
+  groupKeys().forEach((t) => {
+    const n = groupFixtures(t).some((t) => {
+      const n = e.groupMatches?.[t.id];
+      return Boolean(
+        n &&
+          n.home !== "" &&
+          n.home !== undefined &&
+          n.away !== "" &&
+          n.away !== undefined,
+      );
+    });
+    if (n) {
+      e.groups || (e.groups = {});
+      e.groups[t] = groupStandings(e, t).map((e) => e.team);
+    }
+  });
+  ALL_BRACKET_MATCHES.forEach(([t, n, a]) => {
+    const o = e.scores?.[t];
+    if (!o || o.left === "" || o.left === undefined || o.right === "" || o.right === undefined) return;
+    if (e.winners?.[t]) return;
+    const s = resolveSlot(n, e, t),
+      r = resolveSlot(a, e, t);
+    setWinnerFromScore(e, t, s, r);
+  });
 }
 function renderAll() {
   const e = usesWorldCupEditor(),
@@ -3427,11 +3507,11 @@ function renderAll() {
       c && (c.hidden = !1),
       u && (u.hidden = !d),
       p && (p.hidden = !1),
-      document.getElementById("miniStandingsPanel") && (document.getElementById("miniStandingsPanel").hidden = !e),
+      document.getElementById("miniStandingsPanel") && (document.getElementById("miniStandingsPanel").hidden = t.id !== "r32"),
       renderGroups("groupsGrid", state.prediction, "prediction", {
         matchdayId: o,
       }),
-      renderMiniStandings("miniStandingsPanel", state.prediction),
+      t.id === "r32" && renderMiniStandings("miniStandingsPanel", state.prediction),
       renderWorldCupChampionPicker(),
       renderMatchdayMatches("matchdayGrid", state.prediction, "prediction", o),
       renderGroups("realGroupsGrid", state.real, "real"),
@@ -3879,6 +3959,7 @@ async function ensurePaymentBeforeSubmit(e) {
   return !0;
 }
 async function saveRealResults() {
+  normalizeRealResultsForSave(state.real);
   const e = await apiJson("/api/real-results", {
     method: "POST",
     body: JSON.stringify({
