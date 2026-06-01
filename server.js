@@ -3418,7 +3418,13 @@ async function handleProfileStats(req, res) {
       store,
       url.searchParams.get("globalSessionToken") || url.searchParams.get("sessionToken"),
     );
-    const user = companyUser || globalUser;
+    const requestedEmail = normalizeEmail(url.searchParams.get("email"));
+    const fallbackUser = requestedEmail
+      ? (tenant
+          ? tenantStore(store, tenant.id).users?.[requestedEmail]
+          : store.users?.[requestedEmail])
+      : null;
+    const user = companyUser || globalUser || (fallbackUser ? { ...fallbackUser, email: requestedEmail } : null);
     if (!user?.email) {
       send(res, 401, JSON.stringify({ error: "Sesion invalida." }));
       return;
@@ -4058,7 +4064,13 @@ async function handleDailyGamePlay(req, res) {
     };
     gamePlays[email][date][gameType] = play;
     writeStore(store);
-    send(res, 200, JSON.stringify({ ok: true, correct, play, dailyGamePlays: currentDailyGamePlays({ gamePlays }, email, games) }));
+    send(res, 200, JSON.stringify({
+      ok: true,
+      correct,
+      play,
+      fanPoints: totalFanPoints(gamePlays, email),
+      dailyGamePlays: currentDailyGamePlays({ gamePlays }, email, games)
+    }));
   } catch (error) {
     send(res, 500, JSON.stringify({ error: error.message }));
   }

@@ -1589,9 +1589,8 @@ async function submitDailyGamePlay(e, t) {
   return (
     (state.dailyGamePlays = n.dailyGamePlays || state.dailyGamePlays || {}),
     n?.play?.completed &&
-      n?.play?.points &&
       (state.profileStats = {
-        fanPoints: Number(state.profileStats?.fanPoints || 0) + Number(n.play.points || 0),
+        fanPoints: Number(n.fanPoints ?? (Number(state.profileStats?.fanPoints || 0) + Number(n.play.points || 0))),
         rewardName:
           n.play.rewardName ||
           state.profileStats?.rewardName ||
@@ -6241,10 +6240,13 @@ async function saveAvatarRemote(e, t = currentProfileBorder()) {
     state.globalSession?.token &&
     saveGlobalSession({ token: state.globalSession.token, user: n.globalUser });
 }
+function profileEmail() {
+  return String(state.companySession?.user?.email || state.globalSession?.user?.email || "").trim();
+}
 function hasProfileSession() {
   const companyReady = state.companySessionChecked && state.companySession?.token && state.companySession?.user?.email;
   const globalReady = state.globalSessionChecked && state.globalSession?.token && state.globalSession?.user?.email;
-  return Boolean(companyReady || globalReady);
+  return Boolean(companyReady || globalReady || profileEmail());
 }
 async function loadProfileStats() {
   if (!hasProfileSession()) {
@@ -6257,6 +6259,7 @@ async function loadProfileStats() {
       tenantId: state.tenantId || "",
       sessionToken: state.companySession?.token || "",
       globalSessionToken: state.globalSession?.token || "",
+      email: profileEmail(),
     });
     const t = await apiJson(`/api/profile-stats?${e.toString()}`);
     state.profileStats = {
