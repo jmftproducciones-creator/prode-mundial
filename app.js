@@ -636,7 +636,9 @@ const FLAG_CODES = {
     tenantAccessGranted: !1,
     globalGames: null,
     dailyGamePlays: {},
+    profileStats: { fanPoints: 0, rewardName: "Fan Points" },
     leaderboardArea: "",
+    leaderboardViews: {},
     adminKey: "",
     adminUnlocked: !1,
     currentView: "inicio",
@@ -645,7 +647,7 @@ const FLAG_CODES = {
       groupPosition: 1,
       knockoutWinner: 3,
       exactScore: 2,
-      champion: 10,
+      champion: 20,
     },
     currentTournamentId: "global",
     loadedPredictionForTournament: null,
@@ -782,6 +784,9 @@ function companySessionKey() {
 function globalSessionKey() {
   return "globalSession";
 }
+function leaderboardViewsKey() {
+  return "leaderboardViews:v1";
+}
 function tenantTournamentId(e = state.tenantId) {
   return e ? `empresa-${e}` : "";
 }
@@ -795,7 +800,8 @@ function loadStoredGlobalSession() {
 }
 function saveGlobalSession(e) {
   ((state.globalSession = e),
-    localStorage.setItem(globalSessionKey(), JSON.stringify(e)));
+    localStorage.setItem(globalSessionKey(), JSON.stringify(e)),
+    applyAvatarToUi(e?.user?.avatar || currentAvatar()));
 }
 function clearGlobalSession() {
   (localStorage.removeItem(globalSessionKey()),
@@ -816,12 +822,27 @@ function loadStoredCompanySession() {
 function saveCompanySession(e) {
   state.tenantId &&
     ((state.companySession = e),
-    localStorage.setItem(companySessionKey(), JSON.stringify(e)));
+    localStorage.setItem(companySessionKey(), JSON.stringify(e)),
+    applyAvatarToUi(e?.user?.avatar || currentAvatar()));
 }
 function clearCompanySession() {
   (state.tenantId && localStorage.removeItem(companySessionKey()),
     (state.companySession = null),
     (state.adminUnlocked = !1));
+}
+function loadStoredLeaderboardViews() {
+  try {
+    const e = JSON.parse(localStorage.getItem(leaderboardViewsKey()) || "{}");
+    return e && "object" == typeof e ? e : {};
+  } catch {
+    return {};
+  }
+}
+function saveLeaderboardViews() {
+  localStorage.setItem(
+    leaderboardViewsKey(),
+    JSON.stringify(state.leaderboardViews || {}),
+  );
 }
 function isAdminSession() {
   return Boolean(state.companySession?.user?.isAdmin);
@@ -833,8 +854,36 @@ function isGlobalAdminSession() {
         state.globalSession?.user?.isSuperAdmin),
   );
 }
+function isCompanyApproverSession() {
+  const e = state.companySession?.user || null,
+    t = state.globalSession?.user || null;
+  return Boolean(
+    state.tenantId &&
+      ((e && (e.canApproveRequests || e.isAdmin || e.isSuperAdmin || "empresario" === e.role)) ||
+        (t && (t.canApproveRequests || t.isAdmin || t.isSuperAdmin || "empresario" === t.role))),
+  );
+}
+function canManageCompanyAdminUsers() {
+  return Boolean(isAdminSession() || isGlobalAdminSession());
+}
 function canUseAdminPanel() {
-  return isGlobalAdminSession();
+  return Boolean(isGlobalAdminSession() || isCompanyApproverSession());
+}
+function roleLabel(e) {
+  return "superadmin" === e
+    ? "Superadmin"
+    : "admin" === e
+      ? "Admin"
+      : "empresario" === e
+        ? "Empresario"
+        : "Jugador";
+}
+function approvalLabel(e) {
+  return "pending" === e
+    ? "Solicitud pendiente"
+    : "rejected" === e
+      ? "Solicitud rechazada"
+      : "Aprobado";
 }
 function syncAdminNavigation() {
   document.querySelectorAll("[data-admin-tab]").forEach((e) => {
@@ -864,9 +913,10 @@ function syncTenantNavigation() {
     e && state.tenantAccessGranted && a && (a.hidden = !0));
 }
 function updateAdminSections(e = state.adminSection || "users") {
-  ("results" !== e ||
-    (!state.tenantId && "global" === state.currentTournamentId) ||
-    (e = "users"),
+  (state.tenantId && !canManageCompanyAdminUsers() && "users" !== e && (e = "users"),
+    "results" !== e ||
+      (!state.tenantId && "global" === state.currentTournamentId) ||
+      (e = "users"),
     (state.adminSection = e));
   const t = document.getElementById("adminUsersPanel"),
     n = document.getElementById("adminResultsPanel"),
@@ -877,11 +927,13 @@ function updateAdminSections(e = state.adminSection || "users") {
     a && (a.hidden = "customize" !== e),
     o && (o.hidden = "games" !== e),
     document.querySelectorAll(".admin-subtab").forEach((t) => {
-      (t.classList.toggle("is-active", t.dataset.adminSection === e),
-        "customize" === t.dataset.adminSection && (t.hidden = !state.tenantId),
-        "results" === t.dataset.adminSection &&
+      const n = t.dataset.adminSection;
+      (t.classList.toggle("is-active", n === e),
+        "customize" === n && (t.hidden = !state.tenantId || !canManageCompanyAdminUsers()),
+        "games" === n && (t.hidden = state.tenantId && !canManageCompanyAdminUsers()),
+        "results" === n &&
           (t.hidden =
-            Boolean(state.tenantId) || "global" !== state.currentTournamentId));
+            Boolean(state.tenantId) || "global" !== state.currentTournamentId || !isGlobalAdminSession()));
     }));
 }
 function syncTopbarVisibility() {
@@ -985,7 +1037,7 @@ function renderCompanyAuth() {
       t?.user || (state.tenantAccessGranted ? state.globalSession?.user : null);
   if ((n && (n.hidden = !state.tenantId || !o), a && o)) {
     const e = o;
-    a.textContent = `${e.name || e.email} - ${t?.user?.area || state.tenant?.name || "Empresa"}${t?.user?.isAdmin ? " - Admin" : ""}`;
+    a.textContent = `${e.name || e.email} - ${t?.user?.area || state.tenant?.name || "Empresa"}${e.role ? ` - ${roleLabel(e.role)}` : ""}`;
   }
   const s = document.getElementById("companyLoginForm"),
     r = document.getElementById("companyAreaOptions");
@@ -1064,7 +1116,9 @@ function renderGlobalLobby() {
           .map((e) => {
             const t = e.hasAccess
                 ? `<button class="secondary open-tournament-btn" type="button" data-lobby-open="${escapeHtml(e.id)}" data-tenant-path="${escapeHtml(e.tenantPath || "")}">${e.isGlobal ? "Abrir prode" : "Entrar"}</button>`
-                : `<button class="secondary unlock-tournament" type="button" data-tournament-id="${escapeHtml(e.id)}">Desbloquear</button>`,
+                : e.requiresAccountApproval
+                  ? `<a class="secondary private-login-tournament" href="${escapeHtml(e.tenantPath || (e.tenantId ? `/prode/empresa/${encodeURIComponent(e.tenantId)}` : "/prode"))}">Registrarme</a>`
+                  : `<button class="secondary unlock-tournament" type="button" data-tournament-id="${escapeHtml(e.id)}">Ingresar clave</button>`,
               n =
                 state.globalSession?.user?.isSuperAdmin && !e.isGlobal
                   ? `<button class="secondary danger delete-private-tournament" type="button" style="margin-left:0.5rem;" data-tournament-id="${escapeHtml(e.id)}" data-tournament-name="${escapeHtml(e.name)}">Eliminar</button>`
@@ -1278,7 +1332,9 @@ async function unlockTournament(e) {
   (a && (a.textContent = `Desbloquear ${t?.name || "torneo"}`),
     o &&
       (o.textContent =
-        "Ingresa la clave una sola vez. El permiso queda guardado para tu usuario."),
+        t?.requiresAccountApproval
+          ? "Ingresa la clave para enviar tu solicitud. Un administrador o empresario podra aprobarla desde Administracion."
+          : "Ingresa la clave una sola vez. El permiso queda guardado para tu usuario."),
     r && ((r.hidden = !0), (r.textContent = "")),
     s && (s.value = ""),
     n && ((n.hidden = !1), setTimeout(() => s?.focus(), 0)));
@@ -1303,6 +1359,12 @@ async function submitTournamentUnlock() {
           o = state.lobbyTournaments.findIndex(
             (e) => e.id === t.tournament?.id,
           );
+        if (t.pendingApproval) {
+          o >= 0 && t.tournament && (state.lobbyTournaments[o] = t.tournament);
+          renderGlobalLobby();
+          a && ((a.hidden = !1), (a.textContent = t.message || "Solicitud enviada. Queda pendiente de aprobacion y ya aparece en Administracion."));
+          return;
+        }
         if (
           (o >= 0 && (state.lobbyTournaments[o] = t.tournament),
           renderGlobalLobby(),
@@ -1513,6 +1575,19 @@ async function submitDailyGamePlay(e, t) {
   });
   return (
     (state.dailyGamePlays = n.dailyGamePlays || state.dailyGamePlays || {}),
+    n?.play?.completed &&
+      n?.play?.points &&
+      (state.profileStats = {
+        fanPoints: Number(state.profileStats?.fanPoints || 0) + Number(n.play.points || 0),
+        rewardName:
+          n.play.rewardName ||
+          state.profileStats?.rewardName ||
+          "Fan Points",
+      }),
+    document.getElementById("profileFanPoints") &&
+      ("value" in document.getElementById("profileFanPoints")
+        ? (document.getElementById("profileFanPoints").value = `${Number(state.profileStats?.fanPoints || 0)} ${state.profileStats?.rewardName || "Fan Points"}`)
+        : (document.getElementById("profileFanPoints").textContent = `${Number(state.profileStats?.fanPoints || 0)} ${state.profileStats?.rewardName || "Fan Points"}`)),
     n
   );
 }
@@ -1536,9 +1611,9 @@ function renderDailyGames() {
     s)
   ) {
     const e = n?.rewardName || "Fan Points",
-      t = Number(n?.points?.camisetadle || 0),
-      a = Number(n?.points?.desafio || 0);
-    s.innerHTML = `\n      <span>${escapeHtml(state.tenant?.name || "Global")}</span>\n      <span>Camisetadle +${t} ${escapeHtml(e)}</span>\n      <span>Desafio +${a} ${escapeHtml(e)}</span>\n    `;
+      t = 20,
+      a = 15;
+    s.innerHTML = `\n      <span>${escapeHtml(state.tenant?.name || "Global")}</span>\n      <span>Camisetadle +${t} ${escapeHtml(e)}</span>\n      <span>Desafio +${a} ${escapeHtml(e)}</span>\n      <span>Total: ${Number(state.profileStats?.fanPoints || 0)} ${escapeHtml(state.profileStats?.rewardName || e)}</span>\n    `;
   }
   if (!n?.enabled)
     return void (e.innerHTML =
@@ -1629,9 +1704,7 @@ function renderDailyGames() {
       i && d
         ? submitDailyGamePlay("camisetadle", { player: o, number: s })
             .then(() => {
-              ((state.dailyGamePlays.camisetadle = { completed: !0 }),
-                clearDailyProgress("camisetadle", r.id),
-                renderDailyGames());
+              (clearDailyProgress("camisetadle", r.id), renderDailyGames());
             })
             .catch((e) => {
               c.textContent = e.message;
@@ -1676,9 +1749,7 @@ function renderDailyGames() {
     )
       return void submitDailyGamePlay("desafio", { answer: n })
         .then(() => {
-          ((state.dailyGamePlays.desafio = { completed: !0 }),
-            clearDailyProgress("desafio", i.id),
-            renderDailyGames());
+          (clearDailyProgress("desafio", i.id), renderDailyGames());
         })
         .catch((e) => {
           a.textContent = e.message;
@@ -2419,6 +2490,50 @@ function usesWorldCupEditor(e = currentTournament()) {
     ("groups-knockout" === t.mode && !t.teams.length)
   );
 }
+function hasCompleteWorldCupGroups(e) {
+  return groupKeys().every((t) => {
+    const n = e?.groups?.[t];
+    return Array.isArray(n) && n[0] && n[1] && n[2];
+  });
+}
+
+const CHAMPION_PICK_DEADLINE = new Date("2026-06-28T15:00:00-03:00");
+function worldCupChampionTeams() {
+  const teams = new Set();
+  groupKeys().forEach((group) => {
+    (WORLD_CUP_GROUPS[group] || []).forEach((team) => teams.add(team));
+  });
+  return Array.from(teams).sort((a, b) => teamLabel(a).localeCompare(teamLabel(b), "es"));
+}
+function isChampionPickLocked() {
+  return Date.now() >= CHAMPION_PICK_DEADLINE.getTime();
+}
+function renderWorldCupChampionPicker() {
+  const panel = document.getElementById("worldChampionPicker");
+  if (!panel) return;
+  state.prediction.winners || (state.prediction.winners = {});
+  const current = state.prediction.winners.m104 || "";
+  const locked = isChampionPickLocked();
+  panel.innerHTML = `
+    <div>
+      <strong>Campeon del Mundial</strong>
+      <small>${locked ? "Cerrado el 28/06 a las 15:00" : "Bonus de 20 puntos. Cierra el 28/06 a las 15:00."}</small>
+    </div>
+    <label>
+      <span>Seleccion</span>
+      <select id="worldChampionSelect" ${locked ? "disabled" : ""}>
+        <option value="">Elegir campeon</option>
+        ${worldCupChampionTeams().map((team) => `<option value="${escapeHtml(team)}">${escapeHtml(teamLabel(team))}</option>`).join("")}
+      </select>
+    </label>
+  `;
+  const select = panel.querySelector("#worldChampionSelect");
+  select.value = current;
+  select.addEventListener("change", (event) => {
+    state.prediction.winners.m104 = event.target.value;
+  });
+}
+
 function phaseRenderModel() {
   const e = currentTournament(),
     t = currentPhase();
@@ -2432,19 +2547,32 @@ function phaseRenderModel() {
   const n = JSON.parse(JSON.stringify(e.realResults)),
     a = new Set(t.matchIds || []),
     o = n.winners || {},
-    s = n.scores || {};
+    s = n.scores || {},
+    r = hasCompleteWorldCupGroups(e.realResults);
   return (
+    state.prediction.groups || (state.prediction.groups = {}),
+    state.prediction.groupMatches || (state.prediction.groupMatches = {}),
+    state.prediction.thirdAssignments ||
+      (state.prediction.thirdAssignments = {}),
     state.prediction.winners || (state.prediction.winners = {}),
     state.prediction.scores || (state.prediction.scores = {}),
+    r ||
+      ((n.groups = state.prediction.groups),
+      (n.groupMatches = {
+        ...(state.prediction.groupMatches || {}),
+        ...(e.realResults.groupMatches || {}),
+      }),
+      (n.thirdAssignments = state.prediction.thirdAssignments)),
+    "r32" === t.id && (n.thirdAssignments = state.prediction.thirdAssignments),
     (n.winners = new Proxy(state.prediction.winners, {
-      get: (e, t) => (a.has(t) ? e[t] : o[t]),
+      get: (e, t) => (a.has(t) ? e[t] : e[t] ?? o[t]),
       set: (e, t, n) => ((e[t] = n), !0),
-      has: (e, t) => (a.has(t) ? t in e : t in o),
+      has: (e, t) => (a.has(t) ? t in e : t in e || t in o),
     })),
     (n.scores = new Proxy(state.prediction.scores, {
-      get: (e, t) => (a.has(t) ? e[t] : s[t]),
+      get: (e, t) => (a.has(t) ? e[t] : e[t] ?? s[t]),
       set: (e, t, n) => ((e[t] = n), !0),
-      has: (e, t) => (a.has(t) ? t in e : t in s),
+      has: (e, t) => (a.has(t) ? t in e : t in e || t in s),
     })),
     (n.custom = state.prediction.custom),
     n
@@ -2743,6 +2871,52 @@ function renderThirdAssignments(e, t) {
     }),
     n.appendChild(m));
 }
+
+function renderMiniStandings(e, t) {
+  const n = document.getElementById(e);
+  if (!n) return;
+  const a = groupKeys();
+  n.innerHTML = `
+    <div class="section-head compact">
+      <div>
+        <h3>Tabla de posiciones de grupos</h3>
+        <p>Se actualiza automaticamente a medida que completas los pronosticos.</p>
+      </div>
+    </div>
+  `;
+  const o = document.createElement("div");
+  o.className = "standings-grid";
+  a.forEach((e) => {
+    const n = groupStandings(t, e);
+    const a = document.createElement("article");
+    a.className = "group-card";
+    a.innerHTML = `
+      <h4>Grupo ${e}</h4>
+      <table>
+        <thead>
+          <tr><th>#</th><th>Equipo</th><th>Pts</th><th>DG</th><th>GF</th></tr>
+        </thead>
+        <tbody>
+          ${n
+            .map(
+              (t, n) =>
+                `<tr>
+                  <td>${n + 1}</td>
+                  <td>${escapeHtml(teamLabel(t.team))}</td>
+                  <td>${t.pts}</td>
+                  <td>${t.gd >= 0 ? "+" : ""}${t.gd}</td>
+                  <td>${t.gf}</td>
+                </tr>`,
+            )
+            .join("")}
+        </tbody>
+      </table>
+    `;
+    o.appendChild(a);
+  });
+  n.appendChild(o);
+}
+
 function calculateMatchPoints(e, t) {
   if (
     !t ||
@@ -2847,6 +3021,7 @@ function renderGroups(e, t, n, a = {}) {
               syncGroupScoresFromDom(l, t));
             const o = l.querySelector(".group-standings-body");
             o && (o.innerHTML = standingsMarkup(t, e));
+            renderMiniStandings("miniStandingsPanel", state.prediction);
           };
         (u[0].addEventListener("input", p),
           u[0].addEventListener("change", p),
@@ -2913,10 +3088,12 @@ function renderMatchdayMatches(e, t, n, a) {
             (n.addEventListener("input", (n) => {
               getGroupMatch(t, e.id, e.home, e.away)[n.target.dataset.side] =
                 n.target.value;
+              renderMiniStandings("miniStandingsPanel", state.prediction);
             }),
               n.addEventListener("change", (n) => {
                 getGroupMatch(t, e.id, e.home, e.away)[n.target.dataset.side] =
                   n.target.value;
+                renderMiniStandings("miniStandingsPanel", state.prediction);
               }));
           }),
             o.appendChild(u));
@@ -3202,7 +3379,10 @@ function renderAll() {
     r = !e || "all" === t.id || ("groups" === t.type && !a),
     i = e && a && "groups" === t.type,
     d = e && ("all" === t.id || "matches" === t.type),
-    l = e && ("all" === t.id || ("r32" === t.id && !n?.realResults));
+    l =
+      e &&
+      ("all" === t.id ||
+        ("r32" === t.id && !hasCompleteWorldCupGroups(n?.realResults)));
   if (
     (document.querySelectorAll("[data-worldcup-editor]").forEach((t) => {
       t.hidden = !e;
@@ -3235,9 +3415,12 @@ function renderAll() {
       c && (c.hidden = !1),
       u && (u.hidden = !d),
       p && (p.hidden = !1),
+      document.getElementById("miniStandingsPanel") && (document.getElementById("miniStandingsPanel").hidden = !e),
       renderGroups("groupsGrid", state.prediction, "prediction", {
         matchdayId: o,
       }),
+      renderMiniStandings("miniStandingsPanel", state.prediction),
+      renderWorldCupChampionPicker(),
       renderMatchdayMatches("matchdayGrid", state.prediction, "prediction", o),
       renderGroups("realGroupsGrid", state.real, "real"),
       renderThirdAssignments("thirdsPanel", e),
@@ -3490,6 +3673,7 @@ async function createTournament({
   mode: o,
   scoring: s,
   customTemplate: r,
+  accessMode: l = "account",
 }) {
   const i = await apiJson("/api/tournaments", {
     method: "POST",
@@ -3501,6 +3685,7 @@ async function createTournament({
       mode: o,
       scoring: s,
       customTemplate: r,
+      accessMode: l,
       tenantId: state.tenantId,
     }),
   });
@@ -3548,6 +3733,12 @@ async function loginCompanyUser({ name: e, email: t, password: n, area: a }) {
       area: a,
     }),
   });
+  if (o.pendingApproval) {
+    state.tenant = o.tenant || state.tenant;
+    renderCompanyAuth();
+    renderCompanyAreas();
+    throw new Error(o.message || "Tu solicitud de ingreso esta pendiente de aprobacion.");
+  }
   return (
     (state.tenant = o.tenant || state.tenant),
     (state.dailyGamePlays = o.dailyGamePlays || {}),
@@ -3604,6 +3795,13 @@ async function registrarCompanyUser({ name: e, email: t, password: n }) {
             area: "General",
           }),
         });
+        if (a.pendingApproval) {
+          state.tenant = a.tenant || state.tenant;
+          renderCompanyAuth();
+          renderCompanyAreas();
+          showToast(a.message || "Solicitud enviada. Queda pendiente de aprobacion.");
+          return a;
+        }
         ((state.tenant = a.tenant || state.tenant),
           (state.dailyGamePlays = a.dailyGamePlays || {}),
           saveCompanySession({ token: a.token, user: a.user }),
@@ -3612,6 +3810,7 @@ async function registrarCompanyUser({ name: e, email: t, password: n }) {
           (document.getElementById("playerName").value = a.user.name || ""),
           "function" == typeof closeModals && closeModals(),
           openView("predictor"));
+        return a;
       } else
         showToast("El codigo ingresado es incorrecto. Intenta nuevamente.", !0);
     } else showToast("No se pudo enviar el correo. Verifica la direccion.", !0);
@@ -3710,6 +3909,7 @@ async function updateAdminUser({
   area: n,
   active: a,
   isAdmin: o,
+  role: s,
 }) {
   return apiJson("/api/admin-users", {
     method: "POST",
@@ -3723,6 +3923,19 @@ async function updateAdminUser({
       area: n,
       active: a,
       isAdmin: o,
+      role: s,
+    }),
+  });
+}
+async function reviewCompanyJoinRequest(e, t) {
+  return apiJson("/api/company-join-requests", {
+    method: "POST",
+    body: JSON.stringify({
+      tenantId: state.tenantId,
+      sessionToken: state.companySession?.token || "",
+      globalSessionToken: state.globalSession?.token || "",
+      email: e,
+      action: t,
     }),
   });
 }
@@ -3837,7 +4050,8 @@ function parseCamisetadleItems(e) {
     .map((e, t) => {
       const n = e.split("|").map((e) => e.trim()),
         a = /^\d{4}-\d{2}-\d{2}$/.test(n[0] || ""),
-        [o, s, r, i, d, l] = a ? n : ["", ...n];
+        c = !a && n[0] === "" && n.length >= 6,
+        [o, s, r, i, d, l] = a || c ? n : ["", ...n];
       return {
         id: `custom-${t + 1}`,
         date: o,
@@ -3856,7 +4070,8 @@ function parseChallengeItems(e) {
     .map((e, t) => {
       const n = e.split("|").map((e) => e.trim()),
         a = /^\d{4}-\d{2}-\d{2}$/.test(n[0] || ""),
-        [o, s, r, i, d, l] = a ? n : ["", ...n];
+        c = !a && n[0] === "" && n.length >= 6,
+        [o, s, r, i, d, l] = a || c ? n : ["", ...n];
       return {
         id: `challenge-${t + 1}`,
         date: o,
@@ -3926,7 +4141,7 @@ async function loadAdminSummary() {
   ) {
     const e = a.tournaments || [];
     return (
-      (t.innerHTML = `\n      <div class="admin-global-summary">\n        <article class="tournament-card">\n          <div>\n            <h3>Usuarios globales</h3>\n            <p>${Number(a.stats?.users || 0)} registrados en el lobby</p>\n          </div>\n        </article>\n        <article class="tournament-card">\n          <div>\n            <h3>Torneos activos</h3>\n            <p>${e.length} torneos publicados</p>\n          </div>\n        </article>\n        <article class="tournament-card">\n          <div>\n            <h3>Predicciones</h3>\n            <p>${Number(a.stats?.predictions || 0)} jugadas guardadas</p>\n          </div>\n        </article>\n      </div>\n      ${e.length ? `<div class="tournament-list">${e.map((e) => `\n        <article class="tournament-card">\n          <div>\n            <small>${escapeHtml(e.lockedLabel || "")}</small>\n            <h3>${escapeHtml(e.name)}</h3>\n            <p>${escapeHtml(e.templateName || "Competicion")}</p>\n          </div>\n          <div class="tournament-actions">\n            <strong>${Number(e.players || 0)} jugadores</strong>\n            ${e.isGlobal ? "" : `<button class="secondary danger delete-private-tournament" type="button" data-tournament-id="${escapeHtml(e.id)}" data-tournament-name="${escapeHtml(e.name)}">Eliminar</button>`}\n          </div>\n        </article>\n      `).join("")}</div>` : ""}\n      ${(a.users || []).length ? `<div class="admin-users">${a.users.map((e) => `\n        <form class="admin-user-row" data-admin-user="${escapeHtml(e.email)}">\n          <label>\n            Nombre\n            <input name="name" value="${escapeHtml(e.name || "")}" required>\n          </label>\n          <span>\n            <strong>${escapeHtml(e.email)}</strong>\n            <small>${e.isSuperAdmin ? "Superadmin" : e.isAdmin ? "Admin" : "Jugador"}</small>\n          </span>\n          <label>\n            Rol\n            <select name="isAdmin" ${e.isSuperAdmin ? "disabled" : ""}>\n              <option value="0" ${e.isAdmin ? "" : "selected"}>Jugador</option>\n              <option value="1" ${e.isAdmin ? "selected" : ""}>Admin</option>\n            </select>\n          </label>\n          <button class="secondary danger admin-delete-user" type="button" ${e.isSuperAdmin ? "disabled" : ""}>Eliminar</button>\n          <button type="submit">Guardar</button>\n        </form>\n      `).join("")}</div>` : '<p class="empty">Todavia no hay usuarios globales.</p>'}\n    `),
+      (t.innerHTML = `\n      <div class="admin-global-summary">\n        <article class="tournament-card">\n          <div>\n            <h3>Usuarios globales</h3>\n            <p>${Number(a.stats?.users || 0)} registrados en el lobby</p>\n          </div>\n        </article>\n        <article class="tournament-card">\n          <div>\n            <h3>Torneos activos</h3>\n            <p>${e.length} torneos publicados</p>\n          </div>\n        </article>\n        <article class="tournament-card">\n          <div>\n            <h3>Predicciones</h3>\n            <p>${Number(a.stats?.predictions || 0)} jugadas guardadas</p>\n          </div>\n        </article>\n      </div>\n      ${e.length ? `<div class="tournament-list">${e.map((e) => `\n        <article class="tournament-card">\n          <div>\n            <small>${escapeHtml(e.lockedLabel || "")}</small>\n            <h3>${escapeHtml(e.name)}</h3>\n            <p>${escapeHtml(e.templateName || "Competicion")}</p>\n          </div>\n          <div class="tournament-actions">\n            <strong>${Number(e.players || 0)} jugadores</strong>\n            ${e.isGlobal ? "" : `<button class="secondary danger delete-private-tournament" type="button" data-tournament-id="${escapeHtml(e.id)}" data-tournament-name="${escapeHtml(e.name)}">Eliminar</button>`}\n          </div>\n        </article>\n      `).join("")}</div>` : ""}\n      ${(a.users || []).length ? `<div class="admin-users">${a.users.map((e) => `\n        <form class="admin-user-row" data-admin-user="${escapeHtml(e.email)}">\n          <label>\n            Nombre\n            <input name="name" value="${escapeHtml(e.name || "")}" required>\n          </label>\n          <span>\n            <strong>${escapeHtml(e.email)}</strong>\n            <small>${roleLabel(e.role)}</small>\n          </span>\n          <label>\n            Rol\n            <select name="role" ${e.isSuperAdmin ? "disabled" : ""}>\n              <option value="player" ${"player" === e.role ? "selected" : ""}>Jugador</option>\n              <option value="empresario" ${"empresario" === e.role ? "selected" : ""}>Empresario</option>\n              <option value="admin" ${e.isAdmin && !e.isSuperAdmin ? "selected" : ""}>Admin</option>\n              ${e.isSuperAdmin ? '<option value="superadmin" selected>Superadmin</option>' : ""}\n            </select>\n          </label>\n          <button class="secondary danger admin-delete-user" type="button" ${e.isSuperAdmin ? "disabled" : ""}>Eliminar</button>\n          <button type="submit">Guardar</button>\n        </form>\n      `).join("")}</div>` : '<p class="empty">Todavia no hay usuarios globales.</p>'}\n    `),
       t.querySelectorAll("form[data-admin-user]").forEach((e) => {
         (e.addEventListener("submit", (t) => {
           (t.preventDefault(),
@@ -3936,7 +4151,8 @@ async function loadAdminSummary() {
                   email: e.dataset.adminUser,
                   name: e.elements.name.value.trim(),
                   active: !0,
-                  isAdmin: "1" === e.elements.isAdmin?.value,
+                  role: e.elements.role?.value || "player",
+                  isAdmin: ["admin", "superadmin"].includes(e.elements.role?.value || ""),
                 };
               try {
                 (await updateAdminUser(n), await loadAdminSummary());
@@ -4001,9 +4217,44 @@ async function loadAdminSummary() {
               state.companySession?.user?.isSuperAdmin ||
               state.globalSession?.user?.isSuperAdmin,
             ),
-            a = t || !n ? "disabled" : "",
-            o = e.isSuperAdmin ? "Superadmin" : e.isAdmin ? "Admin" : "Jugador";
-          return `\n    <form class="admin-user-row" data-admin-user="${escapeHtml(e.email)}">\n      <span>\n        <strong>${escapeHtml(e.email)}</strong>\n        <small>${o} - ${!1 === e.registered ? "Prode sin usuario registrado" : e.hasPrediction ? "Con prode" : "Sin prode"} - ${e.completedPhases?.length ? escapeHtml(e.completedPhases.join(", ")) : "Sin fechas"}</small>\n      </span>\n      <label>\n        Nombre\n        <input name="name" value="${escapeHtml(e.name || "")}" placeholder="Nombre" ${t}>\n      </label>\n      <label>\n        Area\n        <input name="area" value="${escapeHtml(e.area || "")}" list="companyAreaOptions" placeholder="Area" ${t}>\n      </label>\n      <label class="inline-check">\n        <input name="isAdmin" type="checkbox" ${e.isAdmin ? "checked" : ""} ${a}>\n        Admin\n      </label>\n      <div class="admin-user-actions">\n        <button type="submit" ${t}>Guardar</button>\n        <button class="secondary danger admin-delete-user" type="button" ${e.isSuperAdmin ? "disabled" : ""}>Eliminar</button>\n      </div>\n    </form>\n  `;
+            a = canManageCompanyAdminUsers(),
+            o = e.approvalStatus || "approved",
+            s = roleLabel(e.role),
+            r = approvalLabel(o),
+            i = o === "pending" && e.registered,
+            d = t || !a ? "disabled" : "",
+            l = t || !n ? "disabled" : "",
+            m = `status-${escapeHtml(o)}`;
+          return `
+    <form class="admin-user-row ${i ? "is-pending" : ""}" data-admin-user="${escapeHtml(e.email)}">
+      <span>
+        <strong>${escapeHtml(e.email)}</strong>
+        <small>${s} - <b class="status-badge ${m}">${r}</b> - ${!1 === e.registered ? "Prode sin usuario registrado" : e.hasPrediction ? "Con prode" : "Sin prode"} - ${e.completedPhases?.length ? escapeHtml(e.completedPhases.join(", ")) : "Sin fechas"}</small>
+      </span>
+      <label>
+        Nombre
+        <input name="name" value="${escapeHtml(e.name || "")}" placeholder="Nombre" ${t || !a ? "disabled" : ""}>
+      </label>
+      <label>
+        Area
+        <input name="area" value="${escapeHtml(e.area || "")}" list="companyAreaOptions" placeholder="Area" ${t || !a ? "disabled" : ""}>
+      </label>
+      <label>
+        Rol
+        <select name="role" ${l}>
+          <option value="player" ${"player" === e.role ? "selected" : ""}>Jugador</option>
+          <option value="empresario" ${"empresario" === e.role ? "selected" : ""}>Empresario</option>
+          <option value="admin" ${e.isAdmin && !e.isSuperAdmin ? "selected" : ""}>Admin</option>
+          ${e.isSuperAdmin ? '<option value="superadmin" selected>Superadmin</option>' : ""}
+        </select>
+      </label>
+      <div class="admin-user-actions request-actions">
+        ${i ? `<button class="secondary approve-company-user" type="button">Aceptar</button><button class="secondary danger reject-company-user" type="button">Rechazar</button>` : ""}
+        <button type="submit" ${d}>Guardar</button>
+        <button class="secondary danger admin-delete-user" type="button" ${e.isSuperAdmin || !a ? "disabled" : ""}>Eliminar</button>
+      </div>
+    </form>
+  `;
         })
         .join("")),
       t.querySelectorAll("[data-admin-user]").forEach((e) => {
@@ -4016,7 +4267,8 @@ async function loadAdminSummary() {
                   name: e.elements.name.value.trim(),
                   area: e.elements.area.value.trim(),
                   active: !0,
-                  isAdmin: e.elements.isAdmin.checked,
+                  role: e.elements.role?.value || "player",
+                  isAdmin: ["admin", "superadmin"].includes(e.elements.role?.value || ""),
                 };
               if (n.name && n.area)
                 try {
@@ -4043,10 +4295,51 @@ async function loadAdminSummary() {
               } catch (e) {
                 t && (t.textContent = `No se pudo eliminar: ${e.message}`);
               }
+            }),
+          e
+            .querySelector(".approve-company-user")
+            ?.addEventListener("click", async () => {
+              const t = e.querySelector("small");
+              try {
+                (await reviewCompanyJoinRequest(e.dataset.adminUser, "approve"),
+                  await loadAdminSummary(),
+                  await loadGlobalLobby().catch(() => {}));
+              } catch (e) {
+                t && (t.textContent = `No se pudo aceptar: ${e.message}`);
+              }
+            }),
+          e
+            .querySelector(".reject-company-user")
+            ?.addEventListener("click", async () => {
+              if (!window.confirm(`¿Rechazar la solicitud de ${e.dataset.adminUser}?`)) return;
+              const t = e.querySelector("small");
+              try {
+                (await reviewCompanyJoinRequest(e.dataset.adminUser, "reject"),
+                  await loadAdminSummary(),
+                  await loadGlobalLobby().catch(() => {}));
+              } catch (e) {
+                t && (t.textContent = `No se pudo rechazar: ${e.message}`);
+              }
             }));
       }))
     : (t.innerHTML =
         '<p class="empty">Todavia no hay usuarios registrados.</p>');
+}
+function leaderboardViewContextKey(e, t = "") {
+  const n = state.currentTournamentId || "global",
+    a = state.tenantId || "global",
+    o = state.leaderboardArea || "all";
+  return "mini" === e
+    ? ["mini", n, a, t || "default"].join(":")
+    : ["main", n, a, o].join(":");
+}
+function getLeaderboardView(e) {
+  return state.leaderboardViews?.[e] || "general";
+}
+function setLeaderboardView(e, t) {
+  (state.leaderboardViews || (state.leaderboardViews = {}),
+    (state.leaderboardViews[e] = t || "general"),
+    saveLeaderboardViews());
 }
 async function loadLeaderboard() {
   const e = document.getElementById("leaderboardPanel"),
@@ -4058,6 +4351,8 @@ async function loadLeaderboard() {
     t &&
       (t.innerHTML = `<p class="empty" style="text-align: center;">Cargando tabla de ${n?.name || "torneo"}...</p>`));
   try {
+    const a0 = leaderboardViewContextKey("main"),
+      o0 = getLeaderboardView(a0);
     const n = (e, t) => {
         const n = new URLSearchParams({
           tournamentId: state.currentTournamentId,
@@ -4110,14 +4405,19 @@ async function loadLeaderboard() {
       const e = s.hasRealResults
         ? "Puntaje calculado con resultados reales guardados."
         : "Sin resultados reales guardados: todos figuran con 0 puntos.";
-      i = renderLeaderboardBlock(s, d, e);
+      i = renderLeaderboardBlock(s, d, e, o0);
     } else
       i = `<p class="empty" style="text-align: center;">Todavia no hay prodes guardados en ${escapeHtml(d)}.</p>`;
     [e, t].forEach((e) => {
       e &&
         ((e.innerHTML = i),
+        e.querySelectorAll(".leaderboard-view-select").forEach((e) => {
+          e.addEventListener("change", (e) => {
+            (setLeaderboardView(a0, e.target.value), loadLeaderboard());
+          });
+        }),
         e.querySelectorAll(".view-user-prode").forEach((e) => {
-          e.addEventListener("click", () => showUserProde(e.dataset.email));
+          e.addEventListener("click", () => showUserProde(e.dataset.email, e.dataset.view || state.currentLeaderboardView || "general"));
         }));
     });
     const l = document.getElementById("mainLeaderboardTitle"),
@@ -4136,16 +4436,95 @@ async function loadLeaderboard() {
           '<p class="empty" style="text-align: center;">No se pudo cargar el leaderboard.</p>'));
   }
 }
-function renderLeaderboardBlock(e, t, n) {
-  return e.leaderboard.length
-    ? `\n      <div class="leaderboard-head" style="text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">\n        <div>\n          <h3>${t}</h3>\n          <p>${n}</p>\n        </div>\n        <strong>${e.leaderboard.length} jugadores</strong>\n      </div>\n      <div class="leaderboard-table" style="display: flex; flex-direction: column; align-items: center; width: 100%;">\n        ${e.leaderboard.map((e, t) => `\n          <div class="leaderboard-row" style="display:flex; align-items:center; justify-content:center; gap:0.5rem; flex-wrap:wrap; text-align:center; width:100%;">\n            <b style="flex-shrink:0;">${t + 1}</b>\n            <span style="flex:1; min-width: 120px;">${escapeHtml(e.player.name)}<small style="display:block;">${escapeHtml(e.player.area || "Participante")}</small></span>\n            <strong style="flex-shrink:0;">${e.score.points} pts</strong>\n            <em style="flex:2; min-width: 150px; display:block;">Exactos🎯:${e.score.exactScoreHits}</em>\n            <button class="secondary view-user-prode" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; flex-shrink:0;" data-email="${escapeHtml(e.player.email)}">Ver jugada</button>\n          </div>\n        `).join("")}\n      </div>\n    `
+function renderLeaderboardBlock(e, t, n, a = "general") {
+  const v = [
+      { id: "general", label: "General" },
+      { id: "group1", label: "Fecha 1" },
+      { id: "group2", label: "Fecha 2" },
+      { id: "group3", label: "Fecha 3" },
+      { id: "r32", label: "16avos" },
+      { id: "r16", label: "8avos" },
+      { id: "final-pack", label: "4tos, Semis, Tercer Puesto y Final" },
+    ],
+    o = (a || "general").trim(),
+    s = (e.tournament?.scoring || state.defaultScoring || {}),
+    r = {
+      groupPosition: Number(s.groupPosition) || 1,
+      knockoutWinner: Number(s.knockoutWinner) || 3,
+      exactScore: Number(s.exactScore) || 2,
+      champion: Number(s.champion) || 10,
+    },
+    i = (e, t = "home", n = "away") => {
+      if (!e) return null;
+      const a = e[t] !== "" && null !== e[t] && void 0 !== e[t],
+        o = e[n] !== "" && null !== e[n] && void 0 !== e[n];
+      if (!a || !o) return null;
+      const s = Number(e[t]),
+        r = Number(e[n]);
+      return Number.isFinite(s) && Number.isFinite(r) ? { home: s, away: r } : null;
+    },
+    d = (e) => (GROUP_MATCHDAY_FIXTURES[e] || []).slice(),
+    l = (e) => {
+      if ("r32" === e) return R32_MATCHES.map((e) => e[0]);
+      if ("r16" === e) return LATER_ROUNDS.r16.map((e) => e[0]);
+      if ("final-pack" === e)
+        return [...LATER_ROUNDS.qf, ...LATER_ROUNDS.sf, ...LATER_ROUNDS.third, ...LATER_ROUNDS.final].map((e) => e[0]);
+      return [];
+    },
+    m = (e, t, n) => {
+      const a = t.tournament?.realResults || state.real || null,
+        o = { points: 0, exactScoreHits: 0 };
+      if (!e?.prediction || !a) return e.score || o;
+      const s = (t) => {
+          const n = i(a.groupMatches?.[t]),
+            s = i(e.prediction.groupMatches?.[t]);
+          if (!n || !s) return;
+          Math.sign(n.home - n.away) === Math.sign(s.home - s.away) && (o.points += r.knockoutWinner);
+          n.home === s.home && n.away === s.away && ((o.points += r.exactScore), (o.exactScoreHits += 1));
+        },
+        c = (t) => {
+          const n = a.winners?.[t],
+            s = e.prediction.winners?.[t];
+          n && s && n === s && (o.points += r.knockoutWinner);
+          const d = i(a.scores?.[t], "left", "right"),
+            l = i(e.prediction.scores?.[t], "left", "right");
+          d && l && d.home === l.home && d.away === l.away && ((o.points += r.exactScore), (o.exactScoreHits += 1));
+        };
+      if (GROUP_PHASE_IDS.includes(n)) return d(n).forEach(s), o;
+      if ("general" === n) {
+        Object.keys(a.groupMatches || {}).forEach(s);
+        Array.from(new Set([...Object.keys(a.scores || {}), ...Object.keys(a.winners || {})])).forEach(c);
+        a.winners?.m104 && e.prediction.winners?.m104 === a.winners.m104 && (o.points += r.champion);
+        return o;
+      }
+      return (
+        l(n).forEach(c),
+        "final-pack" === n && a.winners?.m104 && e.prediction.winners?.m104 === a.winners.m104 && (o.points += r.champion),
+        o
+      );
+    },
+    c = (e.leaderboard || [])
+      .map((t) => ({ ...t, score: m(t, e, o) }))
+      .sort((e, t) => {
+        const n = null !== e.prediction,
+          a = null !== t.prediction;
+        if (n && !a) return -1;
+        if (!n && a) return 1;
+        return t.score.points - e.score.points || new Date(e.createdAt) - new Date(t.createdAt);
+      });
+  state.leaderboardDisplayData = c;
+  state.leaderboardRealResults = e.tournament?.realResults || state.real || null;
+  state.currentLeaderboardView = o;
+  return c.length
+    ? `\n      <div class="leaderboard-head" style="text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">\n        <div>\n          <h3>${t}</h3>\n          <p>${n}</p>\n        </div>\n        <label style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; justify-content:center;">\n          <span style="font-weight:700;">Vista:</span>\n          <select class="leaderboard-view-select">\n            ${v.map((e) => `<option value="${e.id}" ${e.id === o ? "selected" : ""}>${e.label}</option>`).join("")}\n          </select>\n        </label>\n        <strong>${c.length} jugadores</strong>\n      </div>\n      <div class="leaderboard-table" style="display: flex; flex-direction: column; align-items: center; width: 100%;">\n        ${c.map((e, t) => `\n          <div class="leaderboard-row" style="display:flex; align-items:center; justify-content:center; gap:0.5rem; flex-wrap:wrap; text-align:center; width:100%;">\n            <b style="flex-shrink:0;">${t + 1}</b>\n            <span style="flex:1; min-width: 120px;">${escapeHtml(e.player.name)}<small style="display:block;">${escapeHtml(e.player.area || "Participante")}</small></span>\n            <strong style="flex-shrink:0;">${e.score.points} pts</strong>\n            <em style="flex:2; min-width: 150px; display:block;">Exactos🎯:${e.score.exactScoreHits || 0}</em>\n            <button class="secondary view-user-prode" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; flex-shrink:0;" data-email="${escapeHtml(e.player.email)}" data-view="${escapeHtml(o)}">Ver jugada</button>\n          </div>\n        `).join("")}\n      </div>\n    `
     : `<p class="empty" style="text-align: center;">Todavia no hay prodes guardados en ${t}.</p>`;
 }
-function showUserProde(e) {
-  const t = (state.leaderboardData || []).find((t) => t.player.email === e);
+function showUserProde(e, view = "general") {
+  view = (view || "general").trim();
+  const t = (state.leaderboardDisplayData || state.leaderboardData || []).find((t) => t.player.email === e);
   if (!t) return;
   const n = t.prediction || {},
-    a = state.real || currentTournament()?.realResults || {},
+    a = state.leaderboardRealResults || state.real || currentTournament()?.realResults || {},
     o =
       t.score?.points ?? ("number" == typeof t.score ? t.score : t.points || 0),
     s = "dynamicUserProdeModal";
@@ -4160,8 +4539,24 @@ function showUserProde(e) {
     (r.style.display = "grid"),
     (r.style.placeItems = "center"),
     (r.style.padding = "20px"));
-  const i = [];
-  (Object.keys(n.groupMatches || {}).forEach((e) => {
+  const i = [],
+    groupViewIds = GROUP_PHASE_IDS.includes(view) ? new Set(GROUP_MATCHDAY_FIXTURES[view] || []) : null,
+    bracketViewIds =
+      "r32" === view
+        ? new Set(R32_MATCHES.map((e) => e[0]))
+        : "r16" === view
+          ? new Set(LATER_ROUNDS.r16.map((e) => e[0]))
+          : "final-pack" === view
+            ? new Set([...LATER_ROUNDS.qf, ...LATER_ROUNDS.sf, ...LATER_ROUNDS.third, ...LATER_ROUNDS.final].map((e) => e[0]))
+            : null,
+    includeGroupMatch = (e) => "general" === view || groupViewIds?.has(e),
+    includeBracketMatch = (e) => "general" === view || bracketViewIds?.has(e);
+  (Array.from(
+    new Set([
+      ...Object.keys(a.groupMatches || {}),
+      ...Object.keys(n.groupMatches || {}),
+    ]),
+  ).filter(includeGroupMatch).forEach((e) => {
     const t = a.groupMatches?.[e];
     if (
       t &&
@@ -4194,7 +4589,9 @@ function showUserProde(e) {
       });
     }
   }),
-    Object.keys(n.scores || {}).forEach((e) => {
+    Array.from(
+      new Set([...Object.keys(a.scores || {}), ...Object.keys(n.scores || {})]),
+    ).filter(includeBracketMatch).forEach((e) => {
       const t = a.scores?.[e];
       if (
         t &&
@@ -4246,7 +4643,8 @@ function showUserProde(e) {
   ((l = n.winners?.m104
     ? `\n      <div style="margin-bottom: 18px; padding: 12px; background: linear-gradient(135deg, rgba(215,169,52,0.12), rgba(215,169,52,0.03)); border: 2px dashed var(--gold, #d7a934); border-radius: 10px; text-align: center; font-weight: 800; color: var(--ink); font-size: 0.95rem;">\n        🏆 Campeón Pronosticado: <span style="color: var(--accent-2, #b4233a); font-size: 1.1rem; font-weight: 900; margin-left: 4px;">${escapeHtml(n.winners.m104)}</span>\n      </div>\n    `
     : '\n      <div style="margin-bottom: 18px; padding: 12px; background: rgba(0,0,0,0.03); border: 1px dashed var(--line); border-radius: 10px; text-align: center; font-weight: 700; color: var(--muted); font-size: 0.88rem;">\n        No seleccionó campeón para la fase final.\n      </div>\n    '),
-    (r.innerHTML = `\n    <div class="modal-panel" style="width: min(100%, 540px); max-height: 80vh; display: flex; flex-direction: column; background: #fffaf1; border-radius: 14px; border: 1px solid var(--line); box-shadow: 0 25px 70px rgba(0,0,0,0.4); overflow: hidden; animation: modalPop 0.2s ease-out;">\n      <div style="background: linear-gradient(135deg, var(--accent), #084c3e); color: white; padding: 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--gold);">\n        <div>\n          <span style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.75); font-weight: 800;">Historial de Aciertos</span>\n          <h3 style="margin: 2px 0 0 0; font-size: 1.3rem; font-weight: 900; color: white;">Prode de ${escapeHtml(t.player.name)}</h3>\n        </div>\n        <div style="background: rgba(255,255,255,0.2); padding: 5px 12px; border-radius: 30px; font-weight: 900; font-size: 0.95rem; box-shadow: inset 0 1px 2px rgba(0,0,0,0.15);">\n          ${o} Pts\n        </div>\n      </div>\n      <div style="flex: 1; overflow-y: auto; padding: 18px; background: #fffaf1;">\n        ${l}\n        <div style="display: flex; flex-direction: column;">\n          ${d}\n        </div>\n      </div>\n      <div style="padding: 14px 18px; background: var(--bg, #f5f1e8); border-top: 1px solid var(--line); display: flex; justify-content: flex-end;">\n        <button id="closeUserProdeModalBtn" style="background: var(--accent-2, #b4233a); color: white; min-height: 40px; padding: 0 26px; font-size: 0.9rem; font-weight: 900; border-radius: 6px; cursor: pointer; border: 0; box-shadow: 0 4px 12px rgba(180,35,58,0.25); transition: all 0.15s ease;">\n          Cerrar Cartel\n        </button>\n      </div>\n    </div>\n    <style>\n      @keyframes modalPop {\n        from { opacity: 0; transform: scale(0.97) translateY(5px); }\n        to { opacity: 1; transform: scale(1) translateY(0); }\n      }\n      #closeUserProdeModalBtn:hover {\n        filter: brightness(0.92);\n        transform: translateY(-1px);\n      }\n    </style>\n  `),
+    !["general", "final-pack"].includes(view) && (l = ""),
+    (r.innerHTML = `\n    <div class="modal-panel" style="width: min(100%, 540px); max-height: 80vh; display: flex; flex-direction: column; background: #fffaf1; border-radius: 14px; border: 1px solid var(--line); box-shadow: 0 25px 70px rgba(0,0,0,0.4); overflow: hidden; animation: modalPop 0.2s ease-out;">\n      <div style="background: linear-gradient(135deg, var(--accent), #084c3e); color: white; padding: 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--gold);">\n        <div>\n          <span style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.75); font-weight: 800;">Historial de Aciertos - ${escapeHtml(({ general: "General", group1: "Fecha 1", group2: "Fecha 2", group3: "Fecha 3", r32: "16avos", r16: "8avos", "final-pack": "Fase final" }[view]) || "General")}</span>\n          <h3 style="margin: 2px 0 0 0; font-size: 1.3rem; font-weight: 900; color: white;">Prode de ${escapeHtml(t.player.name)}</h3>\n        </div>\n        <div style="background: rgba(255,255,255,0.2); padding: 5px 12px; border-radius: 30px; font-weight: 900; font-size: 0.95rem; box-shadow: inset 0 1px 2px rgba(0,0,0,0.15);">\n          ${o} Pts\n        </div>\n      </div>\n      <div style="flex: 1; overflow-y: auto; padding: 18px; background: #fffaf1;">\n        ${l}\n        <div style="display: flex; flex-direction: column;">\n          ${d}\n        </div>\n      </div>\n      <div style="padding: 14px 18px; background: var(--bg, #f5f1e8); border-top: 1px solid var(--line); display: flex; justify-content: flex-end;">\n        <button id="closeUserProdeModalBtn" style="background: var(--accent-2, #b4233a); color: white; min-height: 40px; padding: 0 26px; font-size: 0.9rem; font-weight: 900; border-radius: 6px; cursor: pointer; border: 0; box-shadow: 0 4px 12px rgba(180,35,58,0.25); transition: all 0.15s ease;">\n          Cerrar Cartel\n        </button>\n      </div>\n    </div>\n    <style>\n      @keyframes modalPop {\n        from { opacity: 0; transform: scale(0.97) translateY(5px); }\n        to { opacity: 1; transform: scale(1) translateY(0); }\n      }\n      #closeUserProdeModalBtn:hover {\n        filter: brightness(0.92);\n        transform: translateY(-1px);\n      }\n    </style>\n  `),
     r
       .querySelector("#closeUserProdeModalBtn")
       .addEventListener("click", () => r.remove()),
@@ -4361,15 +4759,47 @@ function renderMiniTournaments(e = []) {
             i = (o.tournament?.minitournaments || n.minitournaments || []).find(
               (e) => e.id === t,
             ),
-            d = i && i.creatorEmail === r;
+            d = i && i.creatorEmail === r,
+            l = leaderboardViewContextKey("mini", t),
+            m = getLeaderboardView(l);
           if (!s.length)
             return void (a.innerHTML =
               '<p class="empty" style="text-align: center; margin: 0;">Todavía no hay jugadores en este minitorneo.</p>');
-          const l = `\n          <div class="leaderboard-table" style="display: flex; flex-direction: column; align-items: center; width: 100%;">\n            ${s.map((e, n) => `\n              <div class="leaderboard-row" style="display:flex; align-items:center; justify-content:center; gap:0.5rem; flex-wrap:wrap; text-align:center; width:100%;">\n                <b style="flex-shrink:0;">${n + 1}</b>\n                <span style="flex:1; min-width: 120px;">${escapeHtml(e.player.name)}<small style="display:block;">${escapeHtml(e.player.area || "Participante")}</small></span>\n                <strong style="flex-shrink:0; align-items:center;">${e.score.points} pts</strong>\n                <em style="flex:2; min-width: 150px; display:block;">Exactos🎯:${e.score.exactScoreHits}</em>\n                <button class="secondary view-user-prode" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; flex-shrink:0;" data-email="${escapeHtml(e.player.email)}">Ver jugada</button>\n                ${d && e.player.email !== r ? `<button class="secondary danger remove-mini-user" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; flex-shrink:0;" data-mini-id="${t}" data-email="${escapeHtml(e.player.email)}">Eliminar</button>` : ""}\n              </div>\n            `).join("")}\n          </div>\n        `;
-          ((a.innerHTML = l),
-            a.querySelectorAll(".view-user-prode").forEach((e) => {
-              e.addEventListener("click", () => showUserProde(e.dataset.email));
+          const c = renderLeaderboardBlock(
+            o,
+            `Minitorneo: ${o.minitournamentName || i?.name || t}`,
+            o.hasRealResults
+              ? "Puntaje calculado con resultados reales guardados."
+              : "Sin resultados reales guardados: todos figuran con 0 puntos.",
+            m,
+          );
+          ((a.innerHTML = c),
+            a.querySelectorAll(".leaderboard-view-select").forEach((e) => {
+              e.addEventListener("change", () => {
+                setLeaderboardView(l, e.value);
+                const n = a
+                  .closest(".minitournament-card")
+                  ?.querySelector(`.view-mini-leaderboard[data-mini-id="${t}"]`);
+                (n?.click(), n?.click());
+              });
             }),
+            a.querySelectorAll(".view-user-prode").forEach((e) => {
+              e.addEventListener("click", () => showUserProde(e.dataset.email, e.dataset.view || state.currentLeaderboardView || "general"));
+            }),
+            d &&
+              a.querySelectorAll(".leaderboard-row").forEach((e) => {
+                const n = e.querySelector(".view-user-prode")?.dataset.email || "";
+                if (!n || n === r) return;
+                const a = document.createElement("button");
+                ((a.className = "secondary danger remove-mini-user"),
+                  (a.style.padding = "0.25rem 0.5rem"),
+                  (a.style.fontSize = "0.75rem"),
+                  (a.style.flexShrink = "0"),
+                  (a.dataset.miniId = t),
+                  (a.dataset.email = n),
+                  (a.textContent = "Eliminar"),
+                  e.appendChild(a));
+              }),
             a.querySelectorAll(".remove-mini-user").forEach((e) => {
               e.addEventListener("click", () =>
                 removeUserFromMiniTournament(e.dataset.miniId, e.dataset.email),
@@ -5112,9 +5542,11 @@ function openView(e) {
               "Para registrarte, completa también tu nombre y área.");
           t.textContent = "Registrando...";
           try {
-            (await registrarCompanyUser({ name: e, email: n, password: a }),
-              (document.getElementById("loginPassword").value = ""),
-              (t.textContent = "Usuario registrado y conectado."));
+            const o = await registrarCompanyUser({ name: e, email: n, password: a });
+            (document.getElementById("loginPassword").value = "");
+            t.textContent = o?.pendingApproval
+              ? "Solicitud enviada. Un empresario o administrador debe aprobar tu ingreso."
+              : "Usuario registrado y conectado.";
           } catch (e) {
             t.textContent = e.message;
           }
@@ -5396,6 +5828,7 @@ function injectLeaderboardTab() {
   }
 }
 async function init() {
+  state.leaderboardViews = loadStoredLeaderboardViews();
   (initialResetToken() &&
     ((document.getElementById("resetPasswordModal").hidden = !1),
     openView("lobby")),
@@ -5407,6 +5840,7 @@ async function init() {
     await loadTenant(),
     state.tenantId && !state.tenantAccessGranted && openView("predictor"),
     await loadTemplates(),
+    await loadProfileStats().catch(() => {}),
     initialContinueToken() ? await loadContinuation() : await loadTournaments(),
     loadGlobalLobby().catch(() => {}),
     loadLiveResults(),
@@ -5465,6 +5899,7 @@ async function init() {
       (t && (t.value = ""),
         n && (n.value = ""),
         a && (a.value = ""),
+        document.getElementById("createLobbyTenantAccessMode") && (document.getElementById("createLobbyTenantAccessMode").value = "account"),
         o && ((o.hidden = !0), (o.textContent = "")),
         (e.hidden = !1),
         setTimeout(() => t?.focus(), 0));
@@ -5508,7 +5943,8 @@ async function init() {
         n = document.getElementById("createLobbyTenantName").value.trim(),
         a = document.getElementById("createLobbyTenantId").value.trim(),
         o = document.getElementById("createLobbyTenantTemplate").value,
-        s = document.getElementById("createLobbyTenantCode").value.trim();
+        s = document.getElementById("createLobbyTenantCode").value.trim(),
+        l = document.getElementById("createLobbyTenantAccessMode")?.value || "account";
       if (((t.hidden = !1), n && a && s)) {
         t.textContent = "Creando torneo...";
         try {
@@ -5517,6 +5953,7 @@ async function init() {
             id: a,
             templateId: o,
             code: s,
+            accessMode: l,
           });
           ((document.getElementById("createLobbyTenantModal").hidden = !0),
             (t.textContent = ""),
@@ -5594,6 +6031,7 @@ async function init() {
             mode: document.getElementById("modeSelect").value,
             scoring: scoringFromForm(),
             customTemplate: d,
+            accessMode: document.getElementById("tournamentAccessMode")?.value || "account",
           }),
           m = state.tenantId
             ? `${window.location.origin}/empresa/${encodeURIComponent(state.tenantId)}`
@@ -5741,7 +6179,80 @@ async function init() {
 // LÓGICA DE MODAL DE PERFIL Y FOTO DE CUENTA
 // ==========================================
 
-function openProfileModal() {
+const DEFAULT_AVATAR =
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ccc'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
+function currentUserRef() {
+  return state.companySession?.user || state.globalSession?.user || null;
+}
+function currentAvatar() {
+  return currentUserRef()?.avatar || DEFAULT_AVATAR;
+}
+function currentProfileBorder() {
+  return currentUserRef()?.profileBorder || "";
+}
+function applyProfileBorderToUi(e) {
+  const t = ["border-gold", "border-neon", "border-fire"],
+    n = e || "";
+  [
+    document.querySelector("#topbarAvatar"),
+    document.querySelector(".avatar-container"),
+  ].forEach((e) => {
+    if (!e) return;
+    t.forEach((t) => e.classList.remove(t));
+    n && e.classList.add(n);
+  });
+}
+function applyAvatarToUi(e) {
+  const t = e || DEFAULT_AVATAR,
+    n = document.getElementById("profileAvatarPreview"),
+    a = document.querySelector("#topbarAvatar img");
+  n && (n.src = t);
+  a && (a.src = t);
+  applyProfileBorderToUi(currentProfileBorder());
+}
+async function saveAvatarRemote(e, t = currentProfileBorder()) {
+  const n = await apiJson("/api/profile-avatar", {
+    method: "POST",
+    body: JSON.stringify({
+      avatar: e === DEFAULT_AVATAR ? "" : e,
+      profileBorder: t,
+      tenantId: state.tenantId || "",
+      sessionToken: state.companySession?.token || "",
+      globalSessionToken: state.globalSession?.token || "",
+    }),
+  });
+  n.companyUser &&
+    state.companySession?.token &&
+    saveCompanySession({ token: state.companySession.token, user: n.companyUser });
+  n.globalUser &&
+    state.globalSession?.token &&
+    saveGlobalSession({ token: state.globalSession.token, user: n.globalUser });
+}
+function hasProfileSession() {
+  return Boolean((state.companySession?.token && state.companySession?.user?.email) || (state.globalSession?.token && state.globalSession?.user?.email));
+}
+async function loadProfileStats() {
+  if (!hasProfileSession()) {
+    state.profileStats || (state.profileStats = { fanPoints: 0, rewardName: "Fan Points" });
+    return;
+  }
+
+  try {
+    const e = new URLSearchParams({
+      tenantId: state.tenantId || "",
+      sessionToken: state.companySession?.token || "",
+      globalSessionToken: state.globalSession?.token || "",
+    });
+    const t = await apiJson(`/api/profile-stats?${e.toString()}`);
+    state.profileStats = {
+      fanPoints: Number(t.fanPoints || 0),
+      rewardName: t.rewardName || "Fan Points",
+    };
+  } catch {
+    if (!state.profileStats) state.profileStats = { fanPoints: 0, rewardName: "Fan Points" };
+  }
+}
+async function openProfileModal() {
   const modal = document.getElementById("profileModal");
   if (!modal) return;
   // Busca el usuario en la sesión global o en la de empresa
@@ -5754,11 +6265,56 @@ function openProfileModal() {
   document.getElementById("profileNameInput").value = user.name;
   document.getElementById("profileEmailInput").value = user.email || "No registrado";
   // Busca si el usuario ya se subió una foto en esta PC/Celular
-  const savedAvatar = localStorage.getItem(`avatar_${user.name}`);
-  if (savedAvatar) {
-    document.getElementById("profileAvatarPreview").src = savedAvatar;
-  } else {
-    document.getElementById("profileAvatarPreview").src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ccc'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
+  applyAvatarToUi(currentAvatar());
+  await loadProfileStats();
+  const pointsEl = document.getElementById("profileFanPoints");
+  pointsEl &&
+    ("value" in pointsEl
+      ? (pointsEl.value = `${Number(state.profileStats?.fanPoints || 0)} ${state.profileStats?.rewardName || "Fan Points"}`)
+      : (pointsEl.textContent = `${Number(state.profileStats?.fanPoints || 0)} ${state.profileStats?.rewardName || "Fan Points"}`));
+  const rewards = [
+    { id: "", name: "Sin contorno", cost: 0, preview: "border-none" },
+    { id: "border-gold", name: "Oro", cost: 300, preview: "border-gold" },
+    { id: "border-neon", name: "Neon", cost: 500, preview: "border-neon" },
+    { id: "border-fire", name: "Fuego", cost: 1000, preview: "border-fire" },
+  ];
+  const borderWrap = document.getElementById("profileBorderOptions"),
+    legendEl = document.getElementById("profileBorderLegend"),
+    current = currentProfileBorder(),
+    points = Number(state.profileStats?.fanPoints || 0);
+  const locked = rewards
+    .filter((e) => e.id && points < e.cost)
+    .sort((a, b) => a.cost - b.cost);
+  if (legendEl) {
+    if (!locked.length) {
+      legendEl.textContent =
+        "Ya desbloqueaste todos los contornos. Cada día hay 1 Camisetadle (+20) y 1 desafío de palabras (+15).";
+    } else {
+      const next = locked[0],
+        missing = Math.max(0, Number(next.cost) - points);
+      legendEl.textContent = `Te faltan ${missing} Fan Points para desbloquear ${next.name}. Recordatorio: hay 1 Camisetadle (+20) y 1 desafío de palabras (+15) por día.`;
+    }
+  }
+  if (borderWrap) {
+    borderWrap.innerHTML = rewards
+      .map((e) => {
+        const unlocked = points >= e.cost,
+          selected = current === e.id;
+        return `<button type="button" class="border-option ${selected ? "is-selected" : ""} ${unlocked ? "" : "is-locked"}" data-border="${e.id}" title="${escapeHtml(e.name)}${e.cost ? ` - ${e.cost} Fan Points` : ""}" ${unlocked ? "" : "disabled"}><span class="border-option-preview ${e.preview}"></span><span class="border-option-text">${escapeHtml(e.name)}${e.cost ? ` ${e.cost}` : ""}</span></button>`;
+      })
+      .join("");
+    borderWrap.querySelectorAll("[data-border]").forEach((e) => {
+      e.addEventListener("click", async () => {
+        const t = String(e.dataset.border || "");
+        try {
+          await saveAvatarRemote(currentAvatar(), t);
+          applyProfileBorderToUi(t);
+          await openProfileModal();
+        } catch (n) {
+          alert(`No se pudo guardar el contorno: ${n.message}`);
+        }
+      });
+    });
   }
   // Oculta el menú desplegable viejo para que no moleste
   const dropdownPanel = document.getElementById("dropdownInfoPanel");
@@ -5780,16 +6336,13 @@ document.getElementById("profileAvatarInput")?.addEventListener("change", functi
     return;
   }
   const reader = new FileReader();
-  reader.onload = function(event) {
-    const base64Image = event.target.result;
-    document.getElementById("profileAvatarPreview").src = base64Image;
-    const user = state.companySession?.user || state.globalSession?.user;
-    if (user && user.name) {
-      // Guarda la foto en la memoria del navegador
-      localStorage.setItem(`avatar_${user.name}`, base64Image);
-      // Actualiza la imagen en la barra superior (TopBar chiquito)
-      const topAvatar = document.querySelector("#topbarAvatar img");
-      if (topAvatar) topAvatar.src = base64Image;
+  reader.onload = async function(event) {
+    const base64Image = String(event.target.result || "");
+    applyAvatarToUi(base64Image);
+    try {
+      await saveAvatarRemote(base64Image);
+    } catch (err) {
+      alert(`No se pudo guardar la foto en la cuenta: ${err.message}`);
     }
   };
   reader.readAsDataURL(file);
@@ -5871,12 +6424,5 @@ document.getElementById("changePasswordForm")?.addEventListener("submit", async 
 });
 // 5. Cargar la foto en la barra superior (TopBar) al iniciar o cambiar de cuenta
 document.getElementById("topbarAvatar")?.addEventListener("click", () => {
-  const user = state.companySession?.user || state.globalSession?.user;
-  if (user && user.name) {
-    const savedAvatar = localStorage.getItem(`avatar_${user.name}`);
-    if (savedAvatar) {
-      const topAvatar = document.querySelector("#topbarAvatar img");
-      if (topAvatar) topAvatar.src = savedAvatar;
-    }
-  }
+  applyAvatarToUi(currentAvatar());
 });

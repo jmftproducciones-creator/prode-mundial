@@ -312,6 +312,10 @@ const DEFAULT_DAILY_GAMES = {
     }
   ]
 };
+const FIXED_DAILY_GAME_POINTS = {
+  camisetadle: 20,
+  desafio: 15,
+};
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -540,7 +544,7 @@ const DEFAULT_SCORING = {
   groupPosition: 1,
   knockoutWinner: 3,
   exactScore: 2,
-  champion: 10
+  champion: 20
 };
 
 const DEFAULT_PHASES = [
@@ -606,6 +610,54 @@ function emptyStore() {
     ],
     tenants: {}
   };
+}
+
+const BASE_ADMIN_EMAIL = "admin@prodeglobal.com";
+
+function ensureBaseAdminMemberships(store) {
+  if (!store.users || typeof store.users !== "object") store.users = {};
+  if (!store.tenants || typeof store.tenants !== "object") store.tenants = {};
+  if (!store.tournamentAccess || typeof store.tournamentAccess !== "object") store.tournamentAccess = {};
+
+  const now = new Date().toISOString();
+  const previous = store.users[BASE_ADMIN_EMAIL] || {};
+  store.users[BASE_ADMIN_EMAIL] = {
+    ...previous,
+    name: previous.name || "Admin Global",
+    email: BASE_ADMIN_EMAIL,
+    active: true,
+    role: "superadmin",
+    ...publicUserFlags("superadmin"),
+    updatedAt: now,
+    createdAt: previous.createdAt || now
+  };
+
+  Object.keys(store.tenants).forEach((tenantId) => {
+    const tenantData = tenantStore(store, tenantId);
+    const existing = tenantData.users[BASE_ADMIN_EMAIL] || {};
+    tenantData.users[BASE_ADMIN_EMAIL] = {
+      ...existing,
+      name: existing.name || store.users[BASE_ADMIN_EMAIL].name || "Admin Global",
+      email: BASE_ADMIN_EMAIL,
+      area: existing.area || "General",
+      active: true,
+      approvalStatus: "approved",
+      role: "admin",
+      ...publicUserFlags("admin"),
+      password: existing.password || store.users[BASE_ADMIN_EMAIL].password,
+      updatedAt: now,
+      createdAt: existing.createdAt || now
+    };
+    const tournamentId = tenantTournamentId(tenantId);
+    accessMapFor(store, BASE_ADMIN_EMAIL)[tournamentId] = {
+      ...(accessMapFor(store, BASE_ADMIN_EMAIL)[tournamentId] || {}),
+      tournamentId,
+      grantedAt: accessMapFor(store, BASE_ADMIN_EMAIL)[tournamentId]?.grantedAt || now,
+      grantedByPassword: false,
+      grantedByAdmin: true,
+      grantedBy: BASE_ADMIN_EMAIL
+    };
+  });
 }
 
 function tenantFromValue(value) {
@@ -790,6 +842,7 @@ function normalizeStoreShape(store) {
     normalized.tournaments.unshift(emptyStore().tournaments[0]);
   }
   ensureTenantTournaments(normalized);
+  ensureBaseAdminMemberships(normalized);
   return normalized;
 }
 
@@ -1221,6 +1274,23 @@ function normalizeEmail(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function emailIdentity(value) {
+  const email = normalizeEmail(value);
+  const atIndex = email.indexOf("@");
+  if (atIndex <= 0) return email;
+  let local = email.slice(0, atIndex);
+  let domain = email.slice(atIndex + 1);
+  if (domain === "googlemail.com") domain = "gmail.com";
+  if (domain === "gmail.com") {
+    local = local.split("+")[0].replace(/\./g, "");
+  }
+  return `${local}@${domain}`;
+}
+
+function sameEmailIdentity(a, b) {
+  return emailIdentity(a) && emailIdentity(a) === emailIdentity(b);
+}
+
 function normalizeAreaName(value) {
   return String(value || "")
     .trim()
@@ -1373,15 +1443,16 @@ function sessionUser(store, tenant, token) {
   const email = tenantData.sessions[rawToken];
   const user = email ? tenantData.users[email] : null;
   if (!user) return null;
-  if (user.active === false) return null;
   const role = userRole(tenant.id, { ...user, email: user.email || email });
+  if (!isApprovedCompanyUser(user, role)) return null;
   return {
     name: user.name || "",
     email: user.email || email,
     area: user.area || "",
+    avatar: user.avatar || "",
+    profileBorder: user.profileBorder || "",
     role,
-    isAdmin: role === "admin" || role === "superadmin",
-    isSuperAdmin: role === "superadmin"
+    ...publicUserFlags(role)
   };
 }
 
@@ -1395,11 +1466,34 @@ function globalSessionUser(store, token) {
   return {
     name: user.name || "",
     email: user.email || email,
+    avatar: user.avatar || "",
+    profileBorder: user.profileBorder || "",
     role,
-    isAdmin: role === "admin" || role === "superadmin",
-    isSuperAdmin: role === "superadmin",
+    ...publicUserFlags(role),
     createdAt: user.createdAt || ""
   };
+}
+
+function sanitizeAvatarDataUrl(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  if (!/^data:image\/(png|jpeg|jpg|webp|gif);base64,/i.test(text)) return null;
+  if (text.length > 2_500_000) return null;
+  return text;
+}
+function sanitizeProfileBorder(value) {
+  const allowed = new Set(["", "border-gold", "border-neon", "border-fire"]);
+  const border = String(value || "").trim();
+  return allowed.has(border) ? border : null;
+}
+function totalFanPoints(gamePlays = {}, email = "") {
+  const normalized = normalizeEmail(email);
+  const byDate = gamePlays?.[normalized] || {};
+  return Object.values(byDate).reduce((sum, day) => {
+    const camisetadle = Number(day?.camisetadle?.points || 0);
+    const desafio = Number(day?.desafio?.points || 0);
+    return sum + camisetadle + desafio;
+  }, 0);
 }
 
 function requireGlobalAdmin(req, res, store, token) {
@@ -1418,23 +1512,43 @@ function accessMapFor(store, email) {
   return store.tournamentAccess[normalized];
 }
 
+function tournamentAccessMode(tournament = {}) {
+  return tournament.accessMode === "code" ? "code" : "account";
+}
+
 function hasTournamentAccess(store, user, tournament) {
   if (!tournament || tournament.isGlobal) return true;
   if (!user?.email) return false;
-  const access = store.tournamentAccess?.[normalizeEmail(user.email)]?.[tournament.id];
+  const email = normalizeEmail(user.email);
+  const role = userRole(tournament.tenantId || null, { ...user, email });
+  if (tournament.tenantId && tournamentAccessMode(tournament) === "account") {
+    const tenantData = store.tenants?.[tournament.tenantId];
+    const tenantUser = tenantData?.users?.[email];
+    if (tenantUser && !isApprovedCompanyUser(tenantUser, role)) return false;
+    if (canApproveCompanyRequestsRole(role)) return true;
+  }
+  const access = store.tournamentAccess?.[email]?.[tournament.id];
   return Boolean(access?.grantedAt);
 }
 
 function publicLobbyTournament(store, tournament, user = null) {
   const tenant = tournament.tenantId ? tenantFromValue(tournament.tenantId) : null;
   const access = hasTournamentAccess(store, user, tournament);
+  const email = normalizeEmail(user?.email || "");
+  const tenantUser = tournament.tenantId && email ? store.tenants?.[tournament.tenantId]?.users?.[email] : null;
+  const tenantRole = userRole(tournament.tenantId || null, { ...(tenantUser || user || {}), email });
+  const approvalStatus = tenantUser ? approvalStatusFor(tenantUser, tenantRole) : "";
   return {
     ...publicTournament(tournament, { includePrivateCode: tournament.isGlobal || access, compact: true }),
     isPrivate: !tournament.isGlobal,
     hasAccess: access,
+    pendingApproval: approvalStatus === "pending",
+    rejectedApproval: approvalStatus === "rejected",
+    accessMode: tournamentAccessMode(tournament),
+    requiresAccountApproval: tournamentAccessMode(tournament) === "account",
     tenantPath: tenant ? `/prode/empresa/${encodeURIComponent(tenant.id)}` : "/prode",
     tenantName: tenant?.name || "",
-    lockedLabel: tournament.isGlobal ? "Publico" : access ? "Acceso habilitado" : "Privado"
+    lockedLabel: tournament.isGlobal ? "Publico" : access ? "Acceso habilitado" : approvalStatus === "pending" ? "Solicitud pendiente" : approvalStatus === "rejected" ? "Solicitud rechazada" : "Privado"
   };
 }
 
@@ -1473,6 +1587,11 @@ function isAdminEmail(tenantId, email) {
   return admins.includes(normalizeEmail(email));
 }
 
+function isEmpresarioEmail(tenantId, email) {
+  const empresarios = envTenantList(tenantId, "EMPRESARIO_EMAILS");
+  return empresarios.includes(normalizeEmail(email));
+}
+
 function isSuperAdminEmail(tenantId, email) {
   const normalized = normalizeEmail(email);
   const configured = envTenantList(tenantId, "SUPERADMIN_EMAILS");
@@ -1481,11 +1600,44 @@ function isSuperAdminEmail(tenantId, email) {
     || (tenantId === "acme" && ["admin@acme", "admin@acme.com"].includes(normalized));
 }
 
+function isAdminRole(role) {
+  return role === "admin" || role === "superadmin";
+}
+
+function canApproveCompanyRequestsRole(role) {
+  return role === "empresario" || isAdminRole(role);
+}
+
 function userRole(tenantId, user = {}) {
   if (isSuperAdminEmail(tenantId, user.email)) return "superadmin";
   if (user.role === "superadmin" || user.isSuperAdmin) return "superadmin";
   if (user.role === "admin" || user.isAdmin || isAdminEmail(tenantId, user.email)) return "admin";
+  if (user.role === "empresario" || user.isEmpresario || isEmpresarioEmail(tenantId, user.email)) return "empresario";
   return "player";
+}
+
+function approvalStatusFor(user = {}, role = "player") {
+  if (canApproveCompanyRequestsRole(role)) return "approved";
+  return user.approvalStatus || "approved";
+}
+
+function isApprovedCompanyUser(user = {}, role = "player") {
+  return user.active !== false && approvalStatusFor(user, role) === "approved";
+}
+
+function publicUserFlags(role) {
+  return {
+    isAdmin: isAdminRole(role),
+    isSuperAdmin: role === "superadmin",
+    isEmpresario: role === "empresario",
+    canApproveRequests: canApproveCompanyRequestsRole(role)
+  };
+}
+
+function normalizeEditableCompanyRole(value, fallbackIsAdmin = false) {
+  const role = String(value || "").trim().toLowerCase();
+  if (["player", "empresario", "admin"].includes(role)) return role;
+  return fallbackIsAdmin ? "admin" : "player";
 }
 
 function adminSessionUser(store, tenant, token) {
@@ -1496,6 +1648,22 @@ function adminSessionUser(store, tenant, token) {
 function superAdminSessionUser(store, tenant, token) {
   const user = sessionUser(store, tenant, token);
   return user?.isSuperAdmin ? user : null;
+}
+
+function companyApproverSessionUser(store, tenant, sessionToken = "", globalSessionToken = "") {
+  const tenantUser = sessionUser(store, tenant, sessionToken);
+  if (tenantUser?.canApproveRequests) return tenantUser;
+  const globalUser = globalSessionUser(store, globalSessionToken);
+  if (globalUser?.canApproveRequests) return globalUser;
+  return null;
+}
+
+function requireCompanyApprover(req, res, tenant, sessionToken = "", globalSessionToken = "") {
+  const store = readStore();
+  const user = companyApproverSessionUser(store, tenant, sessionToken, globalSessionToken);
+  if (user) return user;
+  send(res, 403, JSON.stringify({ error: "Se requiere rol Empresario o Administrador." }));
+  return null;
 }
 
 function requireAdmin(req, res, tenant, key, sessionToken = "", globalSessionToken = "") {
@@ -1956,6 +2124,31 @@ function verifyPassword(password, user) {
   );
 }
 
+function syncPasswordAcrossScopes(store, email, passwordRecord) {
+  const normalized = normalizeEmail(email);
+  if (!normalized || !passwordRecord?.salt || !passwordRecord?.hash) return;
+  if (store.users?.[normalized]) {
+    store.users[normalized].password = passwordRecord;
+    store.users[normalized].updatedAt = new Date().toISOString();
+  }
+  Object.values(store.tenants || {}).forEach((tenantData) => {
+    const tenantUser = tenantData?.users?.[normalized];
+    if (tenantUser) {
+      tenantUser.password = passwordRecord;
+      tenantUser.updatedAt = new Date().toISOString();
+    }
+  });
+}
+
+function findTenantUserWithPassword(store, email, password) {
+  const normalized = normalizeEmail(email);
+  for (const tenantData of Object.values(store.tenants || {})) {
+    const tenantUser = tenantData?.users?.[normalized];
+    if (tenantUser && verifyPassword(password, tenantUser)) return tenantUser;
+  }
+  return null;
+}
+
 function normalizePhaseId(value) {
   if (value === "groups") return "group1";
   const phase = DEFAULT_PHASES.find(item => item.id === value);
@@ -2117,6 +2310,21 @@ function isWorldCupMatchTimeLocked(id) {
   return Date.now() >= startsAt.getTime() - 30 * 60000;
 }
 
+
+const CHAMPION_PICK_DEADLINE = new Date("2026-06-28T15:00:00-03:00");
+function isChampionPickLocked() {
+  return Date.now() >= CHAMPION_PICK_DEADLINE.getTime();
+}
+function mergeChampionPick(merged, previousPrediction, incomingPrediction) {
+  if (!merged.winners) merged.winners = {};
+  const incomingChampion = incomingPrediction?.winners?.m104 || "";
+  if (incomingChampion && !isChampionPickLocked()) {
+    merged.winners.m104 = incomingChampion;
+  } else if (previousPrediction?.winners?.m104 && !merged.winners.m104) {
+    merged.winners.m104 = previousPrediction.winners.m104;
+  }
+}
+
 function mergePredictionByPhase(previousPrediction, incomingPrediction, phaseId, tournament = null) {
   const phase = phaseById(phaseId);
   // CORRECCIÓN: Validar que realmente sea una plantilla personalizada con partidos configurados
@@ -2140,6 +2348,7 @@ function mergePredictionByPhase(previousPrediction, incomingPrediction, phaseId,
         }
       });
     }
+    mergeChampionPick(merged, previousPrediction, incomingPrediction);
     return merged;
   }
   if (phase.type === "matches") {
@@ -2164,6 +2373,7 @@ function mergePredictionByPhase(previousPrediction, incomingPrediction, phaseId,
       }
     });
 
+    mergeChampionPick(merged, previousPrediction, incomingPrediction);
     return merged;
   }
   return incomingPrediction;
@@ -2591,8 +2801,13 @@ async function handleGlobalLogin(req, res) {
         return;
       }
       if (!verifyPassword(password, previousUser)) {
-        send(res, 401, JSON.stringify({ error: "Invalid email or password" }));
-        return;
+        const tenantPasswordUser = findTenantUserWithPassword(store, email, password);
+        if (tenantPasswordUser?.password) {
+          syncPasswordAcrossScopes(store, email, tenantPasswordUser.password);
+        } else {
+          send(res, 401, JSON.stringify({ error: "Invalid email or password" }));
+          return;
+        }
       }
     } else if (!name) {
       send(res, 400, JSON.stringify({ error: "Name is required for first login" }));
@@ -2601,24 +2816,24 @@ async function handleGlobalLogin(req, res) {
     const finalName = previousUser?.name || name;
     const token = randomSecret();
     const role = userRole(null, { ...(previousUser || {}), email });
-    const isAdmin = role === "admin" || role === "superadmin";
     store.users[email] = {
       ...(previousUser || {}),
       name: finalName,
       email,
       active: previousUser?.active !== false,
       role,
-      isAdmin,
+      ...publicUserFlags(role),
       password: previousUser?.password || createPasswordRecord(password),
       updatedAt: new Date().toISOString(),
       createdAt: previousUser?.createdAt || new Date().toISOString()
     };
+    syncPasswordAcrossScopes(store, email, store.users[email].password);
     store.globalSessions[token] = email;
     writeStore(store);
     send(res, 200, JSON.stringify({
       ok: true,
       token,
-      user: { name: finalName, email, role, isAdmin, isSuperAdmin: role === "superadmin" },
+      user: { name: finalName, email, avatar: store.users[email]?.avatar || "", profileBorder: store.users[email]?.profileBorder || "", role, ...publicUserFlags(role) },
       templates: TOURNAMENT_TEMPLATES.map(publicCompetitionTemplate),
       tournaments: ["global", ...Object.keys(TENANTS).map(tenantTournamentId)]
         .map(id => store.tournaments.find(tournament => tournament.id === id))
@@ -2652,13 +2867,12 @@ async function handleRegistrarGlobal(req, res) {
     }
     const token = randomSecret();
     const role = userRole(null, { email });
-    const isAdmin = role === "admin" || role === "superadmin";
     store.users[email] = {
       name,
       email,
       active: true,
       role,
-      isAdmin,
+      ...publicUserFlags(role),
       password: createPasswordRecord(password),
       updatedAt: new Date().toISOString(),
       createdAt: new Date().toISOString()
@@ -2668,7 +2882,7 @@ async function handleRegistrarGlobal(req, res) {
     send(res, 200, JSON.stringify({
       ok: true,
       token,
-      user: { name, email, role, isAdmin, isSuperAdmin: role === "superadmin" },
+      user: { name, email, role, ...publicUserFlags(role) },
       templates: TOURNAMENT_TEMPLATES.map(publicCompetitionTemplate),
       tournaments: ["global", ...Object.keys(TENANTS).map(tenantTournamentId)]
         .map(id => store.tournaments.find(tournament => tournament.id === id))
@@ -2712,6 +2926,7 @@ async function handleCreateLobbyTenant(req, res) {
       return;
     }
     const code = normalizeCode(body.code || `EMPRESA-${id.toUpperCase()}`);
+    const accessMode = body.accessMode === "code" ? "code" : "account";
     if (!code) {
       send(res, 400, JSON.stringify({ error: "Tournament password is required" }));
       return;
@@ -2749,6 +2964,7 @@ async function handleCreateLobbyTenant(req, res) {
       code,
       tenantId: id,
       isGlobal: false,
+      accessMode,
       createdAt: now,
       realResults: null,
       templateId: competitionTemplate.id,
@@ -2764,6 +2980,7 @@ async function handleCreateLobbyTenant(req, res) {
       grantedByPassword: false,
       grantedByAdmin: true
     };
+    ensureBaseAdminMemberships(store);
     writeStore(store);
     const tournament = store.tournaments.find(item => item.id === tenantTournamentId(id));
     send(res, 201, JSON.stringify({
@@ -2799,37 +3016,69 @@ async function handleGrantTournamentAccess(req, res) {
       send(res, 401, JSON.stringify({ error: "Invalid tournament password" }));
       return;
     }
+
+    let tenantSession = null;
+    if (tournament.tenantId && tournamentAccessMode(tournament) === "account") {
+      const tenant = tenantFromValue(tournament.tenantId);
+      const tenantData = tenantStore(store, tenant.id);
+      const email = normalizeEmail(user.email);
+      const globalUserRecord = store.users?.[email] || null;
+      let tenantUser = tenantData.users[email] || null;
+      const role = userRole(tenant.id, { ...(tenantUser || {}), email });
+      const approvalStatus = tenantUser?.approvalStatus || (canApproveCompanyRequestsRole(role) ? "approved" : "pending");
+
+      if (!tenantUser) {
+        tenantUser = tenantData.users[email] = {
+          name: user.name || "",
+          email,
+          area: "General",
+          active: true,
+          approvalStatus,
+          role,
+          isAdmin: isAdminRole(role),
+          isEmpresario: role === "empresario",
+          password: globalUserRecord?.password || createPasswordRecord(""),
+          updatedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString()
+        };
+      } else {
+        tenantUser.name = tenantUser.name || user.name || "";
+        tenantUser.email = email;
+        tenantUser.area = tenantUser.area || "General";
+        tenantUser.active = tenantUser.active !== false;
+        tenantUser.role = role;
+        tenantUser.isAdmin = isAdminRole(role);
+        tenantUser.isEmpresario = role === "empresario";
+        tenantUser.approvalStatus = approvalStatus;
+        tenantUser.updatedAt = new Date().toISOString();
+      }
+
+      if (tenantUser.active === false || approvalStatus === "rejected") {
+        writeStore(store);
+        send(res, 403, JSON.stringify({ error: "Tu solicitud de ingreso a la empresa fue rechazada." }));
+        return;
+      }
+      if (approvalStatus === "pending") {
+        writeStore(store);
+        send(res, 202, JSON.stringify({
+          ok: true,
+          pendingApproval: true,
+          message: "Solicitud enviada. Un empresario o administrador debe aprobar tu ingreso antes de jugar.",
+          tournament: publicLobbyTournament(store, tournament, user)
+        }));
+        return;
+      }
+
+      const token = randomSecret();
+      tenantData.sessions[token] = email;
+      tenantSession = { token, user: { name: tenantUser.name || user.name || "", email, area: tenantUser.area || "", avatar: tenantUser.avatar || store.users?.[email]?.avatar || "", profileBorder: tenantUser.profileBorder || store.users?.[email]?.profileBorder || "", role, ...publicUserFlags(role) } };
+    }
+
     accessMapFor(store, user.email)[tournament.id] = {
       tournamentId: tournament.id,
       grantedAt: new Date().toISOString(),
       grantedByPassword: true
     };
-    // Si el torneo pertenece a una empresa, creamos una sesión de empresa
-    // para que el usuario global pueda operar directamente desde la página de la empresa.
-    let tenantSession = null;
-    if (tournament.tenantId) {
-      const tenant = tenantFromValue(tournament.tenantId);
-      const tenantData = tenantStore(store, tenant.id);
-      const token = randomSecret();
-      // Aseguramos que exista el usuario en el tenant (registro ligero sin contraseña)
-      const email = normalizeEmail(user.email);
-      const globalUserRecord = store.users?.[email] || null;
-      if (!tenantData.users[email]) {
-        tenantData.users[email] = {
-          name: user.name || "",
-          email,
-          area: "",
-          active: true,
-          role: userRole(tenant.id, { email }),
-          isAdmin: false,
-          password: globalUserRecord?.password || createPasswordRecord(""),
-          updatedAt: new Date().toISOString(),
-          createdAt: new Date().toISOString()
-        };
-      }
-      tenantData.sessions[token] = email;
-      tenantSession = { token, user: { name: tenantData.users[email].name || user.name || "", email, area: tenantData.users[email].area || "" } };
-    }
     syncGlobalSubmissionToTournament(store, user.email, tournament);
     writeStore(store);
     send(res, 200, JSON.stringify({ ok: true, tournament: publicLobbyTournament(store, tournament, user), tenantSession }));
@@ -2867,37 +3116,82 @@ async function handleCompanyLogin(req, res) {
     const previousUser = tenantData.users[email];
     const globalUser = store.users?.[email] || null;
     const loginFromGlobal = !previousUser && globalUser && verifyPassword(password, globalUser);
+    const role = userRole(tenant.id, { ...(previousUser || {}), email });
+    const isAdmin = isAdminRole(role);
+
     if (previousUser) {
+      const approvalStatus = approvalStatusFor(previousUser, role);
       if (previousUser.active === false) {
         send(res, 403, JSON.stringify({ error: "User is disabled" }));
         return;
       }
-      if (!verifyPassword(password, previousUser)) {
-        send(res, 401, JSON.stringify({ error: "Invalid email or password" }));
+      if (approvalStatus === "pending") {
+        send(res, 403, JSON.stringify({ error: "Tu solicitud de ingreso a la empresa esta pendiente de aprobacion." }));
         return;
+      }
+      if (approvalStatus === "rejected") {
+        send(res, 403, JSON.stringify({ error: "Tu solicitud de ingreso a la empresa fue rechazada." }));
+        return;
+      }
+      if (!verifyPassword(password, previousUser)) {
+        if (globalUser && verifyPassword(password, globalUser)) {
+          previousUser.password = globalUser.password;
+        } else {
+          send(res, 401, JSON.stringify({ error: "Invalid email or password" }));
+          return;
+        }
       }
     } else if (!loginFromGlobal && (!name)) {
       send(res, 400, JSON.stringify({ error: "Se requiere el nombre para el primer login" }));
       return;
     }
+
     const finalName = previousUser?.name || (loginFromGlobal ? globalUser.name : name);
     const finalArea = previousUser?.area || area || "";
-    const role = userRole(tenant.id, { ...(previousUser || {}), email });
-    const isAdmin = role === "admin" || role === "superadmin";
     if (finalArea && !tenantData.areas.some(item => areaId(item) === areaId(finalArea))) tenantData.areas.push(finalArea);
-    const token = randomSecret();
+
+    const approvalStatus = previousUser?.approvalStatus || (canApproveCompanyRequestsRole(role) ? "approved" : "pending");
     tenantData.users[email] = {
       ...(previousUser || {}),
       name: finalName,
       email,
       area: finalArea,
       active: previousUser?.active !== false,
+      approvalStatus,
       role,
       isAdmin,
+      isEmpresario: role === "empresario",
       password: previousUser?.password || (loginFromGlobal ? globalUser.password : createPasswordRecord(password)),
       updatedAt: new Date().toISOString(),
       createdAt: previousUser?.createdAt || new Date().toISOString()
     };
+    syncPasswordAcrossScopes(store, email, tenantData.users[email].password);
+
+    if (approvalStatus !== "approved") {
+      if (!store.users[email]) {
+        const globalRole = userRole(null, { email });
+        store.users[email] = {
+          name: finalName,
+          email,
+          active: true,
+          role: globalRole,
+          ...publicUserFlags(globalRole),
+          password: tenantData.users[email].password,
+          updatedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString()
+        };
+      }
+      writeStore(store);
+      send(res, 202, JSON.stringify({
+        ok: true,
+        pendingApproval: true,
+        message: "Solicitud enviada. Un empresario o administrador debe aprobar tu ingreso antes de jugar.",
+        tenant: publicTenant(tenant, tenantData)
+      }));
+      return;
+    }
+
+    const token = randomSecret();
     tenantData.sessions[token] = email;
     const globalToken = randomSecret();
     if (!store.users[email]) {
@@ -2907,7 +3201,7 @@ async function handleCompanyLogin(req, res) {
         email,
         active: true,
         role: globalRole,
-        isAdmin: globalRole === "admin" || globalRole === "superadmin",
+        ...publicUserFlags(globalRole),
         password: tenantData.users[email].password,
         updatedAt: new Date().toISOString(),
         createdAt: new Date().toISOString()
@@ -2918,7 +3212,8 @@ async function handleCompanyLogin(req, res) {
     send(res, 200, JSON.stringify({
       ok: true,
       token,
-      user: { name: finalName, email, area: finalArea, role, isAdmin, isSuperAdmin: role === "superadmin" },
+      globalToken,
+      user: { name: finalName, email, area: finalArea, avatar: tenantData.users[email]?.avatar || store.users?.[email]?.avatar || "", profileBorder: tenantData.users[email]?.profileBorder || store.users?.[email]?.profileBorder || "", role, ...publicUserFlags(role) },
       dailyGamePlays: currentDailyGamePlays(tenantData, email),
       tenant: publicTenant(tenant, tenantData)
     }));
@@ -2955,22 +3250,24 @@ async function handleRegistrarCompany(req, res) {
       return;
     }
     const role = userRole(tenant.id, { email });
-    const isAdmin = role === "admin" || role === "superadmin";
+    const isAdmin = isAdminRole(role);
+    const approvalStatus = canApproveCompanyRequestsRole(role) ? "approved" : "pending";
     if (!tenantData.areas.some(item => areaId(item) === areaId(area))) tenantData.areas.push(area);
-    const token = randomSecret();
+    const passwordRecord = createPasswordRecord(password);
     tenantData.users[email] = {
       name,
       email,
       area,
       active: true,
+      approvalStatus,
       role,
       isAdmin,
-      password: createPasswordRecord(password),
+      isEmpresario: role === "empresario",
+      password: passwordRecord,
       updatedAt: new Date().toISOString(),
       createdAt: new Date().toISOString()
     };
-    tenantData.sessions[token] = email;
-    const globalToken = randomSecret();
+    syncPasswordAcrossScopes(store, email, passwordRecord);
     if (!store.users[email]) {
       const globalRole = userRole(null, { email });
       store.users[email] = {
@@ -2978,19 +3275,36 @@ async function handleRegistrarCompany(req, res) {
         email,
         active: true,
         role: globalRole,
-        isAdmin: globalRole === "admin" || globalRole === "superadmin",
-        password: createPasswordRecord(password), // Usa la misma clave
+        ...publicUserFlags(globalRole),
+        password: passwordRecord,
         updatedAt: new Date().toISOString(),
         createdAt: new Date().toISOString()
       };
+    } else {
+      syncPasswordAcrossScopes(store, email, passwordRecord);
     }
+
+    if (approvalStatus !== "approved") {
+      writeStore(store);
+      send(res, 202, JSON.stringify({
+        ok: true,
+        pendingApproval: true,
+        message: "Solicitud enviada. Un empresario o administrador debe aprobar tu ingreso antes de jugar.",
+        tenant: publicTenant(tenant, tenantData)
+      }));
+      return;
+    }
+
+    const token = randomSecret();
+    tenantData.sessions[token] = email;
+    const globalToken = randomSecret();
     store.globalSessions[globalToken] = email;
     writeStore(store);
     send(res, 200, JSON.stringify({
       ok: true,
       token,
-      globalToken, // <--- AGREGAR ESTA LÍNEA
-      user: { name, email, area, role, isAdmin, isSuperAdmin: role === "superadmin" },
+      globalToken,
+      user: { name, email, area, avatar: tenantData.users[email]?.avatar || store.users?.[email]?.avatar || "", profileBorder: tenantData.users[email]?.profileBorder || store.users?.[email]?.profileBorder || "", role, ...publicUserFlags(role) },
       dailyGamePlays: currentDailyGamePlays(tenantData, email),
       tenant: publicTenant(tenant, tenantData)
     }));
@@ -3036,6 +3350,86 @@ async function handleChangePassword(req, res) {
 
     writeStore(store);
     send(res, 200, JSON.stringify({ success: true }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleProfileAvatar(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const avatar = sanitizeAvatarDataUrl(body.avatar);
+    const profileBorder = sanitizeProfileBorder(body.profileBorder);
+    if (avatar === null) {
+      send(res, 400, JSON.stringify({ error: "Formato de imagen no valido o demasiado grande." }));
+      return;
+    }
+    if (profileBorder === null) {
+      send(res, 400, JSON.stringify({ error: "Contorno de perfil invalido." }));
+      return;
+    }
+    const store = readStore();
+    const tenant = tenantFromValue(body.tenantId);
+    const companyUser = tenant ? sessionUser(store, tenant, body.sessionToken) : null;
+    const globalUser = globalSessionUser(store, body.globalSessionToken || body.sessionToken);
+    const authUser = companyUser || globalUser;
+    if (!authUser?.email) {
+      send(res, 401, JSON.stringify({ error: "Sesion invalida." }));
+      return;
+    }
+    const email = normalizeEmail(authUser.email);
+    const now = new Date().toISOString();
+    if (store.users?.[email]) {
+      store.users[email].avatar = avatar;
+      store.users[email].profileBorder = profileBorder;
+      store.users[email].updatedAt = now;
+    }
+    Object.values(store.tenants || {}).forEach(tenantData => {
+      if (tenantData?.users?.[email]) {
+        tenantData.users[email].avatar = avatar;
+        tenantData.users[email].profileBorder = profileBorder;
+        tenantData.users[email].updatedAt = now;
+      }
+    });
+    writeStore(store);
+    const freshTenantUser = tenant ? sessionUser(store, tenant, body.sessionToken) : null;
+    const freshGlobalUser = globalSessionUser(store, body.globalSessionToken || body.sessionToken);
+    send(res, 200, JSON.stringify({
+      ok: true,
+      avatar,
+      profileBorder,
+      companyUser: freshTenantUser || null,
+      globalUser: freshGlobalUser || null
+    }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+async function handleProfileStats(req, res) {
+  try {
+    const url = new URL(req.url, "http://localhost");
+    const tenant = tenantFromValue(url.searchParams.get("tenantId"));
+    const store = readStore();
+    const companyUser = tenant
+      ? sessionUser(store, tenant, url.searchParams.get("sessionToken"))
+      : null;
+    const globalUser = globalSessionUser(
+      store,
+      url.searchParams.get("globalSessionToken") || url.searchParams.get("sessionToken"),
+    );
+    const user = companyUser || globalUser;
+    if (!user?.email) {
+      send(res, 401, JSON.stringify({ error: "Sesion invalida." }));
+      return;
+    }
+    const points = tenant
+      ? totalFanPoints(tenantStore(store, tenant.id).gamePlays, user.email)
+      : totalFanPoints(store.globalGamePlays, user.email);
+    const rewardName = tenant
+      ? publicGames(tenantStore(store, tenant.id)).rewardName
+      : globalGames(store).rewardName;
+    send(res, 200, JSON.stringify({ ok: true, fanPoints: points, rewardName }));
   } catch (error) {
     send(res, 500, JSON.stringify({ error: error.message }));
   }
@@ -3179,14 +3573,15 @@ async function handleAdminUpdateUser(req, res) {
         send(res, 400, JSON.stringify({ error: "Name is required" }));
         return;
       }
+      const requestedRole = normalizeEditableCompanyRole(body.role, body.isAdmin);
       user.name = name;
       user.active = body.active !== false;
-      user.role = body.isAdmin ? "admin" : "player";
+      user.role = requestedRole;
       if (email === normalizeEmail(admin.email)) {
         user.role = "superadmin";
         user.active = true;
       }
-      user.isAdmin = user.role === "admin" || user.role === "superadmin";
+      Object.assign(user, publicUserFlags(user.role));
       user.updatedAt = new Date().toISOString();
       if (!user.active) {
         Object.entries(store.globalSessions || {}).forEach(([token, sessionEmail]) => {
@@ -3219,15 +3614,17 @@ async function handleAdminUpdateUser(req, res) {
       return;
     }
     const active = body.active !== false;
-    const nextIsAdmin = Boolean(body.isAdmin || isAdminEmail(tenant.id, email));
+    const requestedRole = normalizeEditableCompanyRole(body.role, body.isAdmin);
     const currentRole = userRole(tenant.id, { ...user, email });
-    const currentIsAdmin = currentRole === "admin" || currentRole === "superadmin";
-    if (nextIsAdmin !== currentIsAdmin && !requireSuperAdmin(req, res, tenant, body.sessionToken, body.globalSessionToken)) return;
+    const nextRole = isSuperAdminEmail(tenant.id, email) ? "superadmin" : requestedRole;
+    if (nextRole !== currentRole && !requireSuperAdmin(req, res, tenant, body.sessionToken, body.globalSessionToken)) return;
     user.name = name;
     user.area = area;
     user.active = active;
-    user.role = isSuperAdminEmail(tenant.id, email) ? "superadmin" : nextIsAdmin ? "admin" : "player";
-    user.isAdmin = user.role === "admin" || user.role === "superadmin";
+    user.role = nextRole;
+    user.isAdmin = isAdminRole(user.role);
+    user.isEmpresario = user.role === "empresario";
+    if (canApproveCompanyRequestsRole(user.role)) user.approvalStatus = "approved";
     user.updatedAt = new Date().toISOString();
     if (!tenantData.areas.some(item => areaId(item) === areaId(area))) tenantData.areas.push(area);
     if (!active) {
@@ -3239,6 +3636,81 @@ async function handleAdminUpdateUser(req, res) {
     send(res, 200, JSON.stringify({
       ok: true,
       user: { name: user.name, email: user.email || email, area: user.area, active: user.active !== false, role: user.role, isAdmin: user.isAdmin, isSuperAdmin: user.role === "superadmin" }
+    }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
+
+async function handleReviewCompanyJoinRequest(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const tenant = tenantFromValue(body.tenantId);
+    const email = normalizeEmail(body.email);
+    const action = String(body.action || "").trim().toLowerCase();
+    if (!tenant) {
+      send(res, 404, JSON.stringify({ error: "Empresa no encontrada." }));
+      return;
+    }
+    if (!email || !["approve", "reject"].includes(action)) {
+      send(res, 400, JSON.stringify({ error: "Email y accion son obligatorios." }));
+      return;
+    }
+    const reviewer = requireCompanyApprover(req, res, tenant, body.sessionToken, body.globalSessionToken);
+    if (!reviewer) return;
+    const store = readStore();
+    const tenantData = tenantStore(store, tenant.id);
+    const user = tenantData.users[email];
+    if (!user) {
+      send(res, 404, JSON.stringify({ error: "User not found" }));
+      return;
+    }
+    const targetRole = userRole(tenant.id, { ...user, email });
+    if (canApproveCompanyRequestsRole(targetRole) && !reviewer.isSuperAdmin) {
+      send(res, 403, JSON.stringify({ error: "Solo un superadmin puede revisar cuentas con permisos especiales." }));
+      return;
+    }
+    const now = new Date().toISOString();
+    user.reviewedAt = now;
+    user.reviewedBy = reviewer.email;
+    user.updatedAt = now;
+    if (action === "approve") {
+      user.active = true;
+      user.approvalStatus = "approved";
+      user.rejectedAt = "";
+      user.approvedAt = now;
+      const tournamentId = tenantTournamentId(tenant.id);
+      accessMapFor(store, email)[tournamentId] = {
+        tournamentId,
+        grantedAt: now,
+        grantedByPassword: false,
+        grantedByApproval: true,
+        grantedBy: reviewer.email
+      };
+    } else {
+      user.approvalStatus = "rejected";
+      user.rejectedAt = now;
+      user.approvedAt = "";
+      Object.entries(tenantData.sessions || {}).forEach(([token, sessionEmail]) => {
+        if (normalizeEmail(sessionEmail) === email) delete tenantData.sessions[token];
+      });
+      const tournamentId = tenantTournamentId(tenant.id);
+      if (store.tournamentAccess?.[email]) delete store.tournamentAccess[email][tournamentId];
+    }
+    writeStore(store);
+    send(res, 200, JSON.stringify({
+      ok: true,
+      user: {
+        name: user.name || "",
+        email: user.email || email,
+        area: user.area || "",
+        active: user.active !== false,
+        approvalStatus: approvalStatusFor(user, targetRole),
+        role: targetRole,
+        ...publicUserFlags(targetRole)
+      },
+      tenant: publicTenant(tenant, tenantData)
     }));
   } catch (error) {
     send(res, 500, JSON.stringify({ error: error.message }));
@@ -3542,9 +4014,12 @@ async function handleDailyGamePlay(req, res) {
     const body = JSON.parse(await readBody(req));
     const tenant = tenantFromValue(body.tenantId);
     const store = readStore();
+    const tournament = tenant ? store.tournaments.find(item => item.id === tenantTournamentId(tenant.id)) : null;
+    const companyUser = tenant ? sessionUser(store, tenant, body.sessionToken) : null;
+    const globalUser = globalSessionUser(store, body.globalSessionToken || body.sessionToken);
     const user = tenant
-      ? sessionUser(store, tenant, body.sessionToken)
-      : globalSessionUser(store, body.globalSessionToken);
+      ? (companyUser || (hasTournamentAccess(store, globalUser, tournament) ? globalUser : null))
+      : globalUser;
     if (!user) {
       send(res, 401, JSON.stringify({ error: "Login is required" }));
       return;
@@ -3577,7 +4052,7 @@ async function handleDailyGamePlay(req, res) {
       attempts: Number(previous?.attempts || 0) + 1,
       completed: correct,
       completedAt: correct ? new Date().toISOString() : "",
-      points: correct ? Number(games.points?.[gameType] || 0) : 0,
+      points: correct ? Number(FIXED_DAILY_GAME_POINTS[gameType] || 0) : 0,
       rewardName: games.rewardName || DEFAULT_DAILY_GAMES.rewardName,
       updatedAt: new Date().toISOString()
     };
@@ -3641,6 +4116,7 @@ async function handleCreateTournament(req, res) {
       code: requestedCode,
       tenantId: tenant?.id || "",
       isGlobal: false,
+      accessMode: body.accessMode === "code" ? "code" : "account",
       creatorEmail,
       creatorKey: randomSecret(),
       templateId: template.id,
@@ -3689,17 +4165,45 @@ async function handleJoinTournament(req, res) {
   }
 }
 
+function preferSubmissionForLeaderboard(current, candidate) {
+  if (!current) return candidate;
+  const currentDate = new Date(current.updatedAt || current.createdAt || 0).getTime();
+  const candidateDate = new Date(candidate.updatedAt || candidate.createdAt || 0).getTime();
+  if (candidateDate > currentDate) return candidate;
+  if (candidateDate < currentDate) return current;
+  const currentPhases = Array.isArray(current.completedPhases) ? current.completedPhases.length : 0;
+  const candidatePhases = Array.isArray(candidate.completedPhases) ? candidate.completedPhases.length : 0;
+  return candidatePhases > currentPhases ? candidate : current;
+}
+
+function dedupeTournamentSubmissions(tournament) {
+  if (!Array.isArray(tournament?.submissions)) return;
+  const byEmail = new Map();
+  const withoutEmail = [];
+  tournament.submissions.forEach(submission => {
+    const email = normalizeEmail(submission.player?.email);
+    const identity = emailIdentity(email);
+    if (!identity) {
+      withoutEmail.push(submission);
+      return;
+    }
+    submission.player = { ...(submission.player || {}), email };
+    byEmail.set(identity, preferSubmissionForLeaderboard(byEmail.get(identity), submission));
+  });
+  tournament.submissions = [...byEmail.values(), ...withoutEmail];
+}
+
 function syncGlobalSubmissionToTournament(store, email, tournament) {
   const userEmail = normalizeEmail(email);
   if (!userEmail || !tournament || tournament.isGlobal) return;
   if (tournament.templateId && tournament.templateId !== "worldcup-2026") return;
 
   const globalTournament = store.tournaments.find(item => item.id === "global");
-  const globalSubmission = (globalTournament?.submissions || []).find(item => normalizeEmail(item.player?.email) === userEmail);
+  const globalSubmission = (globalTournament?.submissions || []).find(item => sameEmailIdentity(item.player?.email, userEmail));
   if (!globalSubmission?.prediction) return;
 
   if (!Array.isArray(tournament.submissions)) tournament.submissions = [];
-  const existingIndex = tournament.submissions.findIndex(item => normalizeEmail(item.player?.email) === userEmail);
+  const existingIndex = tournament.submissions.findIndex(item => sameEmailIdentity(item.player?.email, userEmail));
   const previous = existingIndex >= 0 ? tournament.submissions[existingIndex] : null;
   const phaseId = normalizePhaseId(globalSubmission.phaseId || "all");
   const prediction = mergePredictionByPhase(previous?.prediction, globalSubmission.prediction, phaseId, tournament);
@@ -3720,6 +4224,7 @@ function syncGlobalSubmissionToTournament(store, email, tournament) {
 
   if (existingIndex >= 0) tournament.submissions[existingIndex] = syncedSubmission;
   else tournament.submissions.push(syncedSubmission);
+  dedupeTournamentSubmissions(tournament);
 }
 
 function syncSubmissionAcrossTournaments(store, sourceTournamentId, player, incomingPrediction, phaseId) {
@@ -3736,7 +4241,7 @@ function syncSubmissionAcrossTournaments(store, sourceTournamentId, player, inco
       if (!otherTournament.submissions) {
         otherTournament.submissions = [];
       }
-      const otherExistingIndex = otherTournament.submissions.findIndex(s => normalizeEmail(s.player?.email) === userEmail);
+      const otherExistingIndex = otherTournament.submissions.findIndex(s => sameEmailIdentity(s.player?.email, userEmail));
       const otherPrevious = otherExistingIndex >= 0 ? otherTournament.submissions[otherExistingIndex] : null;
 
       const predictionForOther = mergePredictionByPhase(otherPrevious?.prediction, incomingPrediction, phaseId, otherTournament);
@@ -3758,6 +4263,7 @@ function syncSubmissionAcrossTournaments(store, sourceTournamentId, player, inco
       } else {
         otherTournament.submissions.push(newOtherSubmission);
       }
+      dedupeTournamentSubmissions(otherTournament);
     }
   }
 }
@@ -3831,6 +4337,7 @@ async function handleSubmitProde(req, res) {
     };
     if (existingIndex >= 0) tournament.submissions[existingIndex] = submission;
     else tournament.submissions.push(submission);
+    dedupeTournamentSubmissions(tournament);
 
     if (tournament.templateId === "worldcup-2026") {
       syncSubmissionAcrossTournaments(store, tournament.id, payload.player, payload.tournament, phaseId);
@@ -3874,8 +4381,8 @@ function materializeApprovedPaymentDraft(req, tournament, payment) {
   const phaseId = normalizePhaseId(payment.pendingSubmission.phaseId || payload?.phaseId);
   if (!payload?.player?.email || !payload?.player?.name || !payload?.tournament) return null;
   const email = normalizeEmail(payload.player.email);
-  if (!email || email !== normalizeEmail(payment.player?.email)) return null;
-  const existingIndex = tournament.submissions.findIndex(item => normalizeEmail(item.player?.email) === email);
+  if (!email || !sameEmailIdentity(email, payment.player?.email)) return null;
+  const existingIndex = tournament.submissions.findIndex(item => sameEmailIdentity(item.player?.email, email));
   const previous = existingIndex >= 0 ? tournament.submissions[existingIndex] : null;
   const continuationToken = previous?.continuationToken || randomSecret();
   const filteredPayload = mergeLockedCustomMatches(previous?.prediction, payload.tournament, tournament);
@@ -3892,6 +4399,7 @@ function materializeApprovedPaymentDraft(req, tournament, payment) {
   };
   if (existingIndex >= 0) tournament.submissions[existingIndex] = submission;
   else tournament.submissions.push(submission);
+  dedupeTournamentSubmissions(tournament);
   payment.submissionId = submission.id;
   payment.submittedAt = new Date().toISOString();
   delete payment.pendingSubmission;
@@ -3939,7 +4447,7 @@ function handlePaymentStatus(req, res) {
     const submission = materializeApprovedPaymentDraft(req, tournament, payment);
     if (submission) writeStore(store);
   }
-  const existingSubmission = (tournament.submissions || []).some(item => normalizeEmail(item.player?.email) === email);
+  const existingSubmission = (tournament.submissions || []).some(item => sameEmailIdentity(item.player?.email, email));
   send(res, 200, JSON.stringify({
     required: paymentSettings(tournament).required && !existingSubmission,
     canSubmit: existingSubmission || paymentAllowsFirstSubmission(tournament, email),
@@ -4055,6 +4563,7 @@ async function handleSaveRealResults(req, res) {
       return;
     }
     const updatedAt = new Date().toISOString();
+    realResults.updatedAt = updatedAt;
     if (realResults.custom?.matches) {
       const timing = tournamentTiming(tournament);
       const delayMs = Number(timing.scoringDelayMinutesAfterResult || 0) * 60000;
@@ -4076,18 +4585,21 @@ async function handleSaveRealResults(req, res) {
           }
         }
       });
-      realResults.updatedAt = updatedAt;
     }
     store.tournaments.forEach(t => {
       t.realResults = realResults;
       t.realResultsUpdatedAt = updatedAt;
     });
     writeStore(store);
-    // DEBUG: log what was saved
-    const savedMatches = Object.entries(realResults.custom?.matches || {});
-    console.log("[DEBUG save-results] Partidos con resultado guardado:",
-      savedMatches.filter(([, m]) => m.homeScore !== "" && m.homeScore !== undefined).map(([id, m]) => `${id}: ${m.homeScore}-${m.awayScore} winner=${m.winner}`)
-    );
+    await mysqlSyncQueue;
+    const savedGroupMatches = Object.entries(realResults.groupMatches || {})
+      .filter(([, m]) => m && m.home !== "" && m.away !== "" && m.home !== undefined && m.away !== undefined)
+      .map(([id, m]) => `${id}: ${m.home}-${m.away}`);
+    const savedCustomMatches = Object.entries(realResults.custom?.matches || {})
+      .filter(([, m]) => m.homeScore !== "" && m.homeScore !== undefined)
+      .map(([id, m]) => `${id}: ${m.homeScore}-${m.awayScore} winner=${m.winner}`);
+    console.log("[DEBUG save-results] Partidos de grupo guardados:", savedGroupMatches);
+    console.log("[DEBUG save-results] Partidos custom guardados:", savedCustomMatches);
     send(res, 200, JSON.stringify({ ok: true }));
   } catch (error) {
     send(res, 500, JSON.stringify({ error: error.message }));
@@ -4483,10 +4995,11 @@ function handleLeaderboard(req, res) {
       minitournamentName = mt.name;
     }
   }
+  const mtParticipantIdentities = mtParticipants ? new Set(mtParticipants.map(emailIdentity)) : null;
   let leaderboard = (tournament.submissions || [])
     .filter(submission => {
       if (!mtParticipants) return true;
-      return mtParticipants.includes(normalizeEmail(submission.player?.email));
+      return mtParticipantIdentities.has(emailIdentity(submission.player?.email));
     })
     .map(submission => ({
       player: {
@@ -4495,15 +5008,45 @@ function handleLeaderboard(req, res) {
         email: submission.player?.email || ""
       },
       createdAt: submission.createdAt,
+      updatedAt: submission.updatedAt || submission.createdAt,
       champion: submission.prediction?.custom?.champion || submission.prediction?.winners?.m104 || "",
       score: scoreSubmission(submission.prediction, tournament.realResults, tournament.scoring, tournament),
       prediction: submission.prediction
     }));
+  const preferLeaderboardRow = (current, candidate) => {
+    if (!current) return candidate;
+    const currentHasPrediction = current.prediction !== null && current.prediction !== undefined;
+    const candidateHasPrediction = candidate.prediction !== null && candidate.prediction !== undefined;
+    if (candidateHasPrediction && !currentHasPrediction) return candidate;
+    if (!candidateHasPrediction && currentHasPrediction) return current;
+    const currentDate = new Date(current.updatedAt || current.createdAt || 0).getTime();
+    const candidateDate = new Date(candidate.updatedAt || candidate.createdAt || 0).getTime();
+    if (candidateDate > currentDate) return candidate;
+    if (candidateDate < currentDate) return current;
+    return Number(candidate.score?.points || 0) > Number(current.score?.points || 0) ? candidate : current;
+  };
+  const dedupeLeaderboardRows = rows => {
+    const byEmail = new Map();
+    const withoutEmail = [];
+    rows.forEach(row => {
+      const email = normalizeEmail(row.player?.email);
+      const identity = emailIdentity(email);
+      if (!identity) {
+        withoutEmail.push(row);
+        return;
+      }
+      byEmail.set(identity, preferLeaderboardRow(byEmail.get(identity), row));
+    });
+    return [...byEmail.values(), ...withoutEmail];
+  };
+  leaderboard = dedupeLeaderboardRows(leaderboard);
 
   if (mtParticipants) {
-    const existingEmails = leaderboard.map(row => normalizeEmail(row.player.email));
+    const existingEmails = new Set(leaderboard.map(row => emailIdentity(row.player.email)));
     mtParticipants.forEach(email => {
-      if (!existingEmails.includes(email)) {
+      email = normalizeEmail(email);
+      const identity = emailIdentity(email);
+      if (!existingEmails.has(identity)) {
         let name = "Jugador sin prode";
         let area = "";
         if (tenant && store.tenants?.[tenant.id]?.users?.[email]) {
@@ -4519,40 +5062,51 @@ function handleLeaderboard(req, res) {
           score: { points: 0, groupHits: 0, winnerHits: 0, exactScoreHits: 0, championHit: false },
           prediction: null
         });
+        existingEmails.add(identity);
       }
     });
   } else {
-    const existingEmails = leaderboard.map(row => normalizeEmail(row.player.email));
+    const existingEmails = new Set(leaderboard.map(row => emailIdentity(row.player.email)));
     if (tenant) {
       const tenantData = store.tenants?.[tenant.id];
       if (tenantData && tenantData.users) {
         Object.values(tenantData.users).forEach(user => {
           const email = normalizeEmail(user.email);
-          if (!existingEmails.includes(email) && user.active !== false) {
+          const identity = emailIdentity(email);
+          if (!existingEmails.has(identity) && user.active !== false) {
             leaderboard.push({
               player: { name: user.name, area: user.area || "", email },
               createdAt: user.createdAt || new Date().toISOString(),
+              updatedAt: user.updatedAt || user.createdAt || new Date().toISOString(),
               champion: "",
               score: { points: 0, groupHits: 0, winnerHits: 0, exactScoreHits: 0, championHit: false },
               prediction: null
             });
+            existingEmails.add(identity);
           }
         });
       }
     } else if (tournament.isGlobal) {
       Object.values(store.users || {}).forEach(user => {
         const email = normalizeEmail(user.email);
-        if (!existingEmails.includes(email) && user.active !== false) {
+        const identity = emailIdentity(email);
+        if (!existingEmails.has(identity) && user.active !== false) {
           leaderboard.push({
             player: { name: user.name, area: "Global", email },
             createdAt: user.createdAt || new Date().toISOString(),
+            updatedAt: user.updatedAt || user.createdAt || new Date().toISOString(),
             champion: "",
             score: { points: 0, groupHits: 0, winnerHits: 0, exactScoreHits: 0, championHit: false },
             prediction: null
           });
+          existingEmails.add(identity);
         }
       });
     }
+  }
+  leaderboard = dedupeLeaderboardRows(leaderboard);
+  if (area) {
+    leaderboard = leaderboard.filter(row => areaId(row.player?.area || "") === areaId(area));
   }
 
   leaderboard.sort((a, b) => {
@@ -4614,26 +5168,29 @@ function handleAdminSummary(req, res) {
     }));
     return;
   }
-  if (!requireAdmin(req, res, tenant, adminKey, sessionToken, globalSessionToken)) return;
+  const approver = requireCompanyApprover(req, res, tenant, sessionToken, globalSessionToken);
+  if (!approver) return;
   const tenantData = tenantStore(store, tenant.id);
   const tournament = store.tournaments.find(item => item.id === tenantTournamentId(tenant.id));
   const submissions = tournament?.submissions || [];
-  const byEmail = new Map(submissions.map(submission => [normalizeEmail(submission.player?.email), submission]));
+  const byEmail = new Map(submissions.map(submission => [emailIdentity(submission.player?.email), submission]));
   const users = Object.values(tenantData.users || {})
     .map(user => {
-      const submission = byEmail.get(normalizeEmail(user.email));
+      const submission = byEmail.get(emailIdentity(user.email));
       const role = userRole(tenant.id, user);
-      const admin = role === "admin" || role === "superadmin";
+      const flags = publicUserFlags(role);
+      const approvalStatus = approvalStatusFor(user, role);
       if (user.role !== role) user.role = role;
-      if (admin && !user.isAdmin) user.isAdmin = true;
+      if (flags.isAdmin && !user.isAdmin) user.isAdmin = true;
+      if (flags.isEmpresario && !user.isEmpresario) user.isEmpresario = true;
       return {
         name: user.name || "",
         email: user.email || "",
         area: user.area || "",
         active: user.active !== false,
+        approvalStatus,
         role,
-        isAdmin: admin,
-        isSuperAdmin: role === "superadmin",
+        ...flags,
         registered: true,
         registeredAt: user.createdAt || "",
         updatedAt: user.updatedAt || "",
@@ -4665,6 +5222,8 @@ function handleAdminSummary(req, res) {
     tournament: tournament ? publicTournament(tournament, { includePrivateCode: true }) : null,
     stats: {
       users: users.length + extraPlayers.length,
+      pendingRequests: users.filter(user => user.approvalStatus === "pending").length,
+      rejectedRequests: users.filter(user => user.approvalStatus === "rejected").length,
       predictions: submissions.length,
       areas: tenantData.areas.length
     },
@@ -4848,8 +5407,20 @@ const server = http.createServer((req, res) => {
     handleChangePassword(req, res);
     return;
   }
+  if (req.method === "POST" && req.url === "/api/profile-avatar") {
+    handleProfileAvatar(req, res);
+    return;
+  }
+  if (req.method === "GET" && req.url.startsWith("/api/profile-stats")) {
+    handleProfileStats(req, res);
+    return;
+  }
   if (req.method === "GET" && req.url.startsWith("/api/company-session")) {
     handleCompanySession(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/company-join-requests") {
+    handleReviewCompanyJoinRequest(req, res);
     return;
   }
   if (req.method === "POST" && req.url === "/api/admin-users") {

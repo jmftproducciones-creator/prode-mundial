@@ -4,14 +4,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Prode Mundial 2026</title>
-  <link rel="manifest" href="/prode-global-static/manifest.json?v=20260522">
+  <title>Prode</title>
+  <link rel="manifest" href="/prode-global-static/manifest.json?v=20260528">
   <meta name="theme-color" content="#0b0f0d">
   <link rel="icon" type="image/png" href="/prode-global-static/BAIT.png?v=20260522">
   <link rel="apple-touch-icon" href="/prode-global-static/BAIT.png?v=20260522">
-  <meta name="apple-mobile-web-app-title" content="Prode BAIT">
+  <meta name="apple-mobile-web-app-title" content="Prode">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <link rel="stylesheet" href="/prode-global-static/styles.css?v=20260521-2">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="stylesheet" href="/prode-global-static/styles.css?v=20260601-knockout-mobile-names">
 </head>
 
 <body>
@@ -137,7 +138,7 @@
               empate.</li>
             <li><strong>Resultado exacto (2 Puntos extra):</strong> Si ademas del ganador acertas los goles exactos de
               ambos equipos (sumando 5 puntos en total).</li>
-            <li><strong>Campeon (10 Puntos):</strong> Bonus especial si adivinas correctamente al campeon del torneo.
+            <li><strong>Campeon (20 Puntos):</strong> Bonus especial si adivinas correctamente al campeon del torneo.
             </li>
             <li><strong>Por Ejemplo:</strong> En un partido en el que Argentina <strong>Gana 2 a 0</strong> a Jordania,
               <ul>
@@ -314,6 +315,13 @@
               Clave del torneo
               <input id="createLobbyTenantCode" placeholder="EMPRESA-CLIENTE">
             </label>
+            <label>
+              Modo de ingreso
+              <select id="createLobbyTenantAccessMode">
+                <option value="account">Usuario y aprobacion</option>
+                <option value="code">Clave simple</option>
+              </select>
+            </label>
             <button type="submit">Crear torneo</button>
           </form>
           <div class="form-status" id="createLobbyTenantStatus" hidden></div>
@@ -391,9 +399,11 @@
         </label>
       </form>
       <div class="phase-status" id="phaseStatus"></div>
+      <div class="champion-picker" id="worldChampionPicker" data-worldcup-editor></div>
 
       <div class="groups-grid" id="groupsGrid" data-worldcup-editor></div>
       <div class="matchday-grid" id="matchdayGrid" data-worldcup-editor hidden></div>
+      <div class="standings-panel" id="miniStandingsPanel" data-worldcup-editor data-worldcup-stage="mini-standings"></div>
       <div class="custom-sheet" id="customSheet" data-custom-editor hidden></div>
 
       <div class="section-head compact" data-worldcup-editor data-worldcup-stage="thirds">
@@ -489,6 +499,13 @@
           <input id="tournamentCode" placeholder="Ej: AMIGOS2026">
         </label>
         <label>
+          Modo de ingreso
+          <select id="tournamentAccessMode">
+            <option value="account">Usuario y aprobacion</option>
+            <option value="code">Clave simple</option>
+          </select>
+        </label>
+        <label>
           Email del creador
           <input id="creatorEmail" type="email" placeholder="creador@email.com">
         </label>
@@ -523,7 +540,7 @@
         </label>
         <label>
           Bonus campeon
-          <input id="scoreChampion" type="number" min="0" value="10">
+          <input id="scoreChampion" type="number" min="0" value="20">
         </label>
         <button>Crear torneo</button>
       </form>
@@ -563,7 +580,7 @@
       <div class="section-head">
         <div>
           <h2>Panel admin</h2>
-          <p>Gestiona resultados reales y revisa usuarios registrados en la empresa.</p>
+          <p>Gestiona resultados reales, usuarios registrados y solicitudes de ingreso en empresas.</p>
         </div>
       </div>
       <form class="tournament-form" id="adminLoginForm">
@@ -585,7 +602,7 @@
           <div class="section-head compact">
             <div>
               <h2>Usuarios</h2>
-              <p>Usuarios registrados, area y estado de prediccion.</p>
+              <p>Usuarios registrados, area, rol y solicitudes pendientes de aprobacion.</p>
             </div>
             <div class="actions">
               <button class="secondary" id="refreshAdminUsers" type="button">Actualizar</button>
@@ -712,6 +729,15 @@
             <label>Email</label>
             <input type="email" id="profileEmailInput" readonly class="readonly-field">
           </div>
+          <div class="info-item">
+            <label>Fan Points</label>
+            <input type="text" id="profileFanPoints" readonly class="readonly-field" value="0 Fan Points">
+          </div>
+          <div class="info-item">
+            <label>Contorno de perfil</label>
+            <div id="profileBorderOptions" class="profile-border-options"></div>
+            <small id="profileBorderLegend" class="profile-border-legend"></small>
+          </div>
         </div>
 
         <button type="button" id="btnChangePasswordAction" class="btn-secondary-profile">Cambiar Contraseña</button>
@@ -756,7 +782,7 @@
     </article>
   </template>
 
-  <script src="/prode-global-static/app.js?v=20260527-admin-global-fix-1"></script>
+  <script src="/prode-global-static/app.js?v=20260601-profile-session"></script>
 </body>
 
 </html>
