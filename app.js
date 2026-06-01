@@ -629,7 +629,9 @@ const FLAG_CODES = {
     tenant: null,
     tenantId: "",
     companySession: null,
+    companySessionChecked: false,
     globalSession: null,
+    globalSessionChecked: false,
     lobbyTournaments: [],
     lobbyTemplates: [],
     pendingUnlockTournamentId: "",
@@ -799,13 +801,15 @@ function loadStoredGlobalSession() {
   }
 }
 function saveGlobalSession(e) {
-  ((state.globalSession = e),
+  ((state.globalSession = e ? { ...e, verified: true } : e),
+    (state.globalSessionChecked = Boolean(e)),
     localStorage.setItem(globalSessionKey(), JSON.stringify(e)),
     applyAvatarToUi(e?.user?.avatar || currentAvatar()));
 }
 function clearGlobalSession() {
   (localStorage.removeItem(globalSessionKey()),
     (state.globalSession = null),
+    (state.globalSessionChecked = true),
     (state.currentMiniTournamentId = null),
     (state.userMiniTournaments = {}),
     (state.adminUnlocked = !1));
@@ -821,13 +825,15 @@ function loadStoredCompanySession() {
 }
 function saveCompanySession(e) {
   state.tenantId &&
-    ((state.companySession = e),
+    ((state.companySession = e ? { ...e, verified: true } : e),
+    (state.companySessionChecked = Boolean(e)),
     localStorage.setItem(companySessionKey(), JSON.stringify(e)),
     applyAvatarToUi(e?.user?.avatar || currentAvatar()));
 }
 function clearCompanySession() {
   (state.tenantId && localStorage.removeItem(companySessionKey()),
     (state.companySession = null),
+    (state.companySessionChecked = true),
     (state.adminUnlocked = !1));
 }
 function loadStoredLeaderboardViews() {
@@ -1002,6 +1008,7 @@ function applyTenantTheme(e) {
     fillAdminGamesForm());
 }
 async function refreshCompanySession() {
+  state.companySessionChecked = false;
   if (state.tenantId && state.companySession?.token) {
     try {
       const e = new URLSearchParams({
@@ -1014,11 +1021,14 @@ async function refreshCompanySession() {
         saveCompanySession({ token: state.companySession.token, user: t.user }),
         (document.getElementById("playerName").value = t.user.name || ""),
         (document.getElementById("playerEmail").value = t.user.email || ""),
-        (state.leaderboardArea = state.leaderboardArea || ""));
+        (state.leaderboardArea = state.leaderboardArea || ""),
+        (state.companySessionChecked = true));
     } catch {
       (clearCompanySession(), (state.dailyGamePlays = {}));
     }
     (renderCompanyAuth(), renderCompanyAreas(), renderDailyGames());
+  } else {
+    state.companySessionChecked = true;
   }
 }
 function renderCompanyAuth() {
@@ -1205,11 +1215,13 @@ async function loadGlobalLobby() {
   renderGlobalLobby();
 }
 async function refreshGlobalSession() {
+  state.globalSessionChecked = false;
   if (
     ((state.globalSession = loadStoredGlobalSession()),
     !state.globalSession?.token)
   )
     return (
+      (state.globalSessionChecked = true),
       syncAdminNavigation(),
       renderGlobalLobby(),
       void loadGlobalGames().catch(() => renderDailyGames())
@@ -1222,6 +1234,7 @@ async function refreshGlobalSession() {
   } catch {
     clearGlobalSession();
   }
+  state.globalSessionChecked = true;
   (syncAdminNavigation(),
     renderGlobalLobby(),
     loadGlobalGames().catch(() => renderDailyGames()));
@@ -6229,7 +6242,9 @@ async function saveAvatarRemote(e, t = currentProfileBorder()) {
     saveGlobalSession({ token: state.globalSession.token, user: n.globalUser });
 }
 function hasProfileSession() {
-  return Boolean((state.companySession?.token && state.companySession?.user?.email) || (state.globalSession?.token && state.globalSession?.user?.email));
+  const companyReady = state.companySessionChecked && state.companySession?.token && state.companySession?.user?.email;
+  const globalReady = state.globalSessionChecked && state.globalSession?.token && state.globalSession?.user?.email;
+  return Boolean(companyReady || globalReady);
 }
 async function loadProfileStats() {
   if (!hasProfileSession()) {
@@ -6248,13 +6263,18 @@ async function loadProfileStats() {
       fanPoints: Number(t.fanPoints || 0),
       rewardName: t.rewardName || "Fan Points",
     };
-  } catch {
+  } catch (error) {
+    if (String(error?.message || "").toLowerCase().includes("sesion")) {
+      state.tenantId ? clearCompanySession() : clearGlobalSession();
+    }
     if (!state.profileStats) state.profileStats = { fanPoints: 0, rewardName: "Fan Points" };
   }
 }
 async function openProfileModal() {
   const modal = document.getElementById("profileModal");
   if (!modal) return;
+  if (state.companySession?.token && !state.companySessionChecked) await refreshCompanySession();
+  if (state.globalSession?.token && !state.globalSessionChecked) await refreshGlobalSession();
   // Busca el usuario en la sesión global o en la de empresa
   const user = state.companySession?.user || state.globalSession?.user;
   if (!user || !user.name) {
