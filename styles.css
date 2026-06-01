@@ -3595,4 +3595,17 @@ button.password-toggle.is-visible {
     width: 20px;
     height: 14px;
   }
+
+  .bracket .round {
+    justify-items: center;
+  }
+
+  .bracket .match-card {
+    width: min(100%, 360px);
+    margin-inline: auto;
+  }
+
+  .bracket .teams-line {
+    justify-items: center;
+  }
 }

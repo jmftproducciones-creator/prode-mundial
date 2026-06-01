@@ -3507,11 +3507,11 @@ function renderAll() {
       c && (c.hidden = !1),
       u && (u.hidden = !d),
       p && (p.hidden = !1),
-      document.getElementById("miniStandingsPanel") && (document.getElementById("miniStandingsPanel").hidden = t.id !== "r32"),
+      document.getElementById("miniStandingsPanel") && (document.getElementById("miniStandingsPanel").hidden = currentPhase().id !== "r32"),
       renderGroups("groupsGrid", state.prediction, "prediction", {
         matchdayId: o,
       }),
-      t.id === "r32" && renderMiniStandings("miniStandingsPanel", state.prediction),
+      currentPhase().id === "r32" && renderMiniStandings("miniStandingsPanel", state.prediction),
       renderWorldCupChampionPicker(),
       renderMatchdayMatches("matchdayGrid", state.prediction, "prediction", o),
       renderGroups("realGroupsGrid", state.real, "real"),
