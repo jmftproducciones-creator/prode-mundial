@@ -5,14 +5,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Prode</title>
-  <link rel="manifest" href="/prode-global-static/manifest.json?v=20260528">
+  <link id="pwaManifestLink" rel="manifest" href="/prode/manifest.json?v=20260603-pwa-context">
   <meta name="theme-color" content="#0b0f0d">
-  <link rel="icon" type="image/png" href="/prode-global-static/BAIT.png?v=20260522">
-  <link rel="apple-touch-icon" href="/prode-global-static/BAIT.png?v=20260522">
-  <meta name="apple-mobile-web-app-title" content="Prode">
+  <link rel="icon" type="image/png" href="/prode-global-static/BAIT.png?v=20260602-mobile-install">
+  <link rel="apple-touch-icon" href="/prode-global-static/BAIT.png?v=20260602-mobile-install">
+  <meta name="apple-mobile-web-app-title" content="Prode BaitSoft">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <link rel="stylesheet" href="/prode-global-static/styles.css?v=20260601-mobile-r32-table">
+  <link rel="stylesheet" href="/prode-global-static/styles.css?v=20260626-mata-ui-steppers">
 </head>
 
 <body>
@@ -129,6 +129,53 @@
         </article>
       </div>
 
+      <section class="home-rules-panel" id="championPickPanel">
+        <div>
+          <h2>Elegi tu campeon del Mundial</h2>
+          <p>Este pronostico se muestra en todos los perfiles de <strong>Ver jugada</strong>.</p>
+          <p><strong>Podes elegir campeon hasta el 28 de junio a las 15:00 hs.</strong></p>
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; margin-top:0.75rem;">
+            <select id="homeChampionSelector" style="min-width:240px;">
+              <option value="">Seleccionar campeón</option>
+            </select>
+            <button id="saveChampionHome" type="button">Guardar campeón</button>
+          </div>
+          <p id="homeChampionCurrent" style="margin-top:0.5rem; font-weight:700;"></p>
+          <p id="homeChampionStatus" class="form-status" style="margin-top:0.75rem;" hidden></p>
+        </div>
+      </section>
+
+      <section class="home-install-panel" aria-labelledby="homeInstallTitle">
+        <div class="home-install-logo">
+          <img src="/prode-global-static/BAIT.png" alt="BaitSoft">
+        </div>
+        <div>
+          <h2 id="homeInstallTitle">Instalar la app</h2>
+          <p>Agregala al inicio del celular o tablet para entrar al prode como una app de BaitSoft.</p>
+          <ol class="home-install-steps">
+            <li><strong>Android:</strong> abri Chrome, toca el menu y elegi <span>Instalar app</span> o <span>Agregar a pantalla principal</span>.</li>
+            <li><strong>iPhone/iPad:</strong> abri Safari, toca Compartir y elegi <span>Agregar a inicio</span>.</li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="home-rules-panel" aria-labelledby="homeVideoTitle">
+        <div style="width:100%; display:flex; flex-direction:column; align-items:center;">
+          <h2 id="homeVideoTitle">Video explicativo</h2>
+          <video controls preload="metadata" style="width:100%; max-width:720px; border-radius:8px; display:block; background:#000; margin:0 auto;">
+            <source src="/Video%20Explicativo%20Prode%20%281%29%20%28online-video-cutter.com%29.mp4" type="video/mp4">
+          </video>
+        </div>
+      </section>
+
+      <section class="home-rules-panel home-feedback-panel" id="homeFeedbackPanel">
+        <div>
+          <h2 id="homeFeedbackTitle">Tu opinion</h2>
+          <p id="homeFeedbackQuestion">Que te parece la experiencia del prode?</p>
+          <div id="homeFeedbackGame"></div>
+        </div>
+      </section>
+
       <section class="home-rules-panel">
         <div>
           <h2>Reglas del Prode</h2>
@@ -138,13 +185,12 @@
               empate.</li>
             <li><strong>Resultado exacto (2 Puntos extra):</strong> Si ademas del ganador acertas los goles exactos de
               ambos equipos (sumando 5 puntos en total).</li>
-            <li><strong>Por Ejemplo:</strong> En un partido en el que Argentina <strong>Gana 2 a 0</strong> a Jordania,
-              <ul>
-                <li>Si tu pronostico fue que el partido empataba o que ganaba Jordania, <strong>no sumas puntos.</strong></li>
-                <li>Si tu pronostico fue de 2-1 que gana Argentina, <strong>sumas 3 puntos.</strong></li>
-                <li>Si tu pronostico fue 2-0 que gana Argentina, <strong>sumas 5 puntos</strong> (3 por el ganador + 2 por el resultado exacto).</li>
-              </ul>
+            <li><strong>Campeon (20 Puntos):</strong> Bonus especial si adivinas correctamente al campeon del torneo.
             </li>
+            <li><strong>Por ejemplo:</strong> si Argentina gana 2-0 a Jordania y vos pusiste empate o gana Jordania, no sumas puntos.</li>
+            <li>Si en ese mismo partido pronosticaste 2-1 para Argentina, <strong>sumas 3 puntos.</strong></li>
+            <li>Si pronosticaste 2-0 para Argentina, <strong>sumas 5 puntos</strong> (3 por ganador + 2 por exacto).</li>
+            <li><strong>Mata-Mata por penales:</strong> se puntua el empate del partido y el clasificado por separado. Ej: si termina empatado y pasa Paraguay, sumas 2 por acertar empate, 3 por acertar clasificado y 5 si ademas clavaste el resultado exacto.</li>
           </ul>
         </div>
         <button id="btnGoToPredictor" type="button">Empezar</button>
@@ -356,6 +402,7 @@
               <button type="submit" id="companyLoginBtn">Ingresar</button>
               <button type="button" id="companyRegistrarBtn" class="secondary">Registrar</button>
             </div>
+            <button class="secondary login-forgot-toggle" type="button" id="openCompanyForgotPassword">Olvide mi contraseña</button>
             <div class="login-home-link">
               <a href="#"
                 onclick="event.preventDefault(); document.querySelector('.tab[data-view=\'inicio\']').click();"
@@ -391,12 +438,27 @@
           Email
           <input id="playerEmail" name="playerEmail" type="email" autocomplete="email" placeholder="nombre@email.com">
         </label>
-        <label>
+        <label data-phase-field>
           Fecha
           <select id="predictionPhase" name="predictionPhase"></select>
         </label>
       </form>
+      <div class="real-match-top-controls" id="realMatchTopControls" hidden></div>
+      <nav class="predictor-subtabs" aria-label="Modo de pronostico">
+        <button class="predictor-subtab is-active" type="button" data-predictor-panel="phases">Fases</button>
+        <button class="predictor-subtab" type="button" data-predictor-panel="real-matches">Mata-Mata</button>
+      </nav>
       <div class="phase-status" id="phaseStatus"></div>
+      <div class="real-matches-panel" id="realMatchesPanel" hidden></div>
+      <div class="submit-panel real-match-save-panel" id="realMatchSavePanel" hidden>
+        <div>
+          <h2>Guardar Mata-Mata</h2>
+          <p>Los partidos confirmados quedan guardados en tu jugada del torneo.</p>
+        </div>
+        <div class="actions">
+          <button id="saveRealMatchPredictions" type="button">Guardar Mata-Mata</button>
+        </div>
+      </div>
       <div class="champion-picker" id="worldChampionPicker" data-worldcup-editor></div>
 
       <div class="groups-grid" id="groupsGrid" data-worldcup-editor></div>
@@ -404,13 +466,7 @@
       <div class="standings-panel" id="miniStandingsPanel" data-worldcup-editor data-worldcup-stage="mini-standings"></div>
       <div class="custom-sheet" id="customSheet" data-custom-editor hidden></div>
 
-      <div class="section-head compact" data-worldcup-editor data-worldcup-stage="thirds">
-        <div>
-          <h2>Cruces eliminatorios</h2>
-          <p>Antes de elegir ganadores, asigna manualmente los mejores terceros a cada cruce.</p>
-        </div>
-      </div>
-      <div class="thirds-panel" id="thirdsPanel" data-worldcup-editor></div>
+      <div class="thirds-panel" id="thirdsPanel" data-worldcup-editor data-worldcup-stage="thirds"></div>
       <div class="bracket" id="bracket" data-worldcup-editor></div>
 
       <div class="submit-panel">
@@ -592,6 +648,7 @@
       <div class="admin-dashboard" id="adminDashboard" hidden>
         <nav class="admin-subtabs" aria-label="Administracion">
           <button class="admin-subtab is-active" type="button" data-admin-section="users">Usuarios</button>
+          <button class="admin-subtab" type="button" data-admin-section="diagnostics">Diagnostico</button>
           <button class="admin-subtab" type="button" data-admin-section="customize">Personalizar</button>
           <button class="admin-subtab" type="button" data-admin-section="games">Juegos</button>
           <button class="admin-subtab" type="button" data-admin-section="results">Cargar resultados</button>
@@ -607,6 +664,18 @@
             </div>
           </div>
           <div class="admin-users" id="adminUsers"></div>
+        </section>
+        <section class="admin-panel" id="adminDiagnosticsPanel" hidden>
+          <div class="section-head compact">
+            <div>
+              <h2>Diagnostico</h2>
+              <p>Estado de guardados, usuarios y respuestas en todos los prodes.</p>
+            </div>
+            <div class="actions">
+              <button class="secondary" id="refreshAdminDiagnostics" type="button">Actualizar</button>
+            </div>
+          </div>
+          <div class="admin-diagnostics" id="adminDiagnostics"></div>
         </section>
         <section class="admin-panel" id="adminCustomizePanel" hidden>
           <div class="section-head compact">
@@ -642,8 +711,15 @@
             <label>Recompensa<input id="gamesRewardName" placeholder="Fan Points"></label>
             <label>Puntos por Camisetadle<input id="camisetadlePoints" type="number" min="0" step="1"></label>
             <label>Puntos por desafio<input id="challengePoints" type="number" min="0" step="1"></label>
+            <label class="inline-check"><input id="feedbackEnabled" type="checkbox"> Feedback activo</label>
+            <label>Puntos por feedback<input id="feedbackPoints" type="number" min="0" step="1"></label>
+            <label>Titulo feedback<input id="feedbackTitle" placeholder="Tu opinion"></label>
             <label class="wide">Descripcion<input id="gamesIntro"
                 placeholder="Desafios rapidos para sumar ritmo al prode diario."></label>
+            <label class="wide">Pregunta de feedback<input id="feedbackQuestion"
+                placeholder="Que te parece la experiencia del prode?"></label>
+            <label>Etiqueta 1<input id="feedbackMinLabel" placeholder="Lo odio"></label>
+            <label>Etiqueta 5<input id="feedbackMaxLabel" placeholder="Me encanta"></label>
             <label class="wide">
               Camisetadle
               <textarea id="camisetadleItems" rows="7"
@@ -656,6 +732,7 @@
             </label>
             <button>Guardar juegos</button>
           </form>
+          <div class="admin-feedback-responses" id="adminFeedbackResponses"></div>
         </section>
         <div class="results-admin" id="adminResultsPanel">
           <div class="section-head compact">
@@ -780,7 +857,7 @@
     </article>
   </template>
 
-  <script src="/prode-global-static/app.js?v=20260601-r32-standings-fix">
+  <script src="/prode-global-static/app.js?v=20260720-champion-visual-fix"></script>
 </body>
 
 </html>

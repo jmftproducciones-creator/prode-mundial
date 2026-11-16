@@ -1,19 +1,21 @@
 {
-  "name": "Prode BAIT Mundial 2026",
-  "short_name": "Prode BAIT",
-  "description": "Prode Mundial 2026 para jugar con amigos, empresas y minitorneos.",
-  "start_url": "/prode/global/",
-  "scope": "/prode/global/",
+  "name": "Prode BaitSoft Mundial 2026",
+  "short_name": "Prode BaitSoft",
+  "description": "Prode Mundial 2026 de BaitSoft.",
+  "start_url": "/prode/",
+  "scope": "/prode/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#0b0f0d",
   "icons": [
     {
-      "src": "/prode-global-static/BAIT.png?v=20260522",
+      "src": "/prode-global-static/BAIT.png?v=20260602-mobile-install",
       "sizes": "1024x1024",
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "lang": "es-AR",
+  "categories": ["sports", "games"]
 }
