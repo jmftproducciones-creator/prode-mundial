@@ -51,6 +51,37 @@ const DB_CONFIG = {
 let STORE_CACHE = null;
 let mysqlSyncQueue = Promise.resolve();
 
+async function preserveTenantUsersFromMysql(store) {
+  if (!store?.tenants || typeof store.tenants !== "object") return store;
+  let db;
+  try {
+    db = await getMysqlConnection();
+    const [rows] = await db.query(`SELECT raw_json FROM app_state WHERE state_key = 'tenants' LIMIT 1`);
+    const currentTenants = parseMysqlJson(rows?.[0]?.raw_json, {});
+    if (!currentTenants || typeof currentTenants !== "object") return store;
+    Object.entries(currentTenants).forEach(([tenantId, currentTenant]) => {
+      const currentUsers = currentTenant?.users;
+      if (!currentUsers || typeof currentUsers !== "object") return;
+      const nextTenant = store.tenants[tenantId];
+      if (!nextTenant || typeof nextTenant !== "object") {
+        store.tenants[tenantId] = currentTenant;
+        return;
+      }
+      if (!nextTenant.users || typeof nextTenant.users !== "object") nextTenant.users = {};
+      Object.entries(currentUsers).forEach(([email, currentUser]) => {
+        if (!nextTenant.users[email]) nextTenant.users[email] = currentUser;
+      });
+    });
+  } catch (error) {
+    console.error("Error preservando usuarios de tenants desde MySQL:", error);
+  } finally {
+    if (db) {
+      try { await db.end(); } catch {}
+    }
+  }
+  return store;
+}
+
 function envFlag(name, fallback = false) {
   const value = process.env[name];
   if (value === undefined) return fallback;
@@ -133,7 +164,16 @@ const DEFAULT_DAILY_GAMES = {
   rewardName: "Fan Points",
   points: {
     camisetadle: 20,
-    desafio: 15
+    desafio: 15,
+    feedback: 15
+  },
+  feedback: {
+    enabled: true,
+    title: "Tu opinion",
+    question: "Que te parece la experiencia del prode?",
+    minLabel: "Lo odio",
+    maxLabel: "Me encanta",
+    points: 15
   },
   camisetas: [
     { id: "messi-10-arg-2022", player: "Lionel Messi", number: "10", team: "Argentina", tournament: "Mundial 2022", hint: "Campeon en Qatar" },
@@ -490,7 +530,7 @@ function argentina2026Fixtures() {
 }
 
 const TOURNAMENT_TEMPLATES = [
-  { id: "worldcup-2026", name: "Mundial 2026", mode: "groups-knockout", teams: [] },
+  { id: "worldcup-2026", name: "Mundial 2026", mode: "groups-knockout", teams: [], timing: { predictionLockMinutesBefore: 60, scoringDelayMinutesAfterResult: 0 } },
   { id: "champions", name: "Champions League", mode: "fixture", teams: ["Real Madrid", "Barcelona", "Manchester City", "Liverpool", "Bayern Munich", "PSG", "Inter", "Arsenal", "Atletico Madrid", "Borussia Dortmund", "Juventus", "Benfica", "Porto", "Napoli", "Bayer Leverkusen", "Chelsea"] },
   { id: "libertadores", name: "Copa Libertadores", mode: "groups-knockout", teams: ["River Plate", "Boca Juniors", "Flamengo", "Palmeiras", "Sao Paulo", "Fluminense", "Gremio", "Atletico Mineiro", "Nacional", "Penarol", "Colo-Colo", "Universidad de Chile", "Olimpia", "Cerro Porteno", "Liga de Quito", "Independiente del Valle"] },
   { id: "sudamericana", name: "Copa Sudamericana", mode: "groups-knockout", teams: ["Lanus", "Defensa y Justicia", "Racing", "Independiente", "Corinthians", "Cruzeiro", "Internacional", "Fortaleza", "Universidad Catolica", "Emelec", "Barcelona SC", "America de Cali", "Junior", "Sporting Cristal", "Bolivar", "The Strongest"] },
@@ -561,12 +601,26 @@ const DEFAULT_PHASES = [
 ];
 
 const GROUP_MATCHDAY_FIXTURES = {
-  group1: ["A-0-2", "A-1-3", "B-0-3", "D-0-1", "B-2-1", "C-0-1", "C-3-2", "D-2-3", "E-0-3", "F-0-1", "E-2-1", "F-3-2", "H-0-3", "G-0-2", "H-2-1", "G-1-3", "I-0-1", "I-3-2", "J-0-2", "J-1-3", "K-0-3", "L-0-1", "L-2-3", "K-2-1"],
-  group2: ["A-3-2", "B-1-3", "B-0-2", "A-0-1", "D-0-2", "C-2-1", "C-0-3", "D-3-1", "F-0-3", "E-0-2", "E-1-3", "F-2-1", "H-0-2", "G-0-1", "H-1-3", "G-3-2", "J-0-1", "I-0-3", "I-2-1", "J-3-2", "K-0-2", "L-0-2", "L-3-1", "K-1-3"],
-  group3: ["B-1-0", "B-3-2", "C-2-0", "C-1-3", "A-3-0", "A-2-1", "E-3-2", "E-1-0", "F-1-3", "F-2-0", "D-3-0", "D-1-2", "I-2-0", "I-1-3", "H-3-2", "H-1-0", "G-2-1", "G-3-0", "L-3-0", "L-1-2", "K-1-0", "K-3-2", "J-2-1", "J-3-0"]
+  group1: ["A-0-2", "A-1-3", "B-0-3", "D-0-1", "B-2-1", "C-0-1", "C-2-3", "D-2-3", "E-0-3", "F-0-1", "E-2-1", "F-3-2", "H-0-3", "G-0-2", "H-2-1", "G-1-3", "I-0-1", "I-3-2", "J-0-2", "J-1-3", "K-0-3", "L-0-1", "L-2-3", "K-2-1"],
+  group2: ["A-3-2", "B-1-3", "B-0-2", "A-0-1", "D-0-2", "C-3-1", "C-0-2", "D-3-1", "F-0-3", "E-0-2", "E-3-1", "F-2-1", "H-0-2", "G-0-1", "H-1-3", "G-3-2", "J-0-1", "I-0-3", "I-2-1", "J-3-2", "K-0-2", "L-0-2", "L-3-1", "K-1-3"],
+  group3: ["B-1-0", "B-3-2", "C-3-0", "C-1-2", "A-3-0", "A-2-1", "E-3-2", "E-1-0", "F-1-3", "F-2-0", "D-3-0", "D-1-2", "I-2-0", "I-1-3", "H-3-2", "H-1-0", "G-2-1", "G-3-0", "L-3-0", "L-1-2", "K-1-0", "K-3-2", "J-2-1", "J-3-0"]
 };
 
 const WORLD_CUP_GROUP_KEYS = "ABCDEFGHIJKL".split("");
+const WORLD_CUP_GROUP_TEAMS = {
+  A: ["Mexico", "Republica de Corea", "Sudafrica", "Republica Checa"],
+  B: ["Canada", "Suiza", "Catar", "Bosnia y Herzegovina"],
+  C: ["Brasil", "Marruecos", "Haiti", "Escocia"],
+  D: ["Estados Unidos", "Paraguay", "Australia", "Turquia"],
+  E: ["Alemania", "Ecuador", "Costa de Marfil", "Curazao"],
+  F: ["Paises Bajos", "Japon", "Tunez", "Suecia"],
+  G: ["Belgica", "RI de Iran", "Egipto", "Nueva Zelanda"],
+  H: ["Espana", "Uruguay", "Arabia Saudi", "Cabo Verde"],
+  I: ["Francia", "Senegal", "Noruega", "Irak"],
+  J: ["Argentina", "Austria", "Argelia", "Jordania"],
+  K: ["Portugal", "Colombia", "Uzbekistan", "RD Congo"],
+  L: ["Inglaterra", "Croacia", "Ghana", "Panama"]
+};
 
 function groupMatchId(group, firstIndex, secondIndex) {
   return `${group}-${firstIndex}-${secondIndex}`;
@@ -575,6 +629,38 @@ function groupMatchId(group, firstIndex, secondIndex) {
 function groupMatchIdsForPhase(phaseId) {
   const list = GROUP_MATCHDAY_FIXTURES[phaseId];
   return Array.isArray(list) ? list : [];
+}
+
+function groupMatchLabelById(id, match = {}) {
+  const parts = String(id || "").split("-");
+  const teams = WORLD_CUP_GROUP_TEAMS[parts[0]];
+  if (teams) {
+    const home = teams[Number(parts[1])];
+    const away = teams[Number(parts[2])];
+    if (home && away) return `${home} vs ${away}`;
+  }
+  return `${match.homeTeam || "Local"} vs ${match.awayTeam || "Visitante"}`;
+}
+
+const LEGACY_GROUP_MATCH_ID_MAP = {
+  "C-3-2": "C-2-3",
+  "C-2-1": "C-3-1",
+  "C-0-3": "C-0-2",
+  "C-2-0": "C-3-0",
+  "C-1-3": "C-1-2",
+  "E-1-3": "E-3-1"
+};
+
+function migrateLegacyGroupMatchIds(prediction) {
+  if (!prediction?.groupMatches || typeof prediction.groupMatches !== "object") return prediction;
+  Object.entries(LEGACY_GROUP_MATCH_ID_MAP).forEach(([oldId, newId]) => {
+    if (!Object.prototype.hasOwnProperty.call(prediction.groupMatches, oldId)) return;
+    if (!Object.prototype.hasOwnProperty.call(prediction.groupMatches, newId)) {
+      prediction.groupMatches[newId] = prediction.groupMatches[oldId];
+    }
+    delete prediction.groupMatches[oldId];
+  });
+  return prediction;
 }
 
 function send(res, status, body, type = "application/json; charset=utf-8") {
@@ -591,6 +677,7 @@ function emptyStore() {
   return {
     users: {},
     globalSessions: {},
+    verificationCodes: {},
     tournamentAccess: {},
     globalGames: JSON.parse(JSON.stringify(DEFAULT_DAILY_GAMES)),
     globalGamePlays: {},
@@ -833,6 +920,7 @@ function normalizeStoreShape(store) {
   if (!normalized.users || typeof normalized.users !== "object") normalized.users = {};
   if (!normalized.globalSessions || typeof normalized.globalSessions !== "object") normalized.globalSessions = {};
   if (!normalized.passwordResets || typeof normalized.passwordResets !== "object") normalized.passwordResets = {};
+  if (!normalized.verificationCodes || typeof normalized.verificationCodes !== "object") normalized.verificationCodes = {};
   if (!normalized.tournamentAccess || typeof normalized.tournamentAccess !== "object") normalized.tournamentAccess = {};
   if (!normalized.globalGames || typeof normalized.globalGames !== "object") normalized.globalGames = JSON.parse(JSON.stringify(DEFAULT_DAILY_GAMES));
   if (!normalized.globalGamePlays || typeof normalized.globalGamePlays !== "object") normalized.globalGamePlays = {};
@@ -843,6 +931,9 @@ function normalizeStoreShape(store) {
   }
   normalized.tournaments.forEach(tournament => {
     tournament.scoring = normalizeScoring(tournament.scoring);
+    if (tournament.templateId === "worldcup-2026") {
+      delete tournament.customTemplate;
+    }
     if (tournament.templateId === "worldcup-2026" && tournament.scoring.champion < DEFAULT_SCORING.champion) {
       tournament.scoring.champion = DEFAULT_SCORING.champion;
     }
@@ -941,6 +1032,7 @@ async function ensureMysqlSchema(db) {
 }
 
 async function syncStoreToMysql(store) {
+  store = await preserveTenantUsersFromMysql(store);
   const db = await getMysqlConnection();
   let committed = false;
 
@@ -1060,6 +1152,7 @@ async function syncStoreToMysql(store) {
     const appState = {
       globalSessions: store.globalSessions || {},
       passwordResets: store.passwordResets || {},
+      verificationCodes: store.verificationCodes || {},
       globalGames: store.globalGames || {},
       globalGamePlays: store.globalGamePlays || {},
       tenants: store.tenants || {}
@@ -1120,6 +1213,7 @@ async function loadStoreFromMysql() {
       const value = parseMysqlJson(row.raw_json, {});
       if (row.state_key === "globalSessions") store.globalSessions = value;
       if (row.state_key === "passwordResets") store.passwordResets = value;
+      if (row.state_key === "verificationCodes") store.verificationCodes = value;
       if (row.state_key === "globalGames") store.globalGames = value;
       if (row.state_key === "globalGamePlays") store.globalGamePlays = value;
       if (row.state_key === "tenants") store.tenants = value;
@@ -1128,6 +1222,7 @@ async function loadStoreFromMysql() {
     const fileFallback = readStoreFileFallback();
     if (!store.globalSessions || !Object.keys(store.globalSessions).length) store.globalSessions = fileFallback?.globalSessions || {};
     if (!store.passwordResets || typeof store.passwordResets !== "object") store.passwordResets = fileFallback?.passwordResets || {};
+    if (!store.verificationCodes || typeof store.verificationCodes !== "object") store.verificationCodes = fileFallback?.verificationCodes || {};
     if (!store.globalGames || typeof store.globalGames !== "object") store.globalGames = fileFallback?.globalGames || JSON.parse(JSON.stringify(DEFAULT_DAILY_GAMES));
     if (!store.globalGamePlays || typeof store.globalGamePlays !== "object") store.globalGamePlays = fileFallback?.globalGamePlays || {};
     if (!store.tenants || !Object.keys(store.tenants).length) store.tenants = fileFallback?.tenants || {};
@@ -1228,6 +1323,7 @@ function publicTournament(tournament, options = {}) {
   const template = TOURNAMENT_TEMPLATES.find(item => item.id === tournament.templateId) || TOURNAMENT_TEMPLATES[0];
   const payment = paymentSettings(tournament);
   const compact = Boolean(options.compact);
+  const isWorldCup = tournament.templateId === "worldcup-2026";
   const fixtures = compact ? [] : tournamentFixtures(tournament);
   const data = {
     id: tournament.id,
@@ -1237,10 +1333,10 @@ function publicTournament(tournament, options = {}) {
     templateId: tournament.templateId || template.id,
     templateName: template.name,
     mode: tournament.mode || template.mode,
-    teams: compact ? [] : (tournament.customTemplate?.teams || template.teams || []),
+    teams: compact ? [] : (isWorldCup ? template.teams : (tournament.customTemplate?.teams || template.teams || [])),
     fixtures,
-    timing: compact ? null : (tournament.customTemplate?.timing || template.timing || { predictionLockMinutesBefore: 0, scoringDelayMinutesAfterResult: 0 }),
-    customTemplate: compact ? null : (tournament.customTemplate || null),
+    timing: compact ? null : (isWorldCup ? template.timing : (tournament.customTemplate?.timing || template.timing || { predictionLockMinutesBefore: 0, scoringDelayMinutesAfterResult: 0 })),
+    customTemplate: compact || isWorldCup ? null : (tournament.customTemplate || null),
     scoring: tournament.scoring || DEFAULT_SCORING,
     createdAt: tournament.createdAt,
     realResults: compact ? null : (tournament.realResults || null),
@@ -1252,6 +1348,21 @@ function publicTournament(tournament, options = {}) {
     data.invitePath = `/join/${encodeURIComponent(tournament.code)}`;
   }
   return data;
+}
+
+function countTournamentRegisteredUsers(store, tournament) {
+  if (!store || !tournament) return 0;
+  if (tournament.isGlobal) return Object.keys(store.users || {}).length;
+  const emails = new Set();
+  Object.entries(store.tournamentAccess || {}).forEach(([email, accessByTournament]) => {
+    if (accessByTournament?.[tournament.id]) emails.add(normalizeEmail(email));
+  });
+  (tournament.submissions || []).forEach((submission) => {
+    const email = normalizeEmail(submission.player?.email);
+    if (email) emails.add(email);
+  });
+  emails.delete("");
+  return emails.size;
 }
 
 function slug(value) {
@@ -1357,19 +1468,29 @@ function mergeGameList(customItems, defaultItems) {
 
 async function handleRequestVerification(req, res) {
   try {
-    // En el servidor nativo, leemos el body con tu propia función readBody
     const body = JSON.parse(await readBody(req));
-    const email = body.email;
-    // Genera un número aleatorio de 6 dígitos
+    const email = normalizeEmail(body.email);
+    if (!email || !email.includes("@")) {
+      send(res, 400, JSON.stringify({ error: "Email invalido" }));
+      return;
+    }
     const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const store = readStore();
+    if (!store.verificationCodes || typeof store.verificationCodes !== "object") store.verificationCodes = {};
+    store.verificationCodes[email] = {
+      code,
+      attempts: 0,
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 15 * 60000).toISOString()
+    };
     verificationCodes[email] = code;
-    // Enviamos el correo
     await transporter.sendMail({
       from: '"Prode Bait" <ba.itsoft26@gmail.com>',
       to: email,
       subject: 'Tu código de verificación - Prode Bait',
       text: `¡Hola!\n\nTu código de acceso de 6 dígitos para registrarte en el Prode es: ${code}\n\nSi no solicitaste esto, ignora este correo.`
     });
+    writeStore(store);
     send(res, 200, JSON.stringify({ ok: true }));
   } catch (err) {
     console.error("Error enviando email:", err);
@@ -1380,27 +1501,49 @@ async function handleRequestVerification(req, res) {
 async function handleVerifyCode(req, res) {
   try {
     const body = JSON.parse(await readBody(req));
-    const { email, code } = body;
-    
-    if (verificationCodes[email] && verificationCodes[email] === code) {
-      delete verificationCodes[email]; // Lo borramos para que no se use 2 veces
+    const email = normalizeEmail(body.email);
+    const code = String(body.code || "").trim();
+    const store = readStore();
+    if (!store.verificationCodes || typeof store.verificationCodes !== "object") store.verificationCodes = {};
+    const record = store.verificationCodes[email];
+    const memoryCode = verificationCodes[email];
+    const expectedCode = record?.code || memoryCode || "";
+    const expired = record?.expiresAt && new Date(record.expiresAt).getTime() < Date.now();
+
+    if (expectedCode && !expired && expectedCode === code) {
+      delete store.verificationCodes[email];
+      delete verificationCodes[email];
+      writeStore(store);
       send(res, 200, JSON.stringify({ ok: true }));
     } else {
+      if (record) {
+        record.attempts = Number(record.attempts || 0) + 1;
+        record.updatedAt = new Date().toISOString();
+        store.verificationCodes[email] = record;
+        writeStore(store);
+      }
       send(res, 400, JSON.stringify({ error: "Código incorrecto" }));
     }
   } catch (err) {
+    console.error("Error verificando codigo:", err);
     send(res, 500, JSON.stringify({ error: "Error al verificar código" }));
   }
 }
 
 function publicGames(tenantData = {}) {
   const custom = tenantData.games && typeof tenantData.games === "object" ? tenantData.games : {};
+  const customFeedback = custom.feedback && typeof custom.feedback === "object" ? custom.feedback : {};
   return {
     ...DEFAULT_DAILY_GAMES,
     ...custom,
     points: {
       ...DEFAULT_DAILY_GAMES.points,
       ...(custom.points && typeof custom.points === "object" ? custom.points : {})
+    },
+    feedback: {
+      ...DEFAULT_DAILY_GAMES.feedback,
+      ...customFeedback,
+      points: Math.max(0, Math.min(999, Number(customFeedback.points ?? custom.points?.feedback ?? DEFAULT_DAILY_GAMES.feedback.points) || 0))
     },
     camisetas: mergeGameList(custom.camisetas, DEFAULT_DAILY_GAMES.camisetas),
     desafios: mergeGameList(custom.desafios, DEFAULT_DAILY_GAMES.desafios)
@@ -1409,6 +1552,31 @@ function publicGames(tenantData = {}) {
 
 function globalGames(store = {}) {
   return publicGames({ games: store.globalGames || {} });
+}
+
+function feedbackGameKey(games = {}) {
+  const feedback = games.feedback && typeof games.feedback === "object" ? games.feedback : DEFAULT_DAILY_GAMES.feedback;
+  const base = slug(feedback.question || feedback.title || "feedback") || "feedback";
+  return `feedback:${base}`;
+}
+
+function feedbackResponsesFromGamePlays(gamePlays = {}) {
+  const rows = [];
+  Object.entries(gamePlays || {}).forEach(([email, byKey]) => {
+    Object.values(byKey || {}).forEach(day => {
+      const play = day?.feedback;
+      if (!play || !play.completed) return;
+      rows.push({
+        email,
+        rating: Number(play.rating || 0),
+        comment: play.comment || "",
+        question: play.question || "",
+        points: Number(play.points || 0),
+        completedAt: play.completedAt || play.updatedAt || ""
+      });
+    });
+  });
+  return rows.sort((a, b) => String(b.completedAt).localeCompare(String(a.completedAt)));
 }
 
 function publicTenant(tenant, tenantData = {}) {
@@ -1432,13 +1600,16 @@ function publicTenant(tenant, tenantData = {}) {
 function currentDailyGamePlays(tenantData = {}, email = "", games = publicGames(tenantData)) {
   const normalized = normalizeEmail(email);
   const plays = tenantData.gamePlays?.[normalized]?.[todayKey()] || {};
+  const feedbackKey = feedbackGameKey(games);
+  const feedbackPlay = tenantData.gamePlays?.[normalized]?.[feedbackKey]?.feedback || null;
   const camisetadle = todayGameItem(games, "camisetadle");
   const desafio = todayGameItem(games, "desafio");
   const camisaPlay = plays.camisetadle?.challengeId === camisetadle?.id ? plays.camisetadle : null;
   const desafioPlay = plays.desafio?.challengeId === desafio?.id ? plays.desafio : null;
   return {
     camisetadle: camisaPlay,
-    desafio: desafioPlay
+    desafio: desafioPlay,
+    feedback: feedbackPlay?.challengeId === feedbackKey ? feedbackPlay : null
   };
 }
 
@@ -1498,8 +1669,19 @@ function totalFanPoints(gamePlays = {}, email = "") {
   return Object.values(byDate).reduce((sum, day) => {
     const camisetadle = Number(day?.camisetadle?.points || 0);
     const desafio = Number(day?.desafio?.points || 0);
-    return sum + camisetadle + desafio;
+    const feedback = Number(day?.feedback?.points || 0);
+    return sum + camisetadle + desafio + feedback;
   }, 0);
+}
+
+function totalSharedFanPoints(store = {}, email = "") {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return 0;
+  let points = totalFanPoints(store.globalGamePlays, normalized);
+  Object.values(store.tenants || {}).forEach((tenantData) => {
+    points += totalFanPoints(tenantData?.gamePlays, normalized);
+  });
+  return points;
 }
 
 function requireGlobalAdmin(req, res, store, token) {
@@ -1531,6 +1713,7 @@ function hasTournamentAccess(store, user, tournament) {
     const tenantData = store.tenants?.[tournament.tenantId];
     const tenantUser = tenantData?.users?.[email];
     if (tenantUser && !isApprovedCompanyUser(tenantUser, role)) return false;
+    if (tenantUser && isApprovedCompanyUser(tenantUser, role)) return true;
     if (canApproveCompanyRequestsRole(role)) return true;
   }
   const access = store.tournamentAccess?.[email]?.[tournament.id];
@@ -1546,6 +1729,7 @@ function publicLobbyTournament(store, tournament, user = null) {
   const approvalStatus = tenantUser ? approvalStatusFor(tenantUser, tenantRole) : "";
   return {
     ...publicTournament(tournament, { includePrivateCode: tournament.isGlobal || access, compact: true }),
+    registeredUsers: countTournamentRegisteredUsers(store, tournament),
     isPrivate: !tournament.isGlobal,
     hasAccess: access,
     pendingApproval: approvalStatus === "pending",
@@ -1789,11 +1973,13 @@ function tournamentTemplate(tournament = {}) {
 
 function tournamentTiming(tournament = {}) {
   const template = tournamentTemplate(tournament);
+  if (tournament.templateId === "worldcup-2026") return normalizeTiming(template.timing || {});
   return normalizeTiming(tournament.customTemplate?.timing || template.timing || {});
 }
 
 function tournamentFixtures(tournament = {}) {
   const template = tournamentTemplate(tournament);
+  if (tournament.templateId === "worldcup-2026") return [];
   const explicit = normalizeFixtures(tournament.customTemplate?.fixtures || template.fixtures || []);
   return explicit.length ? explicit : generatedFixturesForTemplate(tournament.customTemplate || template);
 }
@@ -1944,12 +2130,231 @@ async function syncArgentinaApiResults(store, tournament) {
 }
 
 function normalizeTeamKey(value) {
-  return String(value || "")
+  const normalized = String(value || "")
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/\b(fc|cf|afc|sc|club|de|the)\b/g, "")
     .replace(/[^a-z0-9]+/g, "");
+  const aliases = {
+    mex: "mexico",
+    mexico: "mexico",
+    mx: "mexico",
+    southafrica: "sudafrica",
+    rsa: "sudafrica",
+    za: "sudafrica",
+    sudafrica: "sudafrica",
+    korea: "southkorea",
+    kor: "southkorea",
+    korearep: "southkorea",
+    korearepublic: "southkorea",
+    korearepublicof: "southkorea",
+    republicofkorea: "southkorea",
+    republicacorea: "southkorea",
+    corearepublica: "southkorea",
+    republicadecorea: "southkorea",
+    coreadelsur: "southkorea",
+    southkorea: "southkorea",
+    cze: "czechia",
+    czechrep: "czechia",
+    czechrepublic: "czechia",
+    czechoslovakia: "czechia",
+    republicacheca: "czechia",
+    chequia: "czechia",
+    czechia: "czechia",
+    can: "canada",
+    canada: "canada",
+    bih: "bosniaherzegovina",
+    bosniaherzegovina: "bosniaherzegovina",
+    bosniayherzegovina: "bosniaherzegovina",
+    bosniaandherzegovina: "bosniaherzegovina",
+    bosnia: "bosniaherzegovina",
+    sui: "suiza",
+    ch: "suiza",
+    switzerland: "suiza",
+    swiss: "suiza",
+    suiza: "suiza",
+    qat: "catar",
+    qa: "catar",
+    qatar: "catar",
+    catar: "catar",
+    bra: "brasil",
+    br: "brasil",
+    brazil: "brasil",
+    brasil: "brasil",
+    mar: "marruecos",
+    ma: "marruecos",
+    morocco: "marruecos",
+    marruecos: "marruecos",
+    hai: "haiti",
+    ht: "haiti",
+    haiti: "haiti",
+    sco: "escocia",
+    gbsct: "escocia",
+    scotland: "escocia",
+    escocia: "escocia",
+    usa: "estadosunidos",
+    us: "estadosunidos",
+    unitedstatesamerica: "estadosunidos",
+    unitedstatesofamerica: "estadosunidos",
+    unitedstates: "estadosunidos",
+    estadosunidos: "estadosunidos",
+    eeuu: "estadosunidos",
+    par: "paraguay",
+    py: "paraguay",
+    paraguay: "paraguay",
+    aus: "australia",
+    au: "australia",
+    australia: "australia",
+    tur: "turquia",
+    tr: "turquia",
+    turkey: "turquia",
+    turkiye: "turquia",
+    turquia: "turquia",
+    ger: "alemania",
+    de: "alemania",
+    germany: "alemania",
+    alemania: "alemania",
+    ecu: "ecuador",
+    ec: "ecuador",
+    ecuador: "ecuador",
+    civ: "costademarfil",
+    ci: "costademarfil",
+    costamarfil: "costademarfil",
+    cotedivoire: "costademarfil",
+    coteivoire: "costademarfil",
+    costadeivory: "costademarfil",
+    ivory: "costademarfil",
+    ivorycoast: "costademarfil",
+    costademarfil: "costademarfil",
+    cuw: "curazao",
+    cw: "curazao",
+    curacao: "curazao",
+    curazao: "curazao",
+    ned: "paisesbajos",
+    nl: "paisesbajos",
+    holland: "paisesbajos",
+    netherlands: "paisesbajos",
+    paisesbajos: "paisesbajos",
+    jpn: "japon",
+    jp: "japon",
+    japan: "japon",
+    japon: "japon",
+    tun: "tunez",
+    tn: "tunez",
+    tunisia: "tunez",
+    tunez: "tunez",
+    swe: "suecia",
+    se: "suecia",
+    sweden: "suecia",
+    suecia: "suecia",
+    bel: "belgica",
+    be: "belgica",
+    belgium: "belgica",
+    belgica: "belgica",
+    irn: "iran",
+    ir: "iran",
+    iran: "iran",
+    iranir: "iran",
+    rideiran: "iran",
+    riiran: "iran",
+    iriran: "iran",
+    iranislamicrepublic: "iran",
+    islamicrepublicofiran: "iran",
+    egy: "egipto",
+    eg: "egipto",
+    egypt: "egipto",
+    egipto: "egipto",
+    nzl: "nuevazelanda",
+    nz: "nuevazelanda",
+    newzealand: "nuevazelanda",
+    nuevazelanda: "nuevazelanda",
+    esp: "espana",
+    es: "espana",
+    spain: "espana",
+    espana: "espana",
+    uru: "uruguay",
+    uy: "uruguay",
+    uruguay: "uruguay",
+    ksa: "arabiasaudita",
+    sa: "arabiasaudita",
+    saudiarabia: "arabiasaudita",
+    arabiasaudita: "arabiasaudita",
+    arabiasaudi: "arabiasaudita",
+    cpv: "caboverde",
+    cv: "caboverde",
+    capeverde: "caboverde",
+    capeverdeisland: "caboverde",
+    capeverdeislands: "caboverde",
+    caboverde: "caboverde",
+    caboverdeisland: "caboverde",
+    caboverdeislands: "caboverde",
+    fra: "francia",
+    fr: "francia",
+    france: "francia",
+    francia: "francia",
+    sen: "senegal",
+    sn: "senegal",
+    senegal: "senegal",
+    nor: "noruega",
+    no: "noruega",
+    norway: "noruega",
+    noruega: "noruega",
+    irq: "irak",
+    iq: "irak",
+    iraq: "irak",
+    irak: "irak",
+    arg: "argentina",
+    ar: "argentina",
+    argentina: "argentina",
+    aut: "austria",
+    at: "austria",
+    austria: "austria",
+    alg: "argelia",
+    dz: "argelia",
+    algeria: "argelia",
+    argelia: "argelia",
+    jor: "jordania",
+    jo: "jordania",
+    jordan: "jordania",
+    jordania: "jordania",
+    por: "portugal",
+    pt: "portugal",
+    portugal: "portugal",
+    col: "colombia",
+    co: "colombia",
+    colombia: "colombia",
+    uzb: "uzbekistan",
+    uz: "uzbekistan",
+    uzbekistan: "uzbekistan",
+    cod: "rdcongo",
+    cd: "rdcongo",
+    drc: "rdcongo",
+    drcongo: "rdcongo",
+    rdcongo: "rdcongo",
+    congo: "rdcongo",
+    democraticrepubliccongo: "rdcongo",
+    democraticrepublicofthecongo: "rdcongo",
+    republicademocraticacongo: "rdcongo",
+    republicademocraticadelcongo: "rdcongo",
+    congodemocratico: "rdcongo",
+    congodr: "rdcongo",
+    eng: "inglaterra",
+    gbeng: "inglaterra",
+    england: "inglaterra",
+    inglaterra: "inglaterra",
+    cro: "croacia",
+    hr: "croacia",
+    croatia: "croacia",
+    croacia: "croacia",
+    gha: "ghana",
+    gh: "ghana",
+    ghana: "ghana",
+    pan: "panama",
+    pa: "panama",
+    panama: "panama"
+  };
+  return aliases[normalized] || normalized;
 }
 
 function teamLooksLike(source, target) {
@@ -2017,6 +2422,18 @@ function matchFixtureToApiResult(fixtureItem, apiMatches) {
   }) || null;
 }
 
+function findWorldCupGroupMatchId(realResults, fixtureItem, apiMatch) {
+  const groupMatches = realResults?.groupMatches || {};
+  const apiTeams = footballDataMatchTeams(apiMatch);
+  const home = apiTeams.home || fixtureItem?.home || "";
+  const away = apiTeams.away || fixtureItem?.away || "";
+  const found = Object.entries(groupMatches).find(([, match]) =>
+    teamLooksLike(home, match?.homeTeam || match?.homeName || "") &&
+    teamLooksLike(away, match?.awayTeam || match?.awayName || "")
+  );
+  return found?.[0] || "";
+}
+
 function dateIsNotInFuture(value, now = Date.now()) {
   if (!value) return false;
   const timestamp = new Date(value).getTime();
@@ -2050,6 +2467,12 @@ function estimatedFinishedAt(startsAt, fallback, matchMinutes = 120) {
   const estimated = new Date(start + Number(matchMinutes || 120) * 60000).toISOString();
   if (Number.isFinite(fallbackTime) && new Date(estimated).getTime() > fallbackTime) return fallback;
   return estimated;
+}
+
+function parseApiScore(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
 }
 
 async function fetchFootballDataMatches({ code, season }) {
@@ -2143,6 +2566,32 @@ function syncPasswordAcrossScopes(store, email, passwordRecord) {
       tenantUser.password = passwordRecord;
       tenantUser.updatedAt = new Date().toISOString();
     }
+  });
+}
+
+function passwordScopesForUser(store, email) {
+  const normalized = normalizeEmail(email);
+  const scopes = [];
+  if (!normalized) return scopes;
+  if (store.users?.[normalized]?.password?.hash) scopes.push("Global");
+  Object.entries(store.tenants || {}).forEach(([tenantId, tenantData]) => {
+    if (!tenantData?.users?.[normalized]?.password?.hash) return;
+    const tenant = tenantFromValue(tenantId);
+    scopes.push(tenant?.name || tenantData.name || tenantId);
+  });
+  return scopes;
+}
+
+function invalidateUserSessions(store, email) {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return;
+  Object.entries(store.globalSessions || {}).forEach(([token, sessionEmail]) => {
+    if (normalizeEmail(sessionEmail) === normalized) delete store.globalSessions[token];
+  });
+  Object.values(store.tenants || {}).forEach((tenantData) => {
+    Object.entries(tenantData?.sessions || {}).forEach(([token, sessionEmail]) => {
+      if (normalizeEmail(sessionEmail) === normalized) delete tenantData.sessions[token];
+    });
   });
 }
 
@@ -2287,18 +2736,18 @@ function isWorldCupMatchTimeLocked(id) {
   };
   const GROUP_SCHEDULE = {
     "A-0-2": { date: "11 de Jun", time: "16:00" }, "A-1-3": { date: "11 de Jun", time: "23:00" }, "B-0-3": { date: "12 de Jun", time: "16:00" }, "D-0-1": { date: "12 de Jun", time: "22:00" },
-    "B-2-1": { date: "13 de Jun", time: "16:00" }, "C-0-1": { date: "13 de Jun", time: "19:00" }, "C-3-2": { date: "13 de Jun", time: "22:00" }, "D-2-3": { date: "14 de Jun", time: "01:00" },
+    "B-2-1": { date: "13 de Jun", time: "16:00" }, "C-0-1": { date: "13 de Jun", time: "19:00" }, "C-2-3": { date: "13 de Jun", time: "22:00" }, "D-2-3": { date: "14 de Jun", time: "01:00" },
     "E-0-3": { date: "14 de Jun", time: "14:00" }, "F-0-1": { date: "14 de Jun", time: "17:00" }, "E-2-1": { date: "14 de Jun", time: "20:00" }, "F-3-2": { date: "14 de Jun", time: "23:00" },
     "H-0-3": { date: "15 de Jun", time: "13:00" }, "G-0-2": { date: "15 de Jun", time: "16:00" }, "H-2-1": { date: "15 de Jun", time: "19:00" }, "G-1-3": { date: "15 de Jun", time: "22:00" },
     "I-0-1": { date: "16 de Jun", time: "16:00" }, "I-3-2": { date: "16 de Jun", time: "19:00" }, "J-0-2": { date: "16 de Jun", time: "22:00" }, "J-1-3": { date: "17 de Jun", time: "01:00" },
     "K-0-3": { date: "17 de Jun", time: "14:00" }, "L-0-1": { date: "17 de Jun", time: "17:00" }, "L-2-3": { date: "17 de Jun", time: "20:00" }, "K-2-1": { date: "17 de Jun", time: "23:00" },
     "A-3-2": { date: "18 de Jun", time: "13:00" }, "B-1-3": { date: "18 de Jun", time: "16:00" }, "B-0-2": { date: "18 de Jun", time: "19:00" }, "A-0-1": { date: "18 de Jun", time: "22:00" },
-    "D-0-2": { date: "19 de Jun", time: "16:00" }, "C-2-1": { date: "19 de Jun", time: "19:00" }, "C-0-3": { date: "19 de Jun", time: "22:00" }, "D-3-1": { date: "20 de Jun", time: "01:00" },
-    "F-0-3": { date: "20 de Jun", time: "14:00" }, "E-0-2": { date: "20 de Jun", time: "17:00" }, "E-1-3": { date: "20 de Jun", time: "23:00" }, "F-2-1": { date: "21 de Jun", time: "01:00" },
+    "D-0-2": { date: "19 de Jun", time: "16:00" }, "C-3-1": { date: "19 de Jun", time: "19:00" }, "C-0-2": { date: "19 de Jun", time: "22:00" }, "D-3-1": { date: "20 de Jun", time: "01:00" },
+    "F-0-3": { date: "20 de Jun", time: "14:00" }, "E-0-2": { date: "20 de Jun", time: "17:00" }, "E-3-1": { date: "20 de Jun", time: "23:00" }, "F-2-1": { date: "21 de Jun", time: "01:00" },
     "H-0-2": { date: "21 de Jun", time: "13:00" }, "G-0-1": { date: "21 de Jun", time: "16:00" }, "H-1-3": { date: "21 de Jun", time: "19:00" }, "G-3-2": { date: "21 de Jun", time: "22:00" },
     "J-0-1": { date: "22 de Jun", time: "14:00" }, "I-0-3": { date: "22 de Jun", time: "18:00" }, "I-2-1": { date: "22 de Jun", time: "21:00" }, "J-3-2": { date: "23 de Jun", time: "00:00" },
     "K-0-2": { date: "23 de Jun", time: "14:00" }, "L-0-2": { date: "23 de Jun", time: "17:00" }, "L-3-1": { date: "23 de Jun", time: "20:00" }, "K-1-3": { date: "23 de Jun", time: "23:00" },
-    "B-1-0": { date: "24 de Jun", time: "16:00" }, "B-3-2": { date: "24 de Jun", time: "16:00" }, "C-2-0": { date: "24 de Jun", time: "19:00" }, "C-1-3": { date: "24 de Jun", time: "19:00" },
+    "B-1-0": { date: "24 de Jun", time: "16:00" }, "B-3-2": { date: "24 de Jun", time: "16:00" }, "C-3-0": { date: "24 de Jun", time: "19:00" }, "C-1-2": { date: "24 de Jun", time: "19:00" },
     "A-3-0": { date: "24 de Jun", time: "22:00" }, "A-2-1": { date: "24 de Jun", time: "22:00" }, "E-3-2": { date: "25 de Jun", time: "17:00" }, "E-1-0": { date: "25 de Jun", time: "17:00" },
     "F-1-3": { date: "25 de Jun", time: "20:00" }, "F-2-0": { date: "25 de Jun", time: "20:00" }, "D-1-2": { date: "25 de Jun", time: "23:00" }, "D-3-0": { date: "25 de Jun", time: "23:00" },
     "I-2-0": { date: "26 de Jun", time: "16:00" }, "I-1-3": { date: "26 de Jun", time: "16:00" }, "H-3-2": { date: "26 de Jun", time: "21:00" }, "H-1-0": { date: "26 de Jun", time: "21:00" },
@@ -2313,7 +2762,7 @@ function isWorldCupMatchTimeLocked(id) {
   if (!month) return false;
   const startsAt = new Date(`2026-${month}-${day}T${match.time}:00-03:00`);
   if (Number.isNaN(startsAt.getTime())) return false;
-  return Date.now() >= startsAt.getTime() - 30 * 60000;
+  return Date.now() >= startsAt.getTime() - 60 * 60000;
 }
 
 
@@ -2331,10 +2780,42 @@ function mergeChampionPick(merged, previousPrediction, incomingPrediction) {
   }
 }
 
+function completeGroupScore(match) {
+  return match &&
+    match.home !== "" && match.home !== undefined && match.home !== null &&
+    match.away !== "" && match.away !== undefined && match.away !== null &&
+    Number.isFinite(Number(match.home)) &&
+    Number.isFinite(Number(match.away));
+}
+
+function completeOfficialGroupResult(realResults, id) {
+  const match = realResults?.groupMatches?.[id];
+  return match &&
+    match.home !== "" && match.home !== undefined && match.home !== null &&
+    match.away !== "" && match.away !== undefined && match.away !== null;
+}
+
+function isGroupMatchClosedForPrediction(id, tournament = null) {
+  return completeOfficialGroupResult(tournament?.realResults, id) || isWorldCupMatchTimeLocked(id);
+}
+
+function missingRequiredGroupScores(prediction, phaseId, tournament = null) {
+  const phase = phaseById(phaseId);
+  if (phase.type !== "groups") return [];
+  return groupMatchIdsForPhase(phase.id)
+    .filter(id => !isGroupMatchClosedForPrediction(id, tournament) && !completeGroupScore(prediction?.groupMatches?.[id]))
+    .map(id => ({
+      id,
+      label: groupMatchLabelById(id, prediction?.groupMatches?.[id])
+    }));
+}
+
 function mergePredictionByPhase(previousPrediction, incomingPrediction, phaseId, tournament = null) {
   const phase = phaseById(phaseId);
+  previousPrediction = migrateLegacyGroupMatchIds(previousPrediction);
+  incomingPrediction = migrateLegacyGroupMatchIds(incomingPrediction);
   // CORRECCIÓN: Validar que realmente sea una plantilla personalizada con partidos configurados
-  if (!previousPrediction || phase.id === "all" || (incomingPrediction?.custom && Object.keys(incomingPrediction.custom.matches || {}).length > 0)) return incomingPrediction;
+  if (phase.id === "all") return incomingPrediction;
 
   const merged = previousPrediction ? JSON.parse(JSON.stringify(previousPrediction)) : {
     groups: {}, groupMatches: {}, thirdAssignments: {}, winners: {}, scores: {}, custom: {}
@@ -2349,8 +2830,12 @@ function mergePredictionByPhase(previousPrediction, incomingPrediction, phaseId,
         const isPlayed = realResults.groupMatches?.[id]?.home !== "" && realResults.groupMatches?.[id]?.home !== undefined &&
           realResults.groupMatches?.[id]?.away !== "" && realResults.groupMatches?.[id]?.away !== undefined;
         const timeLocked = isWorldCupMatchTimeLocked(id);
-        if (!isPlayed && !timeLocked && incomingPrediction.groupMatches?.[id]) {
-          merged.groupMatches[id] = incomingPrediction.groupMatches[id];
+        const incomingMatch = incomingPrediction.groupMatches?.[id];
+        const hasCompleteIncoming = incomingMatch &&
+          incomingMatch.home !== "" && incomingMatch.home !== undefined && incomingMatch.home !== null &&
+          incomingMatch.away !== "" && incomingMatch.away !== undefined && incomingMatch.away !== null;
+        if (!isPlayed && !timeLocked && hasCompleteIncoming) {
+          merged.groupMatches[id] = incomingMatch;
         }
       });
     }
@@ -2368,13 +2853,17 @@ function mergePredictionByPhase(previousPrediction, incomingPrediction, phaseId,
         (realResults.winners?.[id] && realResults.winners?.[id] !== "");
       const timeLocked = isWorldCupMatchTimeLocked(id);
       if (isPlayed || timeLocked) {
-        if (previousPrediction.scores?.[id]) {
+        if (previousPrediction?.scores?.[id]) {
           if (!merged.scores) merged.scores = {};
           merged.scores[id] = previousPrediction.scores[id];
+        } else if (merged.scores) {
+          delete merged.scores[id];
         }
-        if (previousPrediction.winners?.[id]) {
+        if (previousPrediction?.winners?.[id]) {
           if (!merged.winners) merged.winners = {};
           merged.winners[id] = previousPrediction.winners[id];
+        } else if (merged.winners) {
+          delete merged.winners[id];
         }
       }
     });
@@ -2405,13 +2894,58 @@ function scorePair(value, homeKey = "home", awayKey = "away") {
   return { home, away };
 }
 
+function resultIsAvailableForScoring(result, real, timing = {}) {
+  const finishedAt = result?.finishedAt || result?.updatedAt || real?.updatedAt || "";
+  if (!finishedAt) return true;
+  const availableAt = new Date(new Date(finishedAt).getTime() + Number(timing.scoringDelayMinutesAfterResult || 0) * 60000);
+  return Number.isNaN(availableAt.getTime()) || Date.now() >= availableAt.getTime();
+}
+
+function availableWorldCupGroups(real, timing = {}) {
+  const groups = {};
+  WORLD_CUP_GROUP_KEYS.forEach(group => {
+    const table = new Map();
+    const ensure = team => {
+      if (!team) return null;
+      if (!table.has(team)) table.set(team, { team, pts: 0, gf: 0, ga: 0, gd: 0 });
+      return table.get(team);
+    };
+    Object.entries(real.groupMatches || {}).forEach(([id, match]) => {
+      if (!String(id).startsWith(`${group}-`) || !match || !resultIsAvailableForScoring(match, real, timing)) return;
+      const score = scorePair(match);
+      if (!score) return;
+      const home = ensure(match.homeTeam || match.homeCode || match.homeName || "");
+      const away = ensure(match.awayTeam || match.awayCode || match.awayName || "");
+      if (!home || !away) return;
+      home.gf += score.home;
+      home.ga += score.away;
+      away.gf += score.away;
+      away.ga += score.home;
+      if (score.home > score.away) home.pts += 3;
+      else if (score.home < score.away) away.pts += 3;
+      else {
+        home.pts += 1;
+        away.pts += 1;
+      }
+      home.gd = home.gf - home.ga;
+      away.gd = away.gf - away.ga;
+    });
+    const standings = [...table.values()].sort(
+      (a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf || a.team.localeCompare(b.team)
+    );
+    if (standings.length) groups[group] = standings.map(row => row.team);
+  });
+  return groups;
+}
+
 function scoreSubmission(prediction, real, scoring = DEFAULT_SCORING, tournament = null) {
   if (!prediction || !real) {
     return { points: 0, groupHits: 0, winnerHits: 0, exactScoreHits: 0, championHit: false };
   }
+  prediction = migrateLegacyGroupMatchIds(JSON.parse(JSON.stringify(prediction)));
   const rules = normalizeScoring(scoring);
   // CORRECCIÓN: Verificar que tenga partidos personalizados cargados
-  if (real.custom && Object.keys(real.custom.matches || {}).length > 0) {
+  if (tournament?.templateId !== "worldcup-2026" && real.custom && Object.keys(real.custom.matches || {}).length > 0) {
     const realMatches = real.custom.matches || {};
     const predictedMatches = prediction.custom?.matches || {};
     const timing = tournament ? tournamentTiming(tournament) : { scoringDelayMinutesAfterResult: 0 };
@@ -2438,11 +2972,13 @@ function scoreSubmission(prediction, real, scoring = DEFAULT_SCORING, tournament
     };
   }
 
-  const groups = Object.keys(real.groups || {});
+  const timing = tournament ? tournamentTiming(tournament) : { scoringDelayMinutesAfterResult: 0 };
+  const scoredGroups = availableWorldCupGroups(real, timing);
+  const groups = Object.keys(scoredGroups);
   let groupHits = 0;
   groups.forEach(group => {
     [0, 1, 2, 3].forEach(index => {
-      if (prediction.groups?.[group]?.[index] && prediction.groups[group][index] === real.groups[group]?.[index]) {
+      if (prediction.groups?.[group]?.[index] && prediction.groups[group][index] === scoredGroups[group]?.[index]) {
         groupHits += 1;
       }
     });
@@ -2452,7 +2988,9 @@ function scoreSubmission(prediction, real, scoring = DEFAULT_SCORING, tournament
   let winnerHits = 0;
   let exactScoreHits = 0;
   Object.keys(real.groupMatches || {}).forEach(id => {
-    const realScore = scorePair(real.groupMatches[id]);
+    const realMatch = real.groupMatches[id];
+    if (!resultIsAvailableForScoring(realMatch, real, timing)) return;
+    const realScore = scorePair(realMatch);
     const predictedScore = scorePair(prediction.groupMatches?.[id]);
     if (!realScore || !predictedScore) return;
     if (Math.sign(realScore.home - realScore.away) === Math.sign(predictedScore.home - predictedScore.away)) {
@@ -2463,13 +3001,19 @@ function scoreSubmission(prediction, real, scoring = DEFAULT_SCORING, tournament
     }
   });
   matchIds.forEach(id => {
+    const realScoreResult = real.scores?.[id] || null;
+    if (!resultIsAvailableForScoring(realScoreResult, real, timing)) return;
     if (real.winners[id] && prediction.winners?.[id] === real.winners[id]) winnerHits += 1;
-    if (scoreLabel(real.scores?.[id]) && scoreLabel(prediction.scores?.[id]) === scoreLabel(real.scores[id])) {
+    if (scoreLabel(realScoreResult) && scoreLabel(prediction.scores?.[id]) === scoreLabel(realScoreResult)) {
       exactScoreHits += 1;
     }
   });
 
-  const championHit = Boolean(real.winners?.m104 && prediction.winners?.m104 === real.winners.m104);
+  const championHit = Boolean(
+    resultIsAvailableForScoring(real.scores?.m104 || { updatedAt: real.updatedAt }, real, timing) &&
+    real.winners?.m104 &&
+    prediction.winners?.m104 === real.winners.m104
+  );
   return {
     points:
       groupHits * rules.groupPosition +
@@ -2480,6 +3024,88 @@ function scoreSubmission(prediction, real, scoring = DEFAULT_SCORING, tournament
     winnerHits,
     exactScoreHits,
     championHit
+  };
+}
+
+function realMatchRoundKey(match = {}) {
+  const text = String(match.round || match.stage || "").trim().toLowerCase();
+  if (/(16avos|last[_\s-]?32|round of 32|playoff|play-off)/i.test(text)) return "r32";
+  if (/(octavos|8avos|last[_\s-]?16|round of 16)/i.test(text)) return "r16";
+  if (/(cuartos|quarter)/i.test(text)) return "qf";
+  if (/(semi)/i.test(text)) return "sf";
+  if (/(tercer|third)/i.test(text)) return "third";
+  if (/(final)/i.test(text)) return "final";
+  return "";
+}
+
+function realPlayoffFixtureMap(tournament, store = null) {
+  const map = new Map();
+  const globalTournament = store?.tournaments?.find(item => item.id === "global");
+  [...tournamentFixtures(tournament), ...(globalTournament && globalTournament !== tournament ? tournamentFixtures(globalTournament) : [])].forEach(match => {
+    const id = safeText(match.id, 80);
+    if (id && match.home && match.away && realMatchRoundKey(match)) {
+      map.set(id, match);
+    }
+  });
+  return map;
+}
+
+function realMatchPredictionWinner(prediction) {
+  const homeScore = Number(prediction?.homeScore);
+  const awayScore = Number(prediction?.awayScore);
+  if (!Number.isFinite(homeScore) || !Number.isFinite(awayScore) || homeScore === awayScore) return "";
+  return homeScore > awayScore ? prediction.home : prediction.away;
+}
+
+function normalizeRealMatchPredictionsForSave(incoming = {}, previous = {}, tournament = {}, store = null) {
+  const fixtures = realPlayoffFixtureMap(tournament, store);
+  const timing = tournamentTiming(tournament);
+  const saved = { ...(previous || {}) };
+  let locked = 0;
+  Object.entries(incoming || {}).forEach(([rawId, value]) => {
+    const id = safeText(rawId, 80);
+    const fixtureItem = fixtures.get(id);
+    if (!fixtureItem) return;
+    if (customMatchLocked(fixtureItem, timing)) {
+      locked += 1;
+      return;
+    }
+    const homeScore = value?.homeScore === "" || value?.homeScore === undefined ? "" : Number(value.homeScore);
+    const awayScore = value?.awayScore === "" || value?.awayScore === undefined ? "" : Number(value.awayScore);
+    const prediction = {
+      id,
+      home: fixtureItem.home,
+      away: fixtureItem.away,
+      startsAt: fixtureItem.startsAt || "",
+      round: fixtureItem.round || "",
+      homeScore: Number.isFinite(homeScore) ? homeScore : "",
+      awayScore: Number.isFinite(awayScore) ? awayScore : "",
+      updatedAt: new Date().toISOString()
+    };
+    prediction.winner = realMatchPredictionWinner(prediction);
+    saved[id] = prediction;
+  });
+  return { predictions: saved, locked };
+}
+
+function scoreRealMatchPredictions(predictions = {}, real = {}, scoring = DEFAULT_SCORING, tournament = null) {
+  const realMatches = real?.custom?.matches || {};
+  const rules = normalizeScoring(scoring);
+  const timing = tournament ? tournamentTiming(tournament) : { scoringDelayMinutesAfterResult: 0 };
+  let winnerHits = 0;
+  let exactScoreHits = 0;
+  Object.entries(predictions || {}).forEach(([id, prediction]) => {
+    const realMatch = realMatches[id];
+    if (!realMatch || !resultIsAvailableForScoring(realMatch, real, timing)) return;
+    if (realMatch.winner && prediction?.winner === realMatch.winner) winnerHits += 1;
+    const realScore = `${realMatch.homeScore ?? ""}-${realMatch.awayScore ?? ""}`;
+    const predictedScore = `${prediction?.homeScore ?? ""}-${prediction?.awayScore ?? ""}`;
+    if (realScore !== "-" && realScore === predictedScore) exactScoreHits += 1;
+  });
+  return {
+    points: winnerHits * rules.knockoutWinner + exactScoreHits * rules.exactScore,
+    winnerHits,
+    exactScoreHits
   };
 }
 
@@ -2529,6 +3155,70 @@ function readLocalLiveResults() {
   } catch {
     return { updatedAt: new Date().toISOString(), source: "Sin datos", matches: [] };
   }
+}
+
+function findWorldCupLocalTeamsForApiNames(realResults, home, away) {
+  const found = Object.values(realResults?.groupMatches || {}).find(match =>
+    teamLooksLike(home, match?.homeTeam || match?.homeName || "") &&
+    teamLooksLike(away, match?.awayTeam || match?.awayName || "")
+  );
+  return found ? { home: found.homeTeam || found.homeName || "", away: found.awayTeam || found.awayName || "" } : { home: "", away: "" };
+}
+
+function liveResultsFromStoredWorldCupResults() {
+  const store = readStore();
+  const tournament = store.tournaments?.find(item => item.id === "global");
+  const realResults = tournament?.realResults || null;
+  const groupMatches = realResults?.groupMatches || {};
+  const matches = Object.entries(groupMatches)
+    .filter(([, match]) => {
+      const hasHome = match?.home !== "" && match?.home !== null && match?.home !== undefined;
+      const hasAway = match?.away !== "" && match?.away !== null && match?.away !== undefined;
+      return hasHome && hasAway;
+    })
+    .map(([id, match]) => {
+      const group = String(id).split("-")[0] || "";
+      return {
+        id: String(match.apiMatchId || id),
+        date: match.finishedAt || match.updatedAt || realResults.updatedAt || "",
+        stage: "Fecha 1",
+        group,
+        home: match.homeTeam || match.apiHome || "",
+        away: match.awayTeam || match.apiAway || "",
+        homeScore: Number(match.home),
+        awayScore: Number(match.away),
+        status: match.status === "FINISHED" ? "finalizado" : (match.status || "finalizado")
+      };
+    });
+  const existingApiIds = new Set(matches.map(match => String(match.id || "")));
+  Object.entries(realResults?.custom?.matches || {}).forEach(([id, match]) => {
+    if (match?.status !== "FINISHED") return;
+    const apiId = String(match.apiMatchId || id.replace(/^fd-/, "") || id);
+    if (existingApiIds.has(apiId)) return;
+    const localTeams = findWorldCupLocalTeamsForApiNames(realResults, match.apiHome || match.homeTeam || "", match.apiAway || match.awayTeam || "");
+    const home = localTeams.home || match.homeTeam || match.apiHome || "";
+    const away = localTeams.away || match.awayTeam || match.apiAway || "";
+    if (!home || !away) return;
+    matches.push({
+      id: apiId,
+      date: match.finishedAt || match.updatedAt || realResults.updatedAt || "",
+      stage: match.stage || "Fecha 1",
+      group: "",
+      home,
+      away,
+      homeScore: Number(match.homeScore),
+      awayScore: Number(match.awayScore),
+      status: "finalizado"
+    });
+    existingApiIds.add(apiId);
+  });
+  matches
+    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+  return {
+    updatedAt: realResults?.updatedAt || new Date().toISOString(),
+    source: matches.length ? `${realResults?.apiSource?.provider || "Resultados guardados"} - Mundial 2026` : "Sin datos",
+    matches
+  };
 }
 
 async function loadWorldCupApiResults() {
@@ -2622,8 +3312,17 @@ function connectSmtp() {
     : net.connect({ host, port });
 }
 
+function extractEmailAddress(value) {
+  const text = String(value || "").trim();
+  const match = text.match(/<([^<>@\s]+@[^<>\s]+)>/);
+  return (match?.[1] || text).trim();
+}
+
 async function sendMail({ to, subject, text, filename, pdfBase64 }) {
   const from = process.env.MAIL_FROM || process.env.SMTP_USER;
+  const envelopeFrom = extractEmailAddress(from);
+  const envelopeTo = extractEmailAddress(to);
+  if (!envelopeTo) throw new Error("Missing email recipient");
   const socket = connectSmtp();
   const boundary = `prode-${Date.now()}`;
   const auth = Buffer.from(`\0${process.env.SMTP_USER}\0${process.env.SMTP_PASS}`).toString("base64");
@@ -2662,8 +3361,8 @@ async function sendMail({ to, subject, text, filename, pdfBase64 }) {
   await smtpCommand(socket, "", [220]);
   await smtpCommand(socket, "EHLO prodemundial.local", [250]);
   await smtpCommand(socket, `AUTH PLAIN ${auth}`, [235]);
-  await smtpCommand(socket, `MAIL FROM:<${from}>`, [250]);
-  await smtpCommand(socket, `RCPT TO:<${to}>`, [250, 251]);
+  await smtpCommand(socket, `MAIL FROM:<${envelopeFrom}>`, [250]);
+  await smtpCommand(socket, `RCPT TO:<${envelopeTo}>`, [250, 251]);
   await smtpCommand(socket, "DATA", [354]);
   await smtpCommand(socket, `${message}\r\n.`, [250]);
   await smtpCommand(socket, "QUIT", [221]);
@@ -2723,9 +3422,20 @@ async function sendSubmissionConfirmation({ to, playerName, tournamentName, phas
 async function handleLiveResults(req, res) {
   try {
     const data = await loadLiveResults();
+    const stored = liveResultsFromStoredWorldCupResults();
+    if (stored.matches.length) {
+      send(res, 200, JSON.stringify(stored));
+      return;
+    }
     send(res, 200, JSON.stringify(data));
   } catch (error) {
-    const fallback = readLocalLiveResults();
+    const fallback = liveResultsFromStoredWorldCupResults();
+    if (!fallback.matches.length) {
+      const localFallback = readLocalLiveResults();
+      localFallback.source = `${localFallback.source || "JSON local"} (fallback: ${error.message})`;
+      send(res, 200, JSON.stringify(localFallback));
+      return;
+    }
     fallback.source = `${fallback.source || "JSON local"} (fallback: ${error.message})`;
     send(res, 200, JSON.stringify(fallback));
   }
@@ -3435,9 +4145,7 @@ async function handleProfileStats(req, res) {
       send(res, 401, JSON.stringify({ error: "Sesion invalida." }));
       return;
     }
-    const points = tenant
-      ? totalFanPoints(tenantStore(store, tenant.id).gamePlays, user.email)
-      : totalFanPoints(store.globalGamePlays, user.email);
+    const points = totalSharedFanPoints(store, user.email);
     const rewardName = tenant
       ? publicGames(tenantStore(store, tenant.id)).rewardName
       : globalGames(store).rewardName;
@@ -3805,6 +4513,57 @@ async function handleAdminDeleteUser(req, res) {
   }
 }
 
+async function handleAdminResetUserPassword(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const email = normalizeEmail(body.email);
+    const password = String(body.password || "");
+    if (!email) {
+      send(res, 400, JSON.stringify({ error: "User email is required" }));
+      return;
+    }
+    if (password.length < 8 || !/[a-z]/.test(password) || !/[A-Z]/.test(password)) {
+      send(res, 400, JSON.stringify({ error: "La clave debe tener al menos 8 caracteres, una minuscula y una mayuscula." }));
+      return;
+    }
+    const store = readStore();
+    const admin = requireGlobalAdmin(req, res, store, body.globalSessionToken || body.sessionToken);
+    if (!admin) return;
+    if (!admin.isSuperAdmin && admin.role !== "superadmin") {
+      send(res, 403, JSON.stringify({ error: "Superadmin required" }));
+      return;
+    }
+    const passwordRecord = createPasswordRecord(password);
+    let touched = false;
+    if (store.users?.[email]) {
+      store.users[email].password = passwordRecord;
+      store.users[email].updatedAt = new Date().toISOString();
+      touched = true;
+    }
+    Object.values(store.tenants || {}).forEach((tenantData) => {
+      const user = tenantData?.users?.[email];
+      if (!user) return;
+      user.password = passwordRecord;
+      user.updatedAt = new Date().toISOString();
+      touched = true;
+    });
+    if (!touched) {
+      send(res, 404, JSON.stringify({ error: "User not found" }));
+      return;
+    }
+    invalidateUserSessions(store, email);
+    writeStore(store);
+    send(res, 200, JSON.stringify({
+      ok: true,
+      email,
+      hasPassword: true,
+      passwordScopes: passwordScopesForUser(store, email)
+    }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
+  }
+}
+
 async function handleCreateCompanyArea(req, res) {
   try {
     const body = JSON.parse(await readBody(req));
@@ -3934,6 +4693,7 @@ function normalizeDesafios(value) {
 function normalizeDailyGames(value = {}) {
   const camisetas = normalizeCamisetas(value.camisetas);
   const desafios = normalizeDesafios(value.desafios);
+  const feedback = value.feedback && typeof value.feedback === "object" ? value.feedback : {};
   return {
     enabled: value.enabled !== false,
     title: safeText(value.title, 70) || DEFAULT_DAILY_GAMES.title,
@@ -3941,7 +4701,16 @@ function normalizeDailyGames(value = {}) {
     rewardName: safeText(value.rewardName, 40) || DEFAULT_DAILY_GAMES.rewardName,
     points: {
       camisetadle: Math.max(0, Math.min(999, Number(value.points?.camisetadle ?? DEFAULT_DAILY_GAMES.points.camisetadle) || 0)),
-      desafio: Math.max(0, Math.min(999, Number(value.points?.desafio ?? DEFAULT_DAILY_GAMES.points.desafio) || 0))
+      desafio: Math.max(0, Math.min(999, Number(value.points?.desafio ?? DEFAULT_DAILY_GAMES.points.desafio) || 0)),
+      feedback: Math.max(0, Math.min(999, Number(value.points?.feedback ?? feedback.points ?? DEFAULT_DAILY_GAMES.points.feedback) || 0))
+    },
+    feedback: {
+      enabled: feedback.enabled !== false,
+      title: safeText(feedback.title, 70) || DEFAULT_DAILY_GAMES.feedback.title,
+      question: safeText(feedback.question, 180) || DEFAULT_DAILY_GAMES.feedback.question,
+      minLabel: safeText(feedback.minLabel, 40) || DEFAULT_DAILY_GAMES.feedback.minLabel,
+      maxLabel: safeText(feedback.maxLabel, 40) || DEFAULT_DAILY_GAMES.feedback.maxLabel,
+      points: Math.max(0, Math.min(999, Number(value.points?.feedback ?? feedback.points ?? DEFAULT_DAILY_GAMES.feedback.points) || 0))
     },
     camisetas: camisetas.length ? camisetas : DEFAULT_DAILY_GAMES.camisetas,
     desafios: desafios.length ? desafios : DEFAULT_DAILY_GAMES.desafios
@@ -3976,17 +4745,32 @@ async function handleAdminGames(req, res) {
   try {
     const body = JSON.parse(await readBody(req));
     const tenant = tenantFromValue(body.tenantId);
+    const store = readStore();
     if (!tenant) {
-      send(res, 404, JSON.stringify({ error: "Company not found" }));
+      const admin = requireGlobalAdmin(req, res, store, body.globalSessionToken || body.sessionToken);
+      if (!admin) return;
+      store.globalGames = normalizeDailyGames(body.games || {});
+      writeStore(store);
+      const games = globalGames(store);
+      send(res, 200, JSON.stringify({
+        ok: true,
+        scope: "global",
+        games,
+        feedbackResponses: feedbackResponsesFromGamePlays(store.globalGamePlays)
+      }));
       return;
     }
     if (!requireAdmin(req, res, tenant, body.adminKey, body.sessionToken, body.globalSessionToken)) return;
-    const store = readStore();
     const tenantData = tenantStore(store, tenant.id);
     tenantData.games = normalizeDailyGames(body.games || {});
     tenantData.updatedAt = new Date().toISOString();
     writeStore(store);
-    send(res, 200, JSON.stringify({ ok: true, games: publicGames(tenantData), tenant: publicTenant(tenant, tenantData) }));
+    send(res, 200, JSON.stringify({
+      ok: true,
+      games: publicGames(tenantData),
+      tenant: publicTenant(tenant, tenantData),
+      feedbackResponses: feedbackResponsesFromGamePlays(tenantData.gamePlays)
+    }));
   } catch (error) {
     send(res, 500, JSON.stringify({ error: error.message }));
   }
@@ -4038,15 +4822,58 @@ async function handleDailyGamePlay(req, res) {
     }
     const tenantData = tenant ? tenantStore(store, tenant.id) : null;
     const games = tenantData ? publicGames(tenantData) : globalGames(store);
-    const gameType = body.gameType === "camisetadle" ? "camisetadle" : "desafio";
+    const gameType = body.gameType === "camisetadle" ? "camisetadle" : body.gameType === "feedback" ? "feedback" : "desafio";
+    const email = normalizeEmail(user.email);
+    const gamePlays = tenantData ? tenantData.gamePlays : store.globalGamePlays;
+    if (gameType === "feedback") {
+      if (!games.feedback?.enabled) {
+        send(res, 404, JSON.stringify({ error: "Feedback not available" }));
+        return;
+      }
+      const rawRating = Number(body.rating || 0);
+      if (!Number.isFinite(rawRating) || rawRating < 1 || rawRating > 5) {
+        send(res, 400, JSON.stringify({ error: "Elegí una calificacion del 1 al 5." }));
+        return;
+      }
+      const rating = Math.max(1, Math.min(5, Math.round(rawRating)));
+      const feedbackKey = feedbackGameKey(games);
+      if (!gamePlays[email]) gamePlays[email] = {};
+      if (!gamePlays[email][feedbackKey]) gamePlays[email][feedbackKey] = {};
+      const previous = gamePlays[email][feedbackKey].feedback;
+      if (previous?.completed) {
+        send(res, 409, JSON.stringify({ error: "Ya respondiste esta pregunta.", play: previous }));
+        return;
+      }
+      const play = {
+        gameType,
+        challengeId: feedbackKey,
+        date: todayKey(),
+        rating,
+        comment: safeText(body.comment, 1000),
+        question: games.feedback.question || DEFAULT_DAILY_GAMES.feedback.question,
+        completed: true,
+        completedAt: new Date().toISOString(),
+        points: Number(games.feedback.points ?? games.points?.feedback ?? DEFAULT_DAILY_GAMES.feedback.points) || 0,
+        rewardName: games.rewardName || DEFAULT_DAILY_GAMES.rewardName,
+        updatedAt: new Date().toISOString()
+      };
+      gamePlays[email][feedbackKey].feedback = play;
+      writeStore(store);
+      send(res, 200, JSON.stringify({
+        ok: true,
+        correct: true,
+        play,
+        fanPoints: totalSharedFanPoints(store, email),
+        dailyGamePlays: currentDailyGamePlays({ gamePlays }, email, games)
+      }));
+      return;
+    }
     const item = todayGameItem(games, gameType);
     if (!item) {
       send(res, 404, JSON.stringify({ error: "Daily game not found" }));
       return;
     }
-    const email = normalizeEmail(user.email);
     const date = todayKey();
-    const gamePlays = tenantData ? tenantData.gamePlays : store.globalGamePlays;
     if (!gamePlays[email]) gamePlays[email] = {};
     if (!gamePlays[email][date]) gamePlays[email][date] = {};
     const previous = gamePlays[email][date][gameType];
@@ -4074,7 +4901,7 @@ async function handleDailyGamePlay(req, res) {
       ok: true,
       correct,
       play,
-      fanPoints: totalFanPoints(gamePlays, email),
+      fanPoints: totalSharedFanPoints(store, email),
       dailyGamePlays: currentDailyGamePlays({ gamePlays }, email, games)
     }));
   } catch (error) {
@@ -4237,7 +5064,11 @@ function syncGlobalSubmissionToTournament(store, email, tournament) {
       ...(globalSubmission.player || {}),
       email: userEmail
     },
-    prediction
+    prediction,
+    realMatchPredictions: {
+      ...(previous?.realMatchPredictions || {}),
+      ...(globalSubmission.realMatchPredictions || {})
+    }
   };
 
   if (existingIndex >= 0) tournament.submissions[existingIndex] = syncedSubmission;
@@ -4273,7 +5104,8 @@ function syncSubmissionAcrossTournaments(store, sourceTournamentId, player, inco
         completedPhases,
         continuationToken: otherPrevious?.continuationToken || randomSecret(),
         player: player,
-        prediction: predictionForOther
+        prediction: predictionForOther,
+        realMatchPredictions: otherPrevious?.realMatchPredictions || {}
       };
 
       if (otherExistingIndex >= 0) {
@@ -4283,6 +5115,114 @@ function syncSubmissionAcrossTournaments(store, sourceTournamentId, player, inco
       }
       dedupeTournamentSubmissions(otherTournament);
     }
+  }
+}
+
+function syncRealMatchPredictionsAcrossTournaments(store, sourceTournamentId, player, predictions) {
+  const userEmail = normalizeEmail(player.email);
+  if (!userEmail) return;
+  const userForAccessCheck = { email: userEmail, ...(store.users[userEmail] || {}) };
+  for (const otherTournament of store.tournaments || []) {
+    if (otherTournament.id === sourceTournamentId) continue;
+    if (otherTournament.templateId !== "worldcup-2026") continue;
+    if (!hasTournamentAccess(store, userForAccessCheck, otherTournament)) continue;
+    if (!Array.isArray(otherTournament.submissions)) otherTournament.submissions = [];
+    const existingIndex = otherTournament.submissions.findIndex(item => sameEmailIdentity(item.player?.email, userEmail));
+    const previous = existingIndex >= 0 ? otherTournament.submissions[existingIndex] : null;
+    const nextSubmission = {
+      id: previous?.id || `${Date.now()}-${slug(userEmail)}`,
+      createdAt: previous?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      phaseId: previous?.phaseId || "all",
+      completedPhases: previous?.completedPhases || [],
+      continuationToken: previous?.continuationToken || randomSecret(),
+      player: previous?.player || player,
+      prediction: previous?.prediction || createEmptyTournament(),
+      realMatchPredictions: {
+        ...(previous?.realMatchPredictions || {}),
+        ...(predictions || {})
+      }
+    };
+    if (existingIndex >= 0) otherTournament.submissions[existingIndex] = nextSubmission;
+    else otherTournament.submissions.push(nextSubmission);
+    dedupeTournamentSubmissions(otherTournament);
+  }
+}
+
+async function handleSaveRealMatchPredictions(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const tournamentId = body.tournamentId || "global";
+    const tenant = tenantFromValue(body.tenantId);
+    const store = readStore();
+    const tournament = findTournament(store, tournamentId);
+    if (!tournament) {
+      send(res, 404, JSON.stringify({ error: "Tournament not found" }));
+      return;
+    }
+    if ((tenant && tournament.tenantId !== tenant.id) || (!tenant && tournament.tenantId)) {
+      send(res, 404, JSON.stringify({ error: "Tournament not found" }));
+      return;
+    }
+    let loggedUser = null;
+    if (tenant) {
+      loggedUser = sessionUser(store, tenant, body.sessionToken);
+      if (!loggedUser) {
+        const globalUser = globalSessionUser(store, body.globalSessionToken);
+        if (hasTournamentAccess(store, globalUser, tournament)) {
+          loggedUser = { name: globalUser.name, email: globalUser.email, area: "" };
+        }
+      }
+      if (!loggedUser) {
+        send(res, 401, JSON.stringify({ error: "Login is required before saving predictions" }));
+        return;
+      }
+    } else {
+      loggedUser = globalSessionUser(store, body.globalSessionToken);
+      if (!loggedUser) {
+        send(res, 401, JSON.stringify({ error: "Login is required before saving predictions" }));
+        return;
+      }
+    }
+    if (!loggedUser?.email || !loggedUser?.name) {
+      send(res, 400, JSON.stringify({ error: "Invalid player" }));
+      return;
+    }
+    if (!Array.isArray(tournament.submissions)) tournament.submissions = [];
+    const email = normalizeEmail(loggedUser.email);
+    const existingIndex = tournament.submissions.findIndex(item => sameEmailIdentity(item.player?.email, email));
+    const previous = existingIndex >= 0 ? tournament.submissions[existingIndex] : null;
+    const normalized = normalizeRealMatchPredictionsForSave(body.predictions || {}, previous?.realMatchPredictions || {}, tournament, store);
+    const submission = {
+      id: previous?.id || `${Date.now()}-${slug(email)}`,
+      createdAt: previous?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      phaseId: previous?.phaseId || "all",
+      completedPhases: previous?.completedPhases || [],
+      continuationToken: previous?.continuationToken || randomSecret(),
+      player: {
+        ...(previous?.player || {}),
+        ...(body.player || {}),
+        ...(loggedUser || {}),
+        email
+      },
+      prediction: previous?.prediction || createEmptyTournament(),
+      realMatchPredictions: normalized.predictions
+    };
+    if (existingIndex >= 0) tournament.submissions[existingIndex] = submission;
+    else tournament.submissions.push(submission);
+    dedupeTournamentSubmissions(tournament);
+    if (tournament.templateId === "worldcup-2026") {
+      syncRealMatchPredictionsAcrossTournaments(store, tournament.id, submission.player, normalized.predictions);
+    }
+    writeStore(store);
+    send(res, 200, JSON.stringify({
+      ok: true,
+      realMatchPredictions: submission.realMatchPredictions,
+      locked: normalized.locked
+    }));
+  } catch (error) {
+    send(res, 500, JSON.stringify({ error: error.message }));
   }
 }
 
@@ -4351,14 +5291,15 @@ async function handleSubmitProde(req, res) {
       completedPhases: [...new Set([...(previous?.completedPhases || []), phaseId])],
       continuationToken,
       player: payload.player,
-      prediction
+      prediction,
+      realMatchPredictions: previous?.realMatchPredictions || {}
     };
     if (existingIndex >= 0) tournament.submissions[existingIndex] = submission;
     else tournament.submissions.push(submission);
     dedupeTournamentSubmissions(tournament);
 
     if (tournament.templateId === "worldcup-2026") {
-      syncSubmissionAcrossTournaments(store, tournament.id, payload.player, payload.tournament, phaseId);
+      syncSubmissionAcrossTournaments(store, tournament.id, payload.player, prediction, phaseId);
     }
 
     writeStore(store);
@@ -4580,9 +5521,11 @@ async function handleSaveRealResults(req, res) {
       send(res, 404, JSON.stringify({ error: "Global tournament not found" }));
       return;
     }
+    const previousRealResults = tournament.realResults || {};
     completeWorldCupRealResults(realResults);
     const updatedAt = new Date().toISOString();
     realResults.updatedAt = updatedAt;
+    stampWorldCupRealResultTimes(realResults, previousRealResults, updatedAt);
     if (realResults.custom?.matches) {
       const timing = tournamentTiming(tournament);
       const delayMs = Number(timing.scoringDelayMinutesAfterResult || 0) * 60000;
@@ -4623,6 +5566,38 @@ async function handleSaveRealResults(req, res) {
   } catch (error) {
     send(res, 500, JSON.stringify({ error: error.message }));
   }
+}
+
+function sameGroupResult(a, b) {
+  return a && b && String(a.home ?? "") === String(b.home ?? "") && String(a.away ?? "") === String(b.away ?? "");
+}
+
+function sameKnockoutResult(a, b, winnerA, winnerB) {
+  return a && b &&
+    String(a.left ?? "") === String(b.left ?? "") &&
+    String(a.right ?? "") === String(b.right ?? "") &&
+    String(winnerA || "") === String(winnerB || "");
+}
+
+function stampWorldCupRealResultTimes(realResults, previousRealResults = {}, updatedAt = new Date().toISOString()) {
+  Object.entries(realResults.groupMatches || {}).forEach(([id, match]) => {
+    if (!match || match.home === "" || match.home === undefined || match.away === "" || match.away === undefined) return;
+    const previous = previousRealResults.groupMatches?.[id];
+    match.finishedAt = sameGroupResult(match, previous)
+      ? (previous.finishedAt || previous.updatedAt || previousRealResults.updatedAt || updatedAt)
+      : updatedAt;
+    match.updatedAt = updatedAt;
+  });
+  Object.entries(realResults.scores || {}).forEach(([id, score]) => {
+    const hasScore = score && score.left !== "" && score.left !== undefined && score.right !== "" && score.right !== undefined;
+    const winner = realResults.winners?.[id] || "";
+    if (!hasScore && !winner) return;
+    const previous = previousRealResults.scores?.[id];
+    score.finishedAt = sameKnockoutResult(score, previous, winner, previousRealResults.winners?.[id])
+      ? (previous.finishedAt || previous.updatedAt || previousRealResults.updatedAt || updatedAt)
+      : updatedAt;
+    score.updatedAt = updatedAt;
+  });
 }
 
 function completeWorldCupRealResults(realResults) {
@@ -4679,7 +5654,8 @@ async function syncTournamentApiResults(store, tournament, options = {}) {
   const season = safeText(options.season, 8) || process.env.FOOTBALL_DATA_SEASON || "";
   const allApiMatches = await fetchFootballDataMatches({ code, season });
   const apiFixtures = footballDataFixtures(allApiMatches);
-  if (apiFixtures.length && options.rebuildFixtures !== false) {
+  const shouldRebuildFixtures = options.rebuildFixtures !== false && tournament.templateId !== "worldcup-2026";
+  if (apiFixtures.length && shouldRebuildFixtures) {
     const template = tournamentTemplate(tournament);
     tournament.customTemplate = {
       ...(tournament.customTemplate || {}),
@@ -4690,7 +5666,7 @@ async function syncTournamentApiResults(store, tournament, options = {}) {
       timing: tournamentTiming(tournament)
     };
   }
-  const fixtures = tournamentFixtures(tournament);
+  const fixtures = tournament.templateId === "worldcup-2026" ? apiFixtures : tournamentFixtures(tournament);
   if (!fixtures.length) {
     throw new Error("This tournament template has no fixture list to sync");
   }
@@ -4700,33 +5676,76 @@ async function syncTournamentApiResults(store, tournament, options = {}) {
   const updatedAt = new Date().toISOString();
   const previous = tournament.realResults?.custom?.matches || {};
   const matches = withoutFutureApiResults(previous, fixtures, now);
+  const groupMatches = { ...(tournament.realResults?.groupMatches || {}) };
   let imported = 0;
   let matched = 0;
+  let skippedWithoutScore = 0;
+  const unmatchedWorldCupGroupMatches = [];
   fixtures.forEach(fixtureItem => {
     if (!dateIsNotInFuture(fixtureItem.startsAt, now)) return;
     const apiMatch = matchFixtureToApiResult(fixtureItem, apiMatches);
     if (!apiMatch) return;
     matched += 1;
     const fullTime = apiMatch.score?.fullTime || {};
-    const homeScore = Number(fullTime.home);
-    const awayScore = Number(fullTime.away);
-    if (!Number.isFinite(homeScore) || !Number.isFinite(awayScore)) return;
+    const homeScore = parseApiScore(fullTime.home);
+    const awayScore = parseApiScore(fullTime.away);
+    if (homeScore === null || awayScore === null) {
+      skippedWithoutScore += 1;
+      return;
+    }
     imported += 1;
+    const apiTeams = footballDataMatchTeams(apiMatch);
     const nextMatch = {
       homeScore,
       awayScore,
       winner: homeScore === awayScore ? "draw" : homeScore > awayScore ? fixtureItem.home : fixtureItem.away,
       source: "football-data.org",
       apiMatchId: apiMatch.id,
+      apiHome: apiTeams.home,
+      apiAway: apiTeams.away,
       status: apiMatch.status,
       updatedAt,
       finishedAt: ""
     };
     nextMatch.finishedAt = apiMatch.status === "FINISHED" ? apiResultFinishedAt(previous[fixtureItem.id], nextMatch, estimatedFinishedAt(apiMatch.utcDate || fixtureItem.startsAt, updatedAt)) : "";
     matches[fixtureItem.id] = nextMatch;
+    if (tournament.templateId === "worldcup-2026") {
+      const groupMatchId = findWorldCupGroupMatchId(tournament.realResults, fixtureItem, apiMatch);
+      if (groupMatchId && groupMatches[groupMatchId]) {
+        groupMatches[groupMatchId] = {
+          ...(groupMatches[groupMatchId] || {}),
+          home: homeScore,
+          away: awayScore,
+          source: "football-data.org",
+          status: apiMatch.status,
+          apiHome: apiTeams.home,
+          apiAway: apiTeams.away,
+          updatedAt,
+          apiMatchId: String(apiMatch.id || ""),
+          finishedAt: nextMatch.finishedAt
+        };
+      } else {
+        unmatchedWorldCupGroupMatches.push({
+          apiMatchId: apiMatch.id,
+          fixtureId: fixtureItem.id,
+          apiHome: apiTeams.home,
+          apiAway: apiTeams.away,
+          fixtureHome: fixtureItem.home,
+          fixtureAway: fixtureItem.away,
+          apiHomeKey: normalizeTeamKey(apiTeams.home),
+          apiAwayKey: normalizeTeamKey(apiTeams.away),
+          fixtureHomeKey: normalizeTeamKey(fixtureItem.home),
+          fixtureAwayKey: normalizeTeamKey(fixtureItem.away)
+        });
+      }
+    }
   });
+  if (unmatchedWorldCupGroupMatches.length) {
+    console.warn("[WorldCup sync] Resultados API sin groupMatchId:", JSON.stringify(unmatchedWorldCupGroupMatches.slice(0, 12)));
+  }
   tournament.realResults = {
     ...(tournament.realResults || {}),
+    ...(tournament.templateId === "worldcup-2026" ? { groupMatches } : {}),
     custom: {
       ...(tournament.realResults?.custom || {}),
       matches,
@@ -4739,12 +5758,25 @@ async function syncTournamentApiResults(store, tournament, options = {}) {
       syncedAt: updatedAt,
       fixtures: apiFixtures.length,
       matched,
-      imported
+      imported,
+      skippedWithoutScore
     },
     updatedAt
   };
+  if (tournament.templateId === "worldcup-2026") {
+    completeWorldCupRealResults(tournament.realResults);
+  }
   tournament.realResultsUpdatedAt = updatedAt;
-  return { provider: "football-data.org", competitionCode: code, season, fixtures: apiFixtures.length, matched, imported };
+  return {
+    provider: "football-data.org",
+    competitionCode: code,
+    season,
+    fixtures: apiFixtures.length,
+    matched,
+    imported,
+    skippedWithoutScore,
+    unmatchedWorldCupGroupMatches
+  };
 }
 
 async function handleImportApiResults(req, res) {
@@ -5066,18 +6098,30 @@ function handleLeaderboard(req, res) {
       if (!mtParticipants) return true;
       return mtParticipantIdentities.has(emailIdentity(submission.player?.email));
     })
-    .map(submission => ({
-      player: {
-        name: submission.player?.name || "",
-        area: submission.player?.area || "",
-        email: submission.player?.email || ""
-      },
-      createdAt: submission.createdAt,
-      updatedAt: submission.updatedAt || submission.createdAt,
-      champion: submission.prediction?.custom?.champion || submission.prediction?.winners?.m104 || "",
-      score: scoreSubmission(submission.prediction, tournament.realResults, tournament.scoring, tournament),
-      prediction: submission.prediction
-    }));
+    .map(submission => {
+      const baseScore = scoreSubmission(submission.prediction, tournament.realResults, tournament.scoring, tournament);
+      const realMatchScore = scoreRealMatchPredictions(submission.realMatchPredictions, tournament.realResults, tournament.scoring, tournament);
+      return {
+        player: {
+          name: submission.player?.name || "",
+          area: submission.player?.area || "",
+          email: submission.player?.email || ""
+        },
+        createdAt: submission.createdAt,
+        updatedAt: submission.updatedAt || submission.createdAt,
+        champion: submission.prediction?.custom?.champion || submission.prediction?.winners?.m104 || "",
+        score: {
+          ...baseScore,
+          points: Number(baseScore.points || 0) + Number(realMatchScore.points || 0),
+          winnerHits: Number(baseScore.winnerHits || 0) + Number(realMatchScore.winnerHits || 0),
+          exactScoreHits: Number(baseScore.exactScoreHits || 0) + Number(realMatchScore.exactScoreHits || 0),
+          realMatchPoints: realMatchScore.points || 0
+        },
+        realMatchScore,
+        realMatchPredictions: submission.realMatchPredictions || {},
+        prediction: submission.prediction
+      };
+    });
   const preferLeaderboardRow = (current, candidate) => {
     if (!current) return candidate;
     const currentHasPrediction = current.prediction !== null && current.prediction !== undefined;
@@ -5191,6 +6235,133 @@ function handleLeaderboard(req, res) {
   }));
 }
 
+function dateTimeMs(value) {
+  const time = value ? new Date(value).getTime() : NaN;
+  return Number.isFinite(time) ? time : null;
+}
+
+function earliestDate(current, next) {
+  if (!current) return next || "";
+  if (!next) return current || "";
+  const currentMs = dateTimeMs(current);
+  const nextMs = dateTimeMs(next);
+  if (currentMs === null) return next;
+  if (nextMs === null) return current;
+  return nextMs < currentMs ? next : current;
+}
+
+function latestDate(current, next) {
+  if (!current) return next || "";
+  if (!next) return current || "";
+  const currentMs = dateTimeMs(current);
+  const nextMs = dateTimeMs(next);
+  if (currentMs === null) return next;
+  if (nextMs === null) return current;
+  return nextMs > currentMs ? next : current;
+}
+
+function gamePlaySummary(gamePlays = {}) {
+  const summary = {
+    usersWithActivity: 0,
+    feedbackResponses: 0,
+    camisetadleCompleted: 0,
+    desafioCompleted: 0,
+    latestActivityAt: ""
+  };
+  Object.values(gamePlays || {}).forEach(byKey => {
+    let userHasActivity = false;
+    Object.values(byKey || {}).forEach(day => {
+      ["feedback", "camisetadle", "desafio"].forEach(gameType => {
+        const play = day?.[gameType];
+        if (!play) return;
+        userHasActivity = true;
+        summary.latestActivityAt = latestDate(summary.latestActivityAt, play.updatedAt || play.completedAt || "");
+        if (!play.completed) return;
+        if (gameType === "feedback") summary.feedbackResponses += 1;
+        if (gameType === "camisetadle") summary.camisetadleCompleted += 1;
+        if (gameType === "desafio") summary.desafioCompleted += 1;
+      });
+    });
+    if (userHasActivity) summary.usersWithActivity += 1;
+  });
+  return summary;
+}
+
+function latestSubmissionAt(submissions = []) {
+  return (submissions || []).reduce((latest, submission) => {
+    return latestDate(latest, submission?.updatedAt || submission?.createdAt || "");
+  }, "");
+}
+
+function adminDiagnosticScopes(store) {
+  const globalTournament = (store.tournaments || []).find(tournament => tournament.id === "global");
+  const scopes = [{
+    id: "global",
+    name: "Global",
+    type: "global",
+    users: Object.keys(store.users || {}).length,
+    predictions: globalTournament?.submissions?.length || 0,
+    latestPredictionAt: latestSubmissionAt(globalTournament?.submissions || []),
+    feedback: gamePlaySummary(store.globalGamePlays || {})
+  }];
+  Object.entries(store.tenants || {}).forEach(([tenantId, tenantData]) => {
+    const tenant = tenantFromValue(tenantId);
+    const tournament = (store.tournaments || []).find(item => item.id === tenantTournamentId(tenantId));
+    scopes.push({
+      id: tenantTournamentId(tenantId),
+      tenantId,
+      name: tenantData.displayName || tenantData.name || tenant?.name || tenantId,
+      type: "empresa",
+      users: Object.keys(tenantData.users || {}).length,
+      predictions: tournament?.submissions?.length || 0,
+      latestPredictionAt: latestSubmissionAt(tournament?.submissions || []),
+      feedback: gamePlaySummary(tenantData.gamePlays || {})
+    });
+  });
+  return scopes.sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === "global" ? -1 : 1));
+}
+
+function recentAdminActivity(store, limit = 20) {
+  const rows = [];
+  (store.tournaments || []).forEach(tournament => {
+    (tournament.submissions || []).forEach(submission => {
+      rows.push({
+        type: "pronostico",
+        scope: tournament.name || tournament.id,
+        email: normalizeEmail(submission.player?.email),
+        name: submission.player?.name || "",
+        at: submission.updatedAt || submission.createdAt || ""
+      });
+    });
+  });
+  const addGameRows = (scope, gamePlays = {}) => {
+    Object.entries(gamePlays || {}).forEach(([email, byKey]) => {
+      Object.values(byKey || {}).forEach(day => {
+        Object.entries(day || {}).forEach(([gameType, play]) => {
+          if (!play) return;
+          rows.push({
+            type: gameType === "feedback" ? "feedback" : "minijuego",
+            gameType,
+            scope,
+            email: normalizeEmail(email),
+            name: "",
+            at: play.updatedAt || play.completedAt || ""
+          });
+        });
+      });
+    });
+  };
+  addGameRows("Global", store.globalGamePlays || {});
+  Object.entries(store.tenants || {}).forEach(([tenantId, tenantData]) => {
+    const tenant = tenantFromValue(tenantId);
+    addGameRows(tenantData.displayName || tenantData.name || tenant?.name || tenantId, tenantData.gamePlays || {});
+  });
+  return rows
+    .filter(row => row.at)
+    .sort((a, b) => dateTimeMs(b.at) - dateTimeMs(a.at))
+    .slice(0, limit);
+}
+
 function handleAdminSummary(req, res) {
   const url = new URL(req.url, "http://localhost");
   const tenant = tenantFromValue(url.searchParams.get("tenant"));
@@ -5201,23 +6372,84 @@ function handleAdminSummary(req, res) {
   if (!tenant) {
     const admin = requireGlobalAdmin(req, res, store, globalSessionToken);
     if (!admin) return;
-    const users = Object.values(store.users || {})
+    const byEmail = new Map();
+    const addGlobalUser = (user, sourceLabel = "Global") => {
+      const email = normalizeEmail(user?.email);
+      if (!email) return null;
+      const previous = byEmail.get(email) || {
+        name: "",
+        email,
+        area: "",
+        active: true,
+        role: "player",
+        isAdmin: false,
+        isSuperAdmin: false,
+        registered: true,
+        registeredAt: "",
+        updatedAt: "",
+        hasPrediction: false,
+        predictionUpdatedAt: "",
+        completedPhases: [],
+        sources: []
+      };
+      const role = userRole(null, { ...previous, ...user, email });
+      const sources = new Set([...(previous.sources || []), sourceLabel].filter(Boolean));
+      byEmail.set(email, {
+        ...previous,
+        name: user?.name || previous.name || email,
+        email,
+        area: [...sources].join(" / "),
+        active: previous.active !== false && user?.active !== false,
+        role: previous.isSuperAdmin ? "superadmin" : role,
+        isAdmin: previous.isAdmin || role === "admin" || role === "superadmin",
+        isSuperAdmin: previous.isSuperAdmin || role === "superadmin",
+        registered: true,
+        registeredAt: earliestDate(previous.registeredAt, user?.createdAt || user?.created_at || ""),
+        updatedAt: latestDate(previous.updatedAt, user?.updatedAt || user?.updated_at || ""),
+        hasPrediction: previous.hasPrediction,
+        predictionUpdatedAt: previous.predictionUpdatedAt,
+        completedPhases: previous.completedPhases || [],
+        sources: [...sources]
+      });
+      return byEmail.get(email);
+    };
+    Object.entries(store.users || {}).forEach(([email, user]) => addGlobalUser({ ...user, email: user.email || email }, "Global"));
+    Object.entries(store.tenants || {}).forEach(([tenantId, tenantData]) => {
+      const tenant = tenantFromValue(tenantId);
+      const sourceLabel = tenant?.name || tenantData?.name || tenantId;
+      Object.entries(tenantData?.users || {}).forEach(([email, user]) => {
+        addGlobalUser({ ...user, email: user.email || email }, sourceLabel);
+      });
+    });
+    Object.entries(store.tournamentAccess || {}).forEach(([email, accessByTournament]) => {
+      Object.keys(accessByTournament || {}).forEach(tournamentId => {
+        const tournament = (store.tournaments || []).find(item => item.id === tournamentId);
+        addGlobalUser({ ...(store.users?.[normalizeEmail(email)] || {}), email }, tournament?.name || tournamentId);
+      });
+    });
+    (store.tournaments || []).forEach(tournament => {
+      (tournament.submissions || []).forEach(submission => {
+        const email = normalizeEmail(submission.player?.email);
+        if (!email) return;
+        const user = addGlobalUser({ ...(submission.player || {}), email }, tournament.name || tournament.id);
+        if (!user) return;
+        user.hasPrediction = true;
+        user.predictionUpdatedAt = latestDate(user.predictionUpdatedAt, submission.updatedAt || submission.createdAt || "");
+        user.completedPhases = [...new Set([...(user.completedPhases || []), ...(submission.completedPhases || [])])];
+      });
+    });
+    const users = [...byEmail.values()]
       .map(user => {
-        const role = userRole(null, user);
+        const role = user.isSuperAdmin ? "superadmin" : user.role || "player";
+        const passwordScopes = passwordScopesForUser(store, user.email);
         return {
-          name: user.name || "",
-          email: user.email || "",
-          area: "Global",
-          active: user.active !== false,
+          ...user,
           role,
-          isAdmin: role === "admin" || role === "superadmin",
+          isAdmin: role === "admin" || role === "superadmin" || user.isAdmin,
           isSuperAdmin: role === "superadmin",
-          registered: true,
-          registeredAt: user.createdAt || "",
-          updatedAt: user.updatedAt || "",
-          hasPrediction: false,
-          predictionUpdatedAt: "",
-          completedPhases: []
+          hasPassword: passwordScopes.length > 0,
+          passwordScopes,
+          sources: undefined
         };
       })
       .sort((a, b) => a.name.localeCompare(b.name) || a.email.localeCompare(b.email));
@@ -5229,7 +6461,14 @@ function handleAdminSummary(req, res) {
         areas: store.tournaments.length
       },
       tournaments: (store.tournaments || []).map(tournament => publicLobbyTournament(store, tournament, admin)),
-      users
+      users,
+      games: globalGames(store),
+      feedbackResponses: feedbackResponsesFromGamePlays(store.globalGamePlays),
+      diagnostics: {
+        scopes: adminDiagnosticScopes(store),
+        recentActivity: recentAdminActivity(store),
+        worldCupUnmatchedGroupMatches: store.diagnostics?.worldCupUnmatchedGroupMatches || null
+      }
     }));
     return;
   }
@@ -5292,7 +6531,8 @@ function handleAdminSummary(req, res) {
       predictions: submissions.length,
       areas: tenantData.areas.length
     },
-    users: [...users, ...extraPlayers]
+    users: [...users, ...extraPlayers],
+    feedbackResponses: feedbackResponsesFromGamePlays(tenantData.gamePlays)
   }));
 }
 
@@ -5305,8 +6545,9 @@ async function syncApiResultsForAllTournaments() {
     const store = readStore();
     let imported = 0;
     let fixtures = 0;
+    const worldCupUnmatchedGroupMatches = [];
     const globalTournament = store.tournaments.find(t => t.id === "global");
-    if (globalTournament && globalTournament.templateId !== "worldcup-2026") {
+    if (globalTournament) {
       try {
         let result = null;
         if (globalTournament.templateId === "argentina") {
@@ -5317,6 +6558,9 @@ async function syncApiResultsForAllTournaments() {
         if (result) {
           imported += result.imported || 0;
           fixtures += result.fixtures || 0;
+          if (Array.isArray(result.unmatchedWorldCupGroupMatches)) {
+            worldCupUnmatchedGroupMatches.push(...result.unmatchedWorldCupGroupMatches);
+          }
           store.tournaments.forEach(t => {
             t.realResults = globalTournament.realResults;
             t.realResultsUpdatedAt = globalTournament.realResultsUpdatedAt;
@@ -5340,10 +6584,19 @@ async function syncApiResultsForAllTournaments() {
         }
         imported += result.imported || 0;
         fixtures += result.fixtures || 0;
+        if (Array.isArray(result.unmatchedWorldCupGroupMatches)) {
+          worldCupUnmatchedGroupMatches.push(...result.unmatchedWorldCupGroupMatches);
+        }
       } catch (error) {
         console.warn(`No se pudo sincronizar ${tournament.id}: ${error.message}`);
       }
     }
+    store.diagnostics || (store.diagnostics = {});
+    store.diagnostics.worldCupUnmatchedGroupMatches = {
+      checkedAt: new Date().toISOString(),
+      count: worldCupUnmatchedGroupMatches.length,
+      items: worldCupUnmatchedGroupMatches.slice(0, 20)
+    };
     if (imported > 0 || fixtures > 0) writeStore(store);
     console.log(`Sync API resultados: ${imported} resultados importados, ${fixtures} fixtures sincronizados`);
   } finally {
@@ -5362,6 +6615,10 @@ function serveStatic(req, res) {
     : staticMatch
       ? `/${staticMatch[1]}`
       : cleanUrl;
+  if (requested.split("/").some((part) => part.startsWith(".") && part !== ".well-known")) {
+    send(res, 404, "Not found", "text/plain; charset=utf-8");
+    return;
+  }
   const filePath = path.normalize(path.join(ROOT, requested));
   if (!filePath.startsWith(ROOT)) {
     send(res, 403, "Forbidden", "text/plain; charset=utf-8");
@@ -5372,6 +6629,21 @@ function serveStatic(req, res) {
       send(res, 404, "Not found", "text/plain; charset=utf-8");
       return;
     }
+    if (requested === "/index.html") {
+      const startUrl = normalizePwaStartPath(cleanUrl);
+      const html = data
+        .toString("utf8")
+        .replace(
+          /href="\/prode\/manifest\.json[^"]*"/,
+          `href="/prode/manifest.json?start=${encodeURIComponent(startUrl)}&v=20260603-pwa-context"`,
+        );
+      res.writeHead(200, {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-cache"
+      });
+      res.end(html);
+      return;
+    }
     res.writeHead(200, {
       "Content-Type": MIME[path.extname(filePath)] || "application/octet-stream",
       "Cache-Control": "no-cache"
@@ -5380,9 +6652,70 @@ function serveStatic(req, res) {
   });
 }
 
+function normalizePwaStartPath(value = "") {
+  let startPath = String(value || "").trim();
+  try {
+    startPath = decodeURIComponent(startPath);
+  } catch {}
+  startPath = startPath.split("#")[0].split("?")[0];
+  if (/^\/empresa\/[^/.]+\/?$/.test(startPath)) {
+    return `/prode${startPath.endsWith("/") ? startPath : `${startPath}/`}`;
+  }
+  if (startPath === "/prode") return "/prode/";
+  if (startPath === "/prode/global") return "/prode/global/";
+  if (startPath === "/prode/global/") return startPath;
+  if (/^\/prode\/empresa\/[^/.]+\/?$/.test(startPath)) {
+    return startPath.endsWith("/") ? startPath : `${startPath}/`;
+  }
+  return "/prode/";
+}
+
+function handlePwaManifest(req, res) {
+  const url = new URL(req.url, "http://localhost");
+  let startUrl = normalizePwaStartPath(url.searchParams.get("start"));
+  if (startUrl === "/prode/" && !url.searchParams.get("start") && req.headers.referer) {
+    try {
+      startUrl = normalizePwaStartPath(new URL(req.headers.referer).pathname);
+    } catch {}
+  }
+  const manifest = {
+    name: startUrl.startsWith("/prode/empresa/")
+      ? "Prode BaitSoft Empresa"
+      : "Prode BaitSoft Mundial 2026",
+    short_name: "Prode BaitSoft",
+    description: "Prode Mundial 2026 de BaitSoft.",
+    start_url: startUrl,
+    scope: "/prode/",
+    display: "standalone",
+    orientation: "portrait",
+    background_color: "#ffffff",
+    theme_color: "#0b0f0d",
+    icons: [
+      {
+        src: "/prode-global-static/BAIT.png?v=20260602-mobile-install",
+        sizes: "1024x1024",
+        type: "image/png",
+        purpose: "any maskable"
+      }
+    ],
+    lang: "es-AR",
+    categories: ["sports", "games"]
+  };
+  res.writeHead(200, {
+    "Content-Type": "application/manifest+json; charset=utf-8",
+    "Cache-Control": "no-cache"
+  });
+  res.end(JSON.stringify(manifest, null, 2));
+}
+
 const server = http.createServer((req, res) => {
   if (req.url.startsWith("/prode/api/")) {
     req.url = req.url.replace(/^\/prode\/api\//, "/api/");
+  }
+
+  if (req.method === "GET" && (req.url.startsWith("/manifest.json") || req.url.startsWith("/prode/manifest.json"))) {
+    handlePwaManifest(req, res);
+    return;
   }
 
   if (req.method === "GET" && req.url === "/healthz") {
@@ -5496,6 +6829,10 @@ const server = http.createServer((req, res) => {
     handleAdminDeleteUser(req, res);
     return;
   }
+  if (req.method === "POST" && req.url === "/api/admin-users/password") {
+    handleAdminResetUserPassword(req, res);
+    return;
+  }
   if (req.method === "POST" && req.url === "/api/admin-theme") {
     handleAdminTheme(req, res);
     return;
@@ -5542,6 +6879,10 @@ const server = http.createServer((req, res) => {
   }
   if (req.method === "POST" && req.url === "/api/submit-prode") {
     handleSubmitProde(req, res);
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/real-match-predictions") {
+    handleSaveRealMatchPredictions(req, res);
     return;
   }
   if (req.method === "POST" && req.url === "/api/real-results") {
